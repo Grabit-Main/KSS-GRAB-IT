@@ -22,6 +22,9 @@ import FloatingCartBar from './components/common/FloatingCartBar';
 import './styles/global.css';
 import './styles/components.css';
 
+import SellerPortalApp from './seller/SellerPortalApp';
+import DeliveryPortalApp from './delivery/DeliveryPortalApp';
+
 // Automatically scroll to top synchronously BEFORE paint on route change
 function ScrollToTop() {
   const location = useLocation();
@@ -40,6 +43,7 @@ function AnimatedRoutes() {
   return (
     <div key={location.pathname} className="page-route-transition">
       <Routes location={location}>
+        {/* Customer Portal Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/categories" element={<CategoriesOverviewPage />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
@@ -53,6 +57,12 @@ function AnimatedRoutes() {
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/help/:tab" element={<HelpPage />} />
+
+        {/* Seller / Merchant Portal Route */}
+        <Route path="/seller/*" element={<SellerPortalApp />} />
+
+        {/* Delivery Partner Portal Route */}
+        <Route path="/delivery/*" element={<DeliveryPortalApp />} />
       </Routes>
     </div>
   );
