@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-backend.vercel.app/api');
+const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api');
 
 export async function api(path, options = {}) {
   const token = localStorage.getItem('grabit_session');
