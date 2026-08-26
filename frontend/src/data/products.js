@@ -1,0 +1,357 @@
+// Comprehensive Product Catalog (270+ Products, 22-25 Products Per Category)
+
+export const products = [
+  // ──────────────────────────────────────────────────────────────────────────
+  // 1. SNACKS & MUNCHIES (catKey: 'snacks' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 1, name: "Lay's American Style Cream & Onion Potato Chips 50g", weight: "50g", price: 20, mrp: 25, discount: 20, rating: 4.8, reviews: 320, image: "lays-cream-onion.png", category: "snacks", brand: "Lay's", inStock: true },
+  { id: 2, name: "Doritos Nacho Cheese Tortilla Chips 82g", weight: "82g", price: 50, mrp: 60, discount: 17, rating: 4.7, reviews: 245, image: "doritos-nacho.png", category: "snacks", brand: "Doritos", inStock: true },
+  { id: 3, name: "Lay's India's Magic Masala Potato Chips 52g", weight: "52g", price: 20, mrp: 25, discount: 20, rating: 4.9, reviews: 512, image: "lays-magic-masala.png", category: "snacks", brand: "Lay's", inStock: true },
+  { id: 4, name: "Lay's Classic Salted Potato Chips 52g", weight: "52g", price: 20, mrp: 25, discount: 20, rating: 4.6, reviews: 189, image: "lays-classic-salted.png", category: "snacks", brand: "Lay's", inStock: true },
+  { id: 5, name: "Lay's Maxx Sizzlin' Hot Potato Chips 50g", weight: "50g", price: 20, mrp: 25, discount: 20, rating: 4.8, reviews: 410, image: "lays-sizzlin-hot.png", category: "snacks", brand: "Lay's", inStock: true },
+  { id: 6, name: "Bingo! Mad Angles Achaari Masti 66g", weight: "66g", price: 20, mrp: 25, discount: 20, rating: 4.5, reviews: 178, image: "bingo-mad-angles.png", category: "snacks", brand: "Bingo!", inStock: true },
+  { id: 7, name: "Doritos Cool Ranch Flavored Tortilla Chips 82g", weight: "82g", price: 50, mrp: 60, discount: 17, rating: 4.6, reviews: 132, image: "doritos-cool-ranch.png", category: "snacks", brand: "Doritos", inStock: true },
+  { id: 8, name: "Kurkure Masala Munch Crunchy Snacks 90g", weight: "90g", price: 20, mrp: 25, discount: 20, rating: 4.8, reviews: 680, image: "lays-magic-masala.png", category: "snacks", brand: "Kurkure", inStock: true },
+  { id: 9, name: "Pringles Original Potato Chips 107g Can", weight: "107g", price: 115, mrp: 135, discount: 15, rating: 4.7, reviews: 390, image: "lays-classic-salted.png", category: "snacks", brand: "Pringles", inStock: true },
+  { id: 10, name: "Haldiram's Nagpur Bhujia Sev 200g", weight: "200g", price: 55, mrp: 65, discount: 15, rating: 4.9, reviews: 820, image: "atta-real.jpg", category: "snacks", brand: "Haldiram's", inStock: true },
+  { id: 11, name: "Haldiram's All-in-One Mixture Namkeen 200g", weight: "200g", price: 60, mrp: 70, discount: 14, rating: 4.8, reviews: 450, image: "atta-real.jpg", category: "snacks", brand: "Haldiram's", inStock: true },
+  { id: 12, name: "Act II Butter Delite Microwave Popcorn 99g", weight: "99g", price: 45, mrp: 55, discount: 18, rating: 4.6, reviews: 290, image: "butter-real.jpg", category: "snacks", brand: "Act II", inStock: true },
+  { id: 13, name: "Uncle Chipps Spicy Treat Potato Chips 50g", weight: "50g", price: 20, mrp: 25, discount: 20, rating: 4.7, reviews: 210, image: "lays-magic-masala.png", category: "snacks", brand: "Uncle Chipps", inStock: true },
+  { id: 14, name: "Cornitos Nacho Chips Sweet Chili 60g", weight: "60g", price: 45, mrp: 50, discount: 10, rating: 4.5, reviews: 140, image: "doritos-nacho.png", category: "snacks", brand: "Cornitos", inStock: true },
+  { id: 15, name: "Haldiram's Khatta Meetha Namkeen 200g", weight: "200g", price: 58, mrp: 68, discount: 15, rating: 4.8, reviews: 520, image: "atta-real.jpg", category: "snacks", brand: "Haldiram's", inStock: true },
+  { id: 16, name: "Haldiram's Moong Dal Salty Snack 200g", weight: "200g", price: 55, mrp: 65, discount: 15, rating: 4.9, reviews: 630, image: "atta-real.jpg", category: "snacks", brand: "Haldiram's", inStock: true },
+  { id: 17, name: "Balaji Wafers Simply Salted Chips 135g", weight: "135g", price: 35, mrp: 40, discount: 13, rating: 4.6, reviews: 190, image: "lays-classic-salted.png", category: "snacks", brand: "Balaji", inStock: true },
+  { id: 18, name: "Pringles Sour Cream & Onion 107g Can", weight: "107g", price: 115, mrp: 135, discount: 15, rating: 4.8, reviews: 480, image: "lays-cream-onion.png", category: "snacks", brand: "Pringles", inStock: true },
+  { id: 19, name: "Bingo! Tedhe Medhe Masala Tadka 90g", weight: "90g", price: 20, mrp: 25, discount: 20, rating: 4.7, reviews: 340, image: "bingo-mad-angles.png", category: "snacks", brand: "Bingo!", inStock: true },
+  { id: 20, name: "Popcorn & Peanuts Party Snack Combo Pack", weight: "300g", price: 120, mrp: 150, discount: 20, rating: 4.5, reviews: 110, image: "butter-real.jpg", category: "snacks", brand: "Act II", inStock: true },
+  { id: 21, name: "Too Yumm! Karare Munchy Chips 80g", weight: "80g", price: 35, mrp: 40, discount: 13, rating: 4.4, reviews: 160, image: "lays-sizzlin-hot.png", category: "snacks", brand: "Too Yumm!", inStock: true },
+  { id: 22, name: "Haldiram's Boondi Masala Munch 200g", weight: "200g", price: 50, mrp: 60, discount: 17, rating: 4.7, reviews: 270, image: "atta-real.jpg", category: "snacks", brand: "Haldiram's", inStock: true },
+  { id: 23, name: "Doritos Cheese Supreme Party Size 150g", weight: "150g", price: 85, mrp: 100, discount: 15, rating: 4.9, reviews: 520, image: "doritos-nacho.png", category: "snacks", brand: "Doritos", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2. DAIRY & BAKERY (catKey: 'dairy' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 24, name: "Amul Pasteurised Salted Butter 100g", weight: "100g", price: 56, mrp: 60, discount: 7, rating: 4.9, reviews: 980, image: "amul-butter.jpg", category: "dairy", brand: "Amul", inStock: true },
+  { id: 25, name: "Amul Taaza Homogenised Toned Milk 1L", weight: "1L", price: 74, mrp: 76, discount: 3, rating: 4.8, reviews: 1420, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 26, name: "Amul Processed Cheese Slices 200g (10 Slices)", weight: "200g", price: 135, mrp: 145, discount: 7, rating: 4.8, reviews: 630, image: "amul-cheese.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 27, name: "Mother Dairy Malai Fresh Paneer 200g", weight: "200g", price: 92, mrp: 100, discount: 8, rating: 4.7, reviews: 510, image: "mother-dairy-paneer.png", category: "dairy", brand: "Mother Dairy", inStock: true },
+  { id: 28, name: "Britannia Brown Bread Whole Wheat 400g", weight: "400g", price: 45, mrp: 50, discount: 10, rating: 4.6, reviews: 420, image: "butter-real.jpg", category: "dairy", brand: "Britannia", inStock: true },
+  { id: 29, name: "Epigamia Greek Yogurt Natural 85g", weight: "85g", price: 50, mrp: 60, discount: 17, rating: 4.5, reviews: 180, image: "epigamia-yogurt.png", category: "dairy", brand: "Epigamia", inStock: true },
+  { id: 30, name: "Amul Masti Dahi Fresh Curd 400g Pouch", weight: "400g", price: 35, mrp: 40, discount: 13, rating: 4.8, reviews: 890, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 31, name: "Amul Gold Whole Milk 1L Tetra Pack", weight: "1L", price: 78, mrp: 82, discount: 5, rating: 4.9, reviews: 1120, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 32, name: "Amul Diced Mozzarella Cheese 200g", weight: "200g", price: 125, mrp: 140, discount: 11, rating: 4.8, reviews: 430, image: "amul-cheese.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 33, name: "Britannia 100% Whole Wheat Bread 400g", weight: "400g", price: 50, mrp: 55, discount: 9, rating: 4.7, reviews: 360, image: "butter-real.jpg", category: "dairy", brand: "Britannia", inStock: true },
+  { id: 34, name: "Amul Fresh Cream 250ml", weight: "250ml", price: 67, mrp: 72, discount: 7, rating: 4.8, reviews: 540, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 35, name: "Amul Chocolate Flavored Milk 200ml Can", weight: "200ml", price: 35, mrp: 40, discount: 13, rating: 4.9, reviews: 780, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 36, name: "Mother Dairy Cow Milk 1L Pouch", weight: "1L", price: 56, mrp: 60, discount: 7, rating: 4.7, reviews: 620, image: "amul-milk.png", category: "dairy", brand: "Mother Dairy", inStock: true },
+  { id: 37, name: "Epigamia Strawberry Greek Yogurt 85g", weight: "85g", price: 55, mrp: 65, discount: 15, rating: 4.6, reviews: 210, image: "epigamia-yogurt.png", category: "dairy", brand: "Epigamia", inStock: true },
+  { id: 38, name: "Amul Unsalted White Butter 100g", weight: "100g", price: 58, mrp: 62, discount: 6, rating: 4.8, reviews: 310, image: "amul-butter.jpg", category: "dairy", brand: "Amul", inStock: true },
+  { id: 39, name: "Amul Garlic & Herbs Butter Spread 100g", weight: "100g", price: 62, mrp: 68, discount: 9, rating: 4.9, reviews: 490, image: "amul-butter.jpg", category: "dairy", brand: "Amul", inStock: true },
+  { id: 40, name: "Britannia Multigrain Bread 400g", weight: "400g", price: 55, mrp: 60, discount: 8, rating: 4.6, reviews: 270, image: "butter-real.jpg", category: "dairy", brand: "Britannia", inStock: true },
+  { id: 41, name: "Mother Dairy Ultimate Dahi 400g Tub", weight: "400g", price: 50, mrp: 55, discount: 9, rating: 4.8, reviews: 410, image: "amul-milk.png", category: "dairy", brand: "Mother Dairy", inStock: true },
+  { id: 42, name: "Amul Cheese Block 200g", weight: "200g", price: 130, mrp: 140, discount: 7, rating: 4.7, reviews: 580, image: "amul-cheese.png", category: "dairy", brand: "Amul", inStock: true },
+  { id: 43, name: "Go Cheese Slices Plain 200g (10 Slices)", weight: "200g", price: 125, mrp: 140, discount: 11, rating: 4.5, reviews: 180, image: "amul-cheese.png", category: "dairy", brand: "Go", inStock: true },
+  { id: 44, name: "Fresh Farm White Eggs 6 Pieces Pack", weight: "6 Eggs", price: 48, mrp: 60, discount: 20, rating: 4.8, reviews: 890, image: "butter-real.jpg", category: "dairy", brand: "Grabit Fresh", inStock: true },
+  { id: 45, name: "Epigamia Blueberry Greek Yogurt 85g", weight: "85g", price: 55, mrp: 65, discount: 15, rating: 4.7, reviews: 240, image: "epigamia-yogurt.png", category: "dairy", brand: "Epigamia", inStock: true },
+  { id: 46, name: "Amul Smooth Buttermilk 250ml Pack", weight: "250ml", price: 15, mrp: 18, discount: 17, rating: 4.9, reviews: 1200, image: "amul-milk.png", category: "dairy", brand: "Amul", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. COLD DRINKS & JUICES / BEVERAGES (catKey: 'beverages' - 25 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 47, name: "Coca-Cola Original Taste Soft Drink 750ml Bottle", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.8, reviews: 890, image: "coca-cola.png", category: "beverages", brand: "Coca-Cola", inStock: true },
+  { id: 48, name: "Thums Up Soft Drink 750ml Bottle", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.9, reviews: 1100, image: "thumsup.png", category: "beverages", brand: "Thums Up", inStock: true },
+  { id: 49, name: "Sprite Lime Soft Drink 750ml Bottle", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.7, reviews: 650, image: "sprite.png", category: "beverages", brand: "Sprite", inStock: true },
+  { id: 50, name: "Red Bull Energy Drink 250ml Can", weight: "250ml", price: 120, mrp: 125, discount: 4, rating: 4.8, reviews: 780, image: "redbull.png", category: "beverages", brand: "Red Bull", inStock: true },
+  { id: 51, name: "Real Fruit Power Alphonso Mango Juice 1L", weight: "1L", price: 110, mrp: 130, discount: 15, rating: 4.7, reviews: 430, image: "real-mango.png", category: "beverages", brand: "Real", inStock: true },
+  { id: 52, name: "Coca-Cola Zero Sugar Soft Drink 300ml Can", weight: "300ml", price: 40, mrp: 45, discount: 11, rating: 4.6, reviews: 310, image: "coca-cola-zero.png", category: "beverages", brand: "Coca-Cola", inStock: true },
+  { id: 53, name: "Fanta Orange Flavored Soft Drink 750ml", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.5, reviews: 290, image: "fanta.png", category: "beverages", brand: "Fanta", inStock: true },
+  { id: 54, name: "Tropicana 100% Orange Juice 1L Pack", weight: "1L", price: 125, mrp: 145, discount: 14, rating: 4.8, reviews: 520, image: "tropicana-orange.png", category: "beverages", brand: "Tropicana", inStock: true },
+  { id: 55, name: "Nescafe Classic Instant Coffee Jar 100g", weight: "100g", price: 330, mrp: 385, discount: 14, rating: 4.9, reviews: 1420, image: "nescafe-coffee.jpg", category: "beverages", brand: "Nescafe", inStock: true },
+  { id: 56, name: "Red Bull Sugar Free Energy Drink 250ml", weight: "250ml", price: 120, mrp: 125, discount: 4, rating: 4.7, reviews: 240, image: "redbull.png", category: "beverages", brand: "Red Bull", inStock: true },
+  { id: 57, name: "Pepsi Soft Drink 750ml Bottle", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.6, reviews: 610, image: "coca-cola.png", category: "beverages", brand: "Pepsi", inStock: true },
+  { id: 58, name: "Limca Lemon Sparkling Drink 750ml", weight: "750ml", price: 40, mrp: 45, discount: 11, rating: 4.7, reviews: 380, image: "sprite.png", category: "beverages", brand: "Limca", inStock: true },
+  { id: 59, name: "Real Fruit Power Mixed Fruit Juice 1L", weight: "1L", price: 110, mrp: 130, discount: 15, rating: 4.8, reviews: 690, image: "real-mango.png", category: "beverages", brand: "Real", inStock: true },
+  { id: 60, name: "Real Fruit Power Pomegranate Juice 1L", weight: "1L", price: 120, mrp: 140, discount: 14, rating: 4.7, reviews: 340, image: "real-mango.png", category: "beverages", brand: "Real", inStock: true },
+  { id: 61, name: "Maaza Mango Drink 1.2L Family Bottle", weight: "1.2L", price: 65, mrp: 75, discount: 13, rating: 4.9, reviews: 1250, image: "real-mango.png", category: "beverages", brand: "Maaza", inStock: true },
+  { id: 62, name: "Frooti Mango Juice Drink 1L Box", weight: "1L", price: 60, mrp: 70, discount: 14, rating: 4.8, reviews: 890, image: "real-mango.png", category: "beverages", brand: "Frooti", inStock: true },
+  { id: 63, name: "Brooke Bond Red Label Tea Powder 500g", weight: "500g", price: 280, mrp: 330, discount: 15, rating: 4.9, reviews: 1890, image: "coffee-real.jpg", category: "beverages", brand: "Red Label", inStock: true },
+  { id: 64, name: "Tata Tea Gold Assam Premium Tea 500g", weight: "500g", price: 310, mrp: 360, discount: 14, rating: 4.8, reviews: 1340, image: "coffee-real.jpg", category: "beverages", brand: "Tata Tea", inStock: true },
+  { id: 65, name: "Monster Energy Drink Green 350ml Can", weight: "350ml", price: 110, mrp: 125, discount: 12, rating: 4.7, reviews: 560, image: "redbull.png", category: "beverages", brand: "Monster", inStock: true },
+  { id: 66, name: "Appy Fizz Sparkling Apple Juice Drink 600ml", weight: "600ml", price: 35, mrp: 40, discount: 13, rating: 4.6, reviews: 490, image: "apples-real.jpg", category: "beverages", brand: "Appy Fizz", inStock: true },
+  { id: 67, name: "Paper Boat Aamras Mango Juice Drink 200ml", weight: "200ml", price: 30, mrp: 35, discount: 14, rating: 4.9, reviews: 920, image: "real-mango.png", category: "beverages", brand: "Paper Boat", inStock: true },
+  { id: 68, name: "Paper Boat Anardana Juice Drink 200ml", weight: "200ml", price: 30, mrp: 35, discount: 14, rating: 4.7, reviews: 310, image: "real-mango.png", category: "beverages", brand: "Paper Boat", inStock: true },
+  { id: 69, name: "Nescafe Sunrise Instant Coffee Powder 200g Pouch", weight: "200g", price: 380, mrp: 440, discount: 14, rating: 4.8, reviews: 670, image: "nescafe-coffee.jpg", category: "beverages", brand: "Nescafe", inStock: true },
+  { id: 70, name: "Tata Coffee Grand Instant Coffee 50g", weight: "50g", price: 130, mrp: 155, discount: 16, rating: 4.6, reviews: 290, image: "nescafe-coffee.jpg", category: "beverages", brand: "Tata Coffee", inStock: true },
+  { id: 71, name: "Kinley Mineral Soda Water 750ml Bottle", weight: "750ml", price: 20, mrp: 25, discount: 20, rating: 4.8, reviews: 410, image: "coca-cola-real.jpg", category: "beverages", brand: "Kinley", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 4. ATTA, RICE & DAL / STAPLES (catKey: 'staples' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 72, name: "Aashirvaad Whole Wheat Shuddh Chakki Atta 5kg", weight: "5kg", price: 245, mrp: 295, discount: 17, rating: 4.9, reviews: 1650, image: "aashirvaad-atta.jpg", category: "staples", brand: "Aashirvaad", inStock: true },
+  { id: 73, name: "Fortune Sunlite Sunflower Cooking Oil 1L Pouch", weight: "1L", price: 135, mrp: 165, discount: 18, rating: 4.8, reviews: 920, image: "fortune-oil.jpg", category: "staples", brand: "Fortune", inStock: true },
+  { id: 74, name: "Daawat Rozana Super Basmati Rice 5kg", weight: "5kg", price: 385, mrp: 450, discount: 14, rating: 4.8, reviews: 780, image: "atta-real.jpg", category: "staples", brand: "Daawat", inStock: true },
+  { id: 75, name: "Maggi 2-Minute Masala Instant Noodles 420g (Pack of 6)", weight: "420g", price: 84, mrp: 96, discount: 13, rating: 4.9, reviews: 2450, image: "maggi-noodles.jpg", category: "staples", brand: "Maggi", inStock: true },
+  { id: 76, name: "Tata Salt Vacuum Evaporated Iodised Salt 1kg", weight: "1kg", price: 25, mrp: 28, discount: 11, rating: 4.9, reviews: 3100, image: "atta-real.jpg", category: "staples", brand: "Tata Salt", inStock: true },
+  { id: 77, name: "Aashirvaad Whole Wheat Atta 10kg Super Saver Pack", weight: "10kg", price: 470, mrp: 550, discount: 15, rating: 4.9, reviews: 2100, image: "aashirvaad-atta.jpg", category: "staples", brand: "Aashirvaad", inStock: true },
+  { id: 78, name: "India Gate Super Premium Basmati Rice 5kg", weight: "5kg", price: 540, mrp: 650, discount: 17, rating: 4.8, reviews: 1450, image: "atta-real.jpg", category: "staples", brand: "India Gate", inStock: true },
+  { id: 79, name: "Tata Sampann Unpolished Toor / Arhar Dal 1kg", weight: "1kg", price: 165, mrp: 195, discount: 15, rating: 4.8, reviews: 820, image: "atta-real.jpg", category: "staples", brand: "Tata Sampann", inStock: true },
+  { id: 80, name: "Tata Sampann Premium Moong Dal Split 1kg", weight: "1kg", price: 145, mrp: 175, discount: 17, rating: 4.7, reviews: 590, image: "atta-real.jpg", category: "staples", brand: "Tata Sampann", inStock: true },
+  { id: 81, name: "Tata Sampann Unpolished Chana Dal 1kg", weight: "1kg", price: 95, mrp: 115, discount: 17, rating: 4.8, reviews: 670, image: "atta-real.jpg", category: "staples", brand: "Tata Sampann", inStock: true },
+  { id: 82, name: "Maggi Special Masala Noodles 70g (Pack of 4)", weight: "280g", price: 60, mrp: 72, discount: 17, rating: 4.8, reviews: 1120, image: "maggi-noodles.jpg", category: "staples", brand: "Maggi", inStock: true },
+  { id: 83, name: "Yippee! Magic Masala Noodles 240g (Pack of 4)", weight: "240g", price: 48, mrp: 56, discount: 14, rating: 4.6, reviews: 780, image: "maggi-noodles.jpg", category: "staples", brand: "Yippee!", inStock: true },
+  { id: 84, name: "Fortune Kachi Ghani Mustard Oil 1L Bottle", weight: "1L", price: 155, mrp: 185, discount: 16, rating: 4.9, reviews: 1350, image: "oil-real.jpg", category: "staples", brand: "Fortune", inStock: true },
+  { id: 85, name: "Madhur Pure & Hygienic Refined Sugar 1kg", weight: "1kg", price: 52, mrp: 60, discount: 13, rating: 4.9, reviews: 1890, image: "atta-real.jpg", category: "staples", brand: "Madhur", inStock: true },
+  { id: 86, name: "Fortune Premium Refined Soyabean Oil 1L", weight: "1L", price: 125, mrp: 150, discount: 17, rating: 4.7, reviews: 640, image: "oil-real.jpg", category: "staples", brand: "Fortune", inStock: true },
+  { id: 87, name: "Fortune Besan Gram Flour 500g", weight: "500g", price: 55, mrp: 68, discount: 19, rating: 4.8, reviews: 520, image: "atta-real.jpg", category: "staples", brand: "Fortune", inStock: true },
+  { id: 88, name: "Aashirvaad Select Premium Sharbati Atta 5kg", weight: "5kg", price: 310, mrp: 360, discount: 14, rating: 4.9, reviews: 940, image: "aashirvaad-atta.jpg", category: "staples", brand: "Aashirvaad", inStock: true },
+  { id: 89, name: "Daawat Feast Rozana Basmati Rice 1kg", weight: "1kg", price: 85, mrp: 105, discount: 19, rating: 4.7, reviews: 430, image: "atta-real.jpg", category: "staples", brand: "Daawat", inStock: true },
+  { id: 90, name: "Tata Sampann Premium Rajma Red 500g", weight: "500g", price: 90, mrp: 110, discount: 18, rating: 4.8, reviews: 360, image: "atta-real.jpg", category: "staples", brand: "Tata Sampann", inStock: true },
+  { id: 91, name: "Tata Sampann Kabuli Chana Chickpeas 500g", weight: "500g", price: 85, mrp: 105, discount: 19, rating: 4.8, reviews: 410, image: "atta-real.jpg", category: "staples", brand: "Tata Sampann", inStock: true },
+  { id: 92, name: "Organic Tattva Organic White Poha Flakes 500g", weight: "500g", price: 65, mrp: 80, discount: 19, rating: 4.7, reviews: 290, image: "atta-real.jpg", category: "staples", brand: "Organic Tattva", inStock: true },
+  { id: 93, name: "Catch Super Garam Masala Powder 100g", weight: "100g", price: 82, mrp: 98, discount: 16, rating: 4.8, reviews: 510, image: "atta-real.jpg", category: "staples", brand: "Catch", inStock: true },
+  { id: 94, name: "Everest Red Chili Powder Tikhalal 100g", weight: "100g", price: 58, mrp: 68, discount: 15, rating: 4.9, reviews: 890, image: "atta-real.jpg", category: "staples", brand: "Everest", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 5. CHOCOLATES & SWEETS (catKey: 'chocolates' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 95, name: "Cadbury Dairy Milk Silk Chocolate Bar 150g", weight: "150g", price: 165, mrp: 180, discount: 8, rating: 4.9, reviews: 1540, image: "cadbury-silk.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 96, name: "Ferrero Rocher Premium Hazelnut Chocolates ( Pack of 16)", weight: "200g", price: 499, mrp: 599, discount: 17, rating: 4.9, reviews: 920, image: "silk-real.jpg", category: "chocolates", brand: "Ferrero", inStock: true },
+  { id: 97, name: "KitKat 4-Finger Crisp Wafer Chocolate 38.5g", weight: "38.5g", price: 30, mrp: 35, discount: 14, rating: 4.8, reviews: 830, image: "fest-chocolates.jpg", category: "chocolates", brand: "KitKat", inStock: true },
+  { id: 98, name: "Nutella Hazelnut Cocoa Spread 350g Jar", weight: "350g", price: 360, mrp: 410, discount: 12, rating: 4.9, reviews: 1240, image: "silk-real.jpg", category: "chocolates", brand: "Nutella", inStock: true },
+  { id: 99, name: "Cadbury Dairy Milk Silk Fruit & Nut 137g", weight: "137g", price: 165, mrp: 180, discount: 8, rating: 4.9, reviews: 870, image: "cadbury-silk.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 100, name: "Cadbury Dairy Milk Silk Roast Almond 143g", weight: "143g", price: 165, mrp: 180, discount: 8, rating: 4.8, reviews: 760, image: "cadbury-silk.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 101, name: "Cadbury Celebrations Gift Pack 177g", weight: "177g", price: 135, mrp: 150, discount: 10, rating: 4.9, reviews: 1430, image: "fest-chocolates.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 102, name: "Amul Dark Chocolate 55% Cocoa Bar 150g", weight: "150g", price: 110, mrp: 125, discount: 12, rating: 4.7, reviews: 420, image: "silk-real.jpg", category: "chocolates", brand: "Amul", inStock: true },
+  { id: 103, name: "Amul Single Origin Dark Chocolate 75% 150g", weight: "150g", price: 130, mrp: 150, discount: 13, rating: 4.8, reviews: 310, image: "silk-real.jpg", category: "chocolates", brand: "Amul", inStock: true },
+  { id: 104, name: "Snickers Peanut Chocolate Bar 50g", weight: "50g", price: 40, mrp: 50, discount: 20, rating: 4.8, reviews: 920, image: "silk-real.jpg", category: "chocolates", brand: "Snickers", inStock: true },
+  { id: 105, name: "M&M's Milk Chocolate Candies 45g", weight: "45g", price: 45, mrp: 55, discount: 18, rating: 4.7, reviews: 360, image: "fest-chocolates.jpg", category: "chocolates", brand: "M&M's", inStock: true },
+  { id: 106, name: "Cadbury 5 Star Crunchy Bar 35g", weight: "35g", price: 20, mrp: 25, discount: 20, rating: 4.7, reviews: 640, image: "cadbury-silk.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 107, name: "Cadbury Perk Chocolate Wafer Bar 28g", weight: "28g", price: 10, mrp: 12, discount: 17, rating: 4.6, reviews: 810, image: "fest-chocolates.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 108, name: "Nestle Munch Crisp Wafer Bar 22g", weight: "22g", price: 10, mrp: 12, discount: 17, rating: 4.7, reviews: 750, image: "fest-chocolates.jpg", category: "chocolates", brand: "Nestle", inStock: true },
+  { id: 109, name: "Ferrero Rocher T3 Pack of 3 Chocolates 37.5g", weight: "37.5g", price: 110, mrp: 125, discount: 12, rating: 4.9, reviews: 890, image: "silk-real.jpg", category: "chocolates", brand: "Ferrero", inStock: true },
+  { id: 110, name: "Kinder Joy Milk & Cocoa Chocolate Toy 20g", weight: "20g", price: 45, mrp: 50, discount: 10, rating: 4.8, reviews: 1100, image: "fest-chocolates.jpg", category: "chocolates", brand: "Kinder", inStock: true },
+  { id: 111, name: "Cadbury Bournville 50% Dark Chocolate 80g", weight: "80g", price: 105, mrp: 120, discount: 12, rating: 4.7, reviews: 430, image: "silk-real.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 112, name: "Toblerone Milk Chocolate Honey Almond Nougat 100g", weight: "100g", price: 165, mrp: 195, discount: 15, rating: 4.9, reviews: 520, image: "silk-real.jpg", category: "chocolates", brand: "Toblerone", inStock: true },
+  { id: 113, name: "Haldiram's Gulab Jamun Sweet Tin 1kg", weight: "1kg", price: 220, mrp: 260, discount: 15, rating: 4.9, reviews: 1450, image: "fest-mithai.jpg", category: "chocolates", brand: "Haldiram's", inStock: true },
+  { id: 114, name: "Haldiram's Rasgulla Sweet Tin 1kg", weight: "1kg", price: 210, mrp: 250, discount: 16, rating: 4.8, reviews: 1210, image: "fest-mithai.jpg", category: "chocolates", brand: "Haldiram's", inStock: true },
+  { id: 115, name: "Cadbury Gems Surprise Ball 16g", weight: "16g", price: 25, mrp: 30, discount: 17, rating: 4.6, reviews: 420, image: "fest-chocolates.jpg", category: "chocolates", brand: "Cadbury", inStock: true },
+  { id: 116, name: "Hershey's Kisses Milk Chocolates 33.6g", weight: "33.6g", price: 55, mrp: 65, discount: 15, rating: 4.8, reviews: 380, image: "silk-real.jpg", category: "chocolates", brand: "Hershey's", inStock: true },
+  { id: 117, name: "Hershey's Chocolate Syrup Bottle 623g", weight: "623g", price: 235, mrp: 270, discount: 13, rating: 4.9, reviews: 890, image: "silk-real.jpg", category: "chocolates", brand: "Hershey's", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. PERSONAL CARE & HYGIENE (catKey: 'personal-care' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 118, name: "Dettol Original Germ Protection Liquid Handwash 250ml", weight: "250ml", price: 95, mrp: 110, discount: 14, rating: 4.9, reviews: 1420, image: "dettol-handwash.jpg", category: "personal-care", brand: "Dettol", inStock: true },
+  { id: 119, name: "Head & Shoulders Smooth & Silky Anti-Dandruff Shampoo 340ml", weight: "340ml", price: 285, mrp: 340, discount: 16, rating: 4.8, reviews: 890, image: "dettol-real.jpg", category: "personal-care", brand: "Head & Shoulders", inStock: true },
+  { id: 120, name: "Dove Cream Beauty Bathing Soap Bar 125g (Pack of 3)", weight: "375g", price: 185, mrp: 215, discount: 14, rating: 4.9, reviews: 1120, image: "fest-sister.jpg", category: "personal-care", brand: "Dove", inStock: true },
+  { id: 121, name: "Colgate Strong Teeth Toothpaste 500g Saver Combo", weight: "500g", price: 235, mrp: 275, discount: 15, rating: 4.9, reviews: 2340, image: "dettol-real.jpg", category: "personal-care", brand: "Colgate", inStock: true },
+  { id: 122, name: "Nivea Soft Light Moisturizing Cream 200ml", weight: "200ml", price: 299, mrp: 360, discount: 17, rating: 4.8, reviews: 760, image: "fest-sister.jpg", category: "personal-care", brand: "Nivea", inStock: true },
+  { id: 123, name: "Dettol Skincare Antiseptic Liquid Handwash 750ml Refill", weight: "750ml", price: 145, mrp: 170, discount: 15, rating: 4.9, reviews: 1890, image: "dettol-handwash.jpg", category: "personal-care", brand: "Dettol", inStock: true },
+  { id: 124, name: "Pears Pure & Gentle Bathing Soap 125g (Pack of 3)", weight: "375g", price: 195, mrp: 225, discount: 13, rating: 4.8, reviews: 640, image: "fest-sister.jpg", category: "personal-care", brand: "Pears", inStock: true },
+  { id: 125, name: "Pantene Hairfall Control Shampoo 340ml", weight: "340ml", price: 270, mrp: 320, discount: 16, rating: 4.7, reviews: 520, image: "dettol-real.jpg", category: "personal-care", brand: "Pantene", inStock: true },
+  { id: 126, name: "Colgate MaxFresh Red Gel Toothpaste 150g", weight: "150g", price: 110, mrp: 130, discount: 15, rating: 4.8, reviews: 1290, image: "dettol-real.jpg", category: "personal-care", brand: "Colgate", inStock: true },
+  { id: 127, name: "Sensodyne Rapid Relief Toothpaste 80g", weight: "80g", price: 195, mrp: 220, discount: 11, rating: 4.9, reviews: 840, image: "dettol-real.jpg", category: "personal-care", brand: "Sensodyne", inStock: true },
+  { id: 128, name: "Gillette Mach3 Turbo Razor + 2 Cartridges", weight: "1 Kit", price: 349, mrp: 425, discount: 18, rating: 4.8, reviews: 950, image: "dettol-real.jpg", category: "personal-care", brand: "Gillette", inStock: true },
+  { id: 129, name: "Gillette Foam Sensitive Shaving Cream 245g", weight: "245g", price: 210, mrp: 250, discount: 16, rating: 4.8, reviews: 610, image: "dettol-real.jpg", category: "personal-care", brand: "Gillette", inStock: true },
+  { id: 130, name: "Vaseline Intensive Care Cocoa Glow Body Lotion 400ml", weight: "400ml", price: 340, mrp: 425, discount: 20, rating: 4.9, reviews: 1140, image: "fest-sister.jpg", category: "personal-care", brand: "Vaseline", inStock: true },
+  { id: 131, name: "L'Oreal Paris Total Repair 5 Shampoo 340ml", weight: "340ml", price: 299, mrp: 350, discount: 15, rating: 4.8, reviews: 480, image: "fest-sister.jpg", category: "personal-care", brand: "L'Oreal", inStock: true },
+  { id: 132, name: "Himalaya Purifying Neem Face Wash 150ml", weight: "150ml", price: 175, mrp: 210, discount: 17, rating: 4.8, reviews: 1950, image: "fest-sister.jpg", category: "personal-care", brand: "Himalaya", inStock: true },
+  { id: 133, name: "Garnier Skin Naturals Micellar Cleansing Water 125ml", weight: "125ml", price: 195, mrp: 249, discount: 22, rating: 4.8, reviews: 520, image: "fest-sister.jpg", category: "personal-care", brand: "Garnier", inStock: true },
+  { id: 134, name: "Wild Stone Code Titanium Body Spray Deodorant 150ml", weight: "150ml", price: 220, mrp: 275, discount: 20, rating: 4.7, reviews: 630, image: "dettol-real.jpg", category: "personal-care", brand: "Wild Stone", inStock: true },
+  { id: 135, name: "Fogg Impressio Scent Perfume for Men 100ml", weight: "100ml", price: 395, mrp: 500, discount: 21, rating: 4.8, reviews: 890, image: "dettol-real.jpg", category: "personal-care", brand: "Fogg", inStock: true },
+  { id: 136, name: "Stayfree Secure Cottony Soft Sanitary Pads 28s", weight: "Pack of 28", price: 175, mrp: 210, discount: 17, rating: 4.9, reviews: 1450, image: "fest-sister.jpg", category: "personal-care", brand: "Stayfree", inStock: true },
+  { id: 137, name: "Whisper Choice Ultra Sanitary Pads 20s", weight: "Pack of 20", price: 135, mrp: 160, discount: 16, rating: 4.8, reviews: 1120, image: "fest-sister.jpg", category: "personal-care", brand: "Whisper", inStock: true },
+  { id: 138, name: "Biotique Bio Kelp Protein Shampoo 340ml", weight: "340ml", price: 210, mrp: 299, discount: 30, rating: 4.6, reviews: 340, image: "fest-sister.jpg", category: "personal-care", brand: "Biotique", inStock: true },
+  { id: 139, name: "Dettol Antiseptic Liquid Disinfectant 550ml", weight: "550ml", price: 215, mrp: 245, discount: 12, rating: 4.9, reviews: 1780, image: "dettol-handwash.jpg", category: "personal-care", brand: "Dettol", inStock: true },
+  { id: 140, name: "Savlon Antiseptic Disinfectant Liquid 1L Saver", weight: "1L", price: 280, mrp: 330, discount: 15, rating: 4.9, reviews: 890, image: "dettol-handwash.jpg", category: "personal-care", brand: "Savlon", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. HOUSEHOLD ESSENTIALS (catKey: 'household' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 141, name: "Surf Excel Easy Wash Detergent Powder 1kg", weight: "1kg", price: 140, mrp: 160, discount: 13, rating: 4.9, reviews: 1890, image: "surf-excel.jpg", category: "household", brand: "Surf Excel", inStock: true },
+  { id: 142, name: "Vim Lemon Dishwash Gel Bottle 500ml", weight: "500ml", price: 110, mrp: 125, discount: 12, rating: 4.8, reviews: 1450, image: "surf-real.jpg", category: "household", brand: "Vim", inStock: true },
+  { id: 143, name: "Harpic Powerplus Toilet Cleaner Liquid 1L (Buy 1 Get 1)", weight: "1L", price: 195, mrp: 230, discount: 15, rating: 4.9, reviews: 2100, image: "surf-real.jpg", category: "household", brand: "Harpic", inStock: true },
+  { id: 144, name: "Surf Excel Matic Front Load Liquid Detergent 1L", weight: "1L", price: 235, mrp: 270, discount: 13, rating: 4.9, reviews: 940, image: "surf-excel.jpg", category: "household", brand: "Surf Excel", inStock: true },
+  { id: 145, name: "Ariel Matic Top Load Washing Powder 2kg", weight: "2kg", price: 440, mrp: 520, discount: 15, rating: 4.8, reviews: 780, image: "surf-excel.jpg", category: "household", brand: "Ariel", inStock: true },
+  { id: 146, name: "Lizol Disinfectant Surface Floor Cleaner Citrus 1L", weight: "1L", price: 210, mrp: 245, discount: 14, rating: 4.9, reviews: 1650, image: "surf-real.jpg", category: "household", brand: "Lizol", inStock: true },
+  { id: 147, name: "Colin Glass & Surface Cleaner Spray 500ml", weight: "500ml", price: 105, mrp: 120, discount: 13, rating: 4.8, reviews: 890, image: "surf-real.jpg", category: "household", brand: "Colin", inStock: true },
+  { id: 148, name: "Comfort After Wash Fabric Conditioner Blue 860ml", weight: "860ml", price: 225, mrp: 265, discount: 15, rating: 4.9, reviews: 1320, image: "surf-excel.jpg", category: "household", brand: "Comfort", inStock: true },
+  { id: 149, name: "Pril Kraft Dishwash Liquid Lime 425ml", weight: "425ml", price: 99, mrp: 115, discount: 14, rating: 4.7, reviews: 420, image: "surf-real.jpg", category: "household", brand: "Pril", inStock: true },
+  { id: 150, name: "Godrej aer Pocket Bathroom Air Freshener Pack of 3", weight: "3x10g", price: 165, mrp: 195, discount: 15, rating: 4.8, reviews: 1100, image: "surf-real.jpg", category: "household", brand: "Godrej aer", inStock: true },
+  { id: 151, name: "Odonil Bathroom Air Freshener Zipper Pack of 4", weight: "4x10g", price: 180, mrp: 220, discount: 18, rating: 4.7, reviews: 840, image: "surf-real.jpg", category: "household", brand: "Odonil", inStock: true },
+  { id: 152, name: "Tide Plus Extra Power Detergent Powder 2kg", weight: "2kg", price: 260, mrp: 300, discount: 13, rating: 4.7, reviews: 920, image: "surf-excel.jpg", category: "household", brand: "Tide", inStock: true },
+  { id: 153, name: "Rin Advanced Detergent Bar 250g (Pack of 4)", weight: "1kg", price: 90, mrp: 100, discount: 10, rating: 4.8, reviews: 740, image: "surf-excel.jpg", category: "household", brand: "Rin", inStock: true },
+  { id: 154, name: "Scotch-Brite Sponge Scrub Pad Pack of 3", weight: "3 Units", price: 75, mrp: 90, discount: 17, rating: 4.9, reviews: 1890, image: "surf-real.jpg", category: "household", brand: "Scotch-Brite", inStock: true },
+  { id: 155, name: "Goodknight Gold Flash Mosquito Vaporizer Machine + Refill", weight: "45ml", price: 115, mrp: 135, discount: 15, rating: 4.8, reviews: 1450, image: "surf-real.jpg", category: "household", brand: "Goodknight", inStock: true },
+  { id: 156, name: "All Out Ultra Power Slider Mosquito Refill 45ml (Pack of 2)", weight: "90ml", price: 155, mrp: 180, discount: 14, rating: 4.8, reviews: 1120, image: "surf-real.jpg", category: "household", brand: "All Out", inStock: true },
+  { id: 157, name: "Hit Black Mosquito & Fly Killer Spray 400ml", weight: "400ml", price: 230, mrp: 270, discount: 15, rating: 4.9, reviews: 980, image: "surf-real.jpg", category: "household", brand: "Hit", inStock: true },
+  { id: 158, name: "Hit Red Cockroach Killer Spray with Deep Reach Nozzle 400ml", weight: "400ml", price: 240, mrp: 280, discount: 14, rating: 4.9, reviews: 1340, image: "surf-real.jpg", category: "household", brand: "Hit", inStock: true },
+  { id: 159, name: "Origami 2-Ply Kitchen Towel Rolls Pack of 2", weight: "2 Rolls", price: 120, mrp: 150, discount: 20, rating: 4.8, reviews: 620, image: "surf-real.jpg", category: "household", brand: "Origami", inStock: true },
+  { id: 160, name: "Origami 2-Ply Soft Facial Tissue Box 200 Pulls", weight: "200 Pulls", price: 135, mrp: 165, discount: 18, rating: 4.8, reviews: 540, image: "surf-real.jpg", category: "household", brand: "Origami", inStock: true },
+  { id: 161, name: "Garbage Bags Black Medium 19x21 Inches (30 Bags)", weight: "30 Bags", price: 99, mrp: 130, discount: 24, rating: 4.7, reviews: 890, image: "surf-real.jpg", category: "household", brand: "Grabit Home", inStock: true },
+  { id: 162, name: "Gala Super Broom Dust Free Floor Cleaning Broom", weight: "1 Unit", price: 175, mrp: 220, discount: 20, rating: 4.8, reviews: 780, image: "surf-real.jpg", category: "household", brand: "Gala", inStock: true },
+  { id: 163, name: "Gala Spin Mop set with Bucket & 2 Microfiber Refills", weight: "1 Set", price: 1199, mrp: 1599, discount: 25, rating: 4.9, reviews: 1420, image: "surf-real.jpg", category: "household", brand: "Gala", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. FRESH FRUITS & VEGGIES / PRODUCE (catKey: 'produce' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 164, name: "Fresh Premium Royal Gala Red Apples 4 Pcs", weight: "4 Pcs (~500g)", price: 149, mrp: 180, discount: 17, rating: 4.8, reviews: 610, image: "fresh-red-apples.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 165, name: "Fresh Robusta Bananas 1 kg", weight: "1 kg", price: 49, mrp: 65, discount: 25, rating: 4.9, reviews: 1420, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 166, name: "Fresh Hybrid Tomatoes 1 kg", weight: "1 kg", price: 32, mrp: 45, discount: 29, rating: 4.7, reviews: 1890, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 167, name: "Fresh Broccoli 250g", weight: "250g", price: 45, mrp: 60, discount: 25, rating: 4.8, reviews: 340, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 168, name: "Fresh Farm Onions 1 kg", weight: "1 kg", price: 28, mrp: 40, discount: 30, rating: 4.8, reviews: 2450, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 169, name: "Fresh New Crop Potatoes 1 kg", weight: "1 kg", price: 25, mrp: 35, discount: 29, rating: 4.9, reviews: 2900, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 170, name: "Fresh Sweet Shimla Capsicum Green 250g", weight: "250g", price: 28, mrp: 40, discount: 30, rating: 4.7, reviews: 520, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 171, name: "Fresh Nagpur Orange 1 kg", weight: "1 kg", price: 95, mrp: 130, discount: 27, rating: 4.8, reviews: 430, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 172, name: "Fresh Pomegranate Anar 500g", weight: "500g", price: 125, mrp: 160, discount: 22, rating: 4.8, reviews: 670, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 173, name: "Fresh Green Seedless Grapes 500g", weight: "500g", price: 85, mrp: 120, discount: 29, rating: 4.7, reviews: 590, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 174, name: "Fresh Kiwi Green Box 3 Pcs", weight: "3 Pcs", price: 99, mrp: 140, discount: 29, rating: 4.8, reviews: 310, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 175, name: "Fresh Tender Coconut Water 1 Pc", weight: "1 Pc", price: 55, mrp: 70, discount: 21, rating: 4.9, reviews: 1890, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 176, name: "Fresh Papaya Semi-Ripe 1 Pc (~1 kg)", weight: "1 Pc", price: 58, mrp: 80, discount: 27, rating: 4.6, reviews: 410, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 177, name: "Fresh Watermelon Whole 1 Pc (~2.5 kg)", weight: "1 Pc", price: 89, mrp: 120, discount: 26, rating: 4.8, reviews: 780, image: "apples-real.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 178, name: "Fresh Palak Spinach Bundle 250g", weight: "250g", price: 18, mrp: 25, discount: 28, rating: 4.8, reviews: 920, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 179, name: "Fresh Coriander Dhania Leaves 100g", weight: "100g", price: 12, mrp: 18, discount: 33, rating: 4.9, reviews: 1450, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 180, name: "Fresh Green Chilies Hari Mirch 100g", weight: "100g", price: 14, mrp: 20, discount: 30, rating: 4.8, reviews: 1120, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 181, name: "Fresh Ginger Adrak 250g", weight: "250g", price: 35, mrp: 50, discount: 30, rating: 4.7, reviews: 640, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 182, name: "Fresh Garlic Lahsun 250g", weight: "250g", price: 65, mrp: 90, discount: 28, rating: 4.8, reviews: 710, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 183, name: "Fresh Lemon Nimbu 250g (~6-8 Pcs)", weight: "250g", price: 30, mrp: 45, discount: 33, rating: 4.9, reviews: 1340, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 184, name: "Fresh Cucumber Kheera 500g", weight: "500g", price: 25, mrp: 35, discount: 29, rating: 4.7, reviews: 480, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 185, name: "Fresh Carrots Gajar 500g", weight: "500g", price: 35, mrp: 50, discount: 30, rating: 4.8, reviews: 590, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+  { id: 186, name: "Fresh Cauliflower Phool Gobhi 1 Pc (~500g)", weight: "1 Pc", price: 32, mrp: 45, discount: 29, rating: 4.8, reviews: 670, image: "fresh-produce-hero-green.jpg", category: "produce", brand: "Grabit Fresh", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 9. BISCUITS & COOKIES (catKey: 'biscuits' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 187, name: "Oreo Original Chocolate Cream Biscuit 120g", weight: "120g", price: 35, mrp: 40, discount: 13, rating: 4.8, reviews: 920, image: "oreo-biscuits.jpg", category: "biscuits", brand: "Oreo", inStock: true },
+  { id: 188, name: "Parle-G Original Glucose Biscuits 800g Family Pack", weight: "800g", price: 85, mrp: 95, discount: 11, rating: 4.9, reviews: 3100, image: "oreo-real.jpg", category: "biscuits", brand: "Parle", inStock: true },
+  { id: 189, name: "Parle Hide & Seek Chocolate Chip Cookies 200g", weight: "200g", price: 50, mrp: 60, discount: 17, rating: 4.8, reviews: 1420, image: "oreo-real.jpg", category: "biscuits", brand: "Parle", inStock: true },
+  { id: 190, name: "Britannia Bourbon Chocolate Cream Biscuits 150g", weight: "150g", price: 35, mrp: 40, discount: 13, rating: 4.8, reviews: 1150, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 191, name: "Britannia Good Day Cashew Biscuits 200g", weight: "200g", price: 45, mrp: 55, discount: 18, rating: 4.9, reviews: 1680, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 192, name: "Sunfeast Dark Fantasy Choco Fills Cookies 300g", weight: "300g", price: 140, mrp: 170, discount: 18, rating: 4.9, reviews: 2150, image: "oreo-real.jpg", category: "biscuits", brand: "Sunfeast", inStock: true },
+  { id: 193, name: "Britannia Good Day Butter Biscuits 200g", weight: "200g", price: 40, mrp: 50, discount: 20, rating: 4.8, reviews: 1340, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 194, name: "Britannia Marie Gold Biscuit 300g", weight: "300g", price: 45, mrp: 50, discount: 10, rating: 4.8, reviews: 1890, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 195, name: "Sunfeast Mom's Magic Cashew & Almond Cookies 200g", weight: "200g", price: 50, mrp: 60, discount: 17, rating: 4.8, reviews: 890, image: "oreo-real.jpg", category: "biscuits", brand: "Sunfeast", inStock: true },
+  { id: 196, name: "Oreo Vanilla Cream Biscuits 120g", weight: "120g", price: 35, mrp: 40, discount: 13, rating: 4.7, reviews: 620, image: "oreo-biscuits.jpg", category: "biscuits", brand: "Oreo", inStock: true },
+  { id: 197, name: "Oreo Strawberry Cream Biscuits 120g", weight: "120g", price: 35, mrp: 40, discount: 13, rating: 4.6, reviews: 410, image: "oreo-biscuits.jpg", category: "biscuits", brand: "Oreo", inStock: true },
+  { id: 198, name: "Britannia Little Hearts Biscuits 75g", weight: "75g", price: 20, mrp: 25, discount: 20, rating: 4.9, reviews: 1780, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 199, name: "Britannia NutriChoice Digestive Biscuits 250g", weight: "250g", price: 65, mrp: 75, discount: 13, rating: 4.8, reviews: 940, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 200, name: "Britannia NutriChoice Oats & Milk Cookies 150g", weight: "150g", price: 55, mrp: 65, discount: 15, rating: 4.7, reviews: 430, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 201, name: "Sunfeast Dark Fantasy Vanilla Fills 100g", weight: "100g", price: 50, mrp: 60, discount: 17, rating: 4.8, reviews: 520, image: "oreo-real.jpg", category: "biscuits", brand: "Sunfeast", inStock: true },
+  { id: 202, name: "Parle Monaco Salted Biscuit 200g", weight: "200g", price: 30, mrp: 35, discount: 14, rating: 4.8, reviews: 1120, image: "oreo-real.jpg", category: "biscuits", brand: "Parle", inStock: true },
+  { id: 203, name: "Parle Krackjack Sweet & Salty Biscuit 200g", weight: "200g", price: 30, mrp: 35, discount: 14, rating: 4.8, reviews: 980, image: "oreo-real.jpg", category: "biscuits", brand: "Parle", inStock: true },
+  { id: 204, name: "Parle 20-20 Butter Cookies 200g", weight: "200g", price: 35, mrp: 40, discount: 13, rating: 4.7, reviews: 670, image: "oreo-real.jpg", category: "biscuits", brand: "Parle", inStock: true },
+  { id: 205, name: "Unibic Choco Chip Cookies 150g", weight: "150g", price: 60, mrp: 75, discount: 20, rating: 4.8, reviews: 710, image: "oreo-real.jpg", category: "biscuits", brand: "Unibic", inStock: true },
+  { id: 206, name: "Unibic Butter Cookies 150g", weight: "150g", price: 60, mrp: 75, discount: 20, rating: 4.7, reviews: 490, image: "oreo-real.jpg", category: "biscuits", brand: "Unibic", inStock: true },
+  { id: 207, name: "Unibic Fruit & Nut Cookies 150g", weight: "150g", price: 65, mrp: 80, discount: 19, rating: 4.8, reviews: 560, image: "oreo-real.jpg", category: "biscuits", brand: "Unibic", inStock: true },
+  { id: 208, name: "Britannia Milk Bikis Biscuits 200g", weight: "200g", price: 35, mrp: 40, discount: 13, rating: 4.8, reviews: 1450, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+  { id: 209, name: "Britannia 50-50 Sweet & Salty Biscuits 200g", weight: "200g", price: 35, mrp: 40, discount: 13, rating: 4.7, reviews: 890, image: "oreo-real.jpg", category: "biscuits", brand: "Britannia", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 10. EDIBLE OILS & GHEE (catKey: 'oil' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 210, name: "Fortune Sunlite Refined Sunflower Oil 1L Pouch", weight: "1L", price: 135, mrp: 165, discount: 18, rating: 4.8, reviews: 1250, image: "fortune-oil.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 211, name: "Fortune Kachi Ghani Pure Mustard Oil 1L Bottle", weight: "1L", price: 155, mrp: 185, discount: 16, rating: 4.9, reviews: 1680, image: "oil-real.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 212, name: "Amul Pure Cow Ghee 1L Tin", weight: "1L", price: 580, mrp: 650, discount: 11, rating: 4.9, reviews: 2450, image: "oil-real.jpg", category: "oil", brand: "Amul", inStock: true },
+  { id: 213, name: "Saffola Gold Pro Healthy Refined Oil 1L", weight: "1L", price: 165, mrp: 195, discount: 15, rating: 4.8, reviews: 920, image: "fortune-oil.jpg", category: "oil", brand: "Saffola", inStock: true },
+  { id: 214, name: "Saffola Tasty Blend Cooking Oil 1L", weight: "1L", price: 145, mrp: 175, discount: 17, rating: 4.7, reviews: 640, image: "fortune-oil.jpg", category: "oil", brand: "Saffola", inStock: true },
+  { id: 215, name: "Saffola Total Pro Heart Oil 1L Pouch", weight: "1L", price: 185, mrp: 220, discount: 16, rating: 4.9, reviews: 810, image: "fortune-oil.jpg", category: "oil", brand: "Saffola", inStock: true },
+  { id: 216, name: "Fortune Sunlite Refined Sunflower Oil 5L Can", weight: "5L", price: 685, mrp: 825, discount: 17, rating: 4.9, reviews: 1890, image: "fortune-oil.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 217, name: "Fortune Premium Kachi Ghani Mustard Oil 5L Can", weight: "5L", price: 765, mrp: 915, discount: 16, rating: 4.9, reviews: 1450, image: "oil-real.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 218, name: "Mother Dairy Pure Cow Ghee 1L Carton", weight: "1L", price: 560, mrp: 630, discount: 11, rating: 4.8, reviews: 980, image: "oil-real.jpg", category: "oil", brand: "Mother Dairy", inStock: true },
+  { id: 219, name: "Dhara Mustard Oil 1L Pouch", weight: "1L", price: 148, mrp: 175, discount: 15, rating: 4.7, reviews: 620, image: "oil-real.jpg", category: "oil", brand: "Dhara", inStock: true },
+  { id: 220, name: "Dhara Refined Sunflower Oil 1L Pouch", weight: "1L", price: 130, mrp: 155, discount: 16, rating: 4.7, reviews: 510, image: "fortune-oil.jpg", category: "oil", brand: "Dhara", inStock: true },
+  { id: 221, name: "Ananda Pure Cow Ghee 500ml", weight: "500ml", price: 290, mrp: 330, discount: 12, rating: 4.8, reviews: 340, image: "oil-real.jpg", category: "oil", brand: "Ananda", inStock: true },
+  { id: 222, name: "Gowardhan Pure Cow Ghee 1L Jar", weight: "1L", price: 595, mrp: 675, discount: 12, rating: 4.9, reviews: 1120, image: "oil-real.jpg", category: "oil", brand: "Gowardhan", inStock: true },
+  { id: 223, name: "Borges Extra Virgin Olive Oil 500ml Glass Bottle", weight: "500ml", price: 549, mrp: 750, discount: 27, rating: 4.9, reviews: 890, image: "oil-real.jpg", category: "oil", brand: "Borges", inStock: true },
+  { id: 224, name: "Borges Extra Light Olive Oil 1L", weight: "1L", price: 899, mrp: 1250, discount: 28, rating: 4.8, reviews: 620, image: "oil-real.jpg", category: "oil", brand: "Borges", inStock: true },
+  { id: 225, name: "Figaro Extra Virgin Olive Oil 500ml", weight: "500ml", price: 520, mrp: 699, discount: 26, rating: 4.8, reviews: 740, image: "oil-real.jpg", category: "oil", brand: "Figaro", inStock: true },
+  { id: 226, name: "Disano Extra Virgin Olive Oil 500ml", weight: "500ml", price: 449, mrp: 649, discount: 31, rating: 4.7, reviews: 510, image: "oil-real.jpg", category: "oil", brand: "Disano", inStock: true },
+  { id: 227, name: "Fortune Rice Bran Health Oil 1L", weight: "1L", price: 140, mrp: 170, discount: 18, rating: 4.8, reviews: 670, image: "fortune-oil.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 228, name: "Fortune Groundnut Filtered Oil 1L", weight: "1L", price: 180, mrp: 215, discount: 16, rating: 4.7, reviews: 390, image: "oil-real.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 229, name: "Fortune Til Sesame Cooking Oil 500ml", weight: "500ml", price: 160, mrp: 195, discount: 18, rating: 4.8, reviews: 280, image: "oil-real.jpg", category: "oil", brand: "Fortune", inStock: true },
+  { id: 230, name: "KLF Coconad 100% Pure Coconut Oil 500ml", weight: "500ml", price: 145, mrp: 175, discount: 17, rating: 4.9, reviews: 890, image: "oil-real.jpg", category: "oil", brand: "KLF", inStock: true },
+  { id: 231, name: "Parachute 100% Pure Edible Coconut Oil 500ml", weight: "500ml", price: 155, mrp: 180, discount: 14, rating: 4.9, reviews: 1650, image: "oil-real.jpg", category: "oil", brand: "Parachute", inStock: true },
+  { id: 232, name: "Patanjali Cow Ghee 1L Pack", weight: "1L", price: 570, mrp: 630, discount: 10, rating: 4.7, reviews: 1100, image: "oil-real.jpg", category: "oil", brand: "Patanjali", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 11. ELECTRONICS & GADGETS (catKey: 'electronics' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 233, name: "Sony WH-CH520 Wireless On-Ear Headphones 50H Battery", weight: "1 Unit", price: 3990, mrp: 4990, discount: 20, rating: 4.8, reviews: 1420, image: "p1.jpg", category: "electronics", brand: "Sony", inStock: true },
+  { id: 234, name: "JBL Go 3 Ultra Portable Waterproof Bluetooth Speaker", weight: "1 Unit", price: 2499, mrp: 3999, discount: 38, rating: 4.9, reviews: 2150, image: "p2.jpg", category: "electronics", brand: "JBL", inStock: true },
+  { id: 235, name: "boAt Wave Call 2 Smartwatch with Bluetooth Calling 1.83\"", weight: "1 Unit", price: 1299, mrp: 4990, discount: 74, rating: 4.7, reviews: 3450, image: "p3.jpg", category: "electronics", brand: "boAt", inStock: true },
+  { id: 236, name: "Rode Wireless GO II Dual Channel Microphone System", weight: "1 Kit", price: 24990, mrp: 29990, discount: 17, rating: 4.9, reviews: 680, image: "p4.jpg", category: "electronics", brand: "Rode", inStock: true },
+  { id: 237, name: "Sony Extra Bass Portable Wireless Speaker SRS-XB13", weight: "1 Unit", price: 3490, mrp: 4990, discount: 30, rating: 4.8, reviews: 1120, image: "p2.jpg", category: "electronics", brand: "Sony", inStock: true },
+  { id: 238, name: "boAt Airdopes 141 TWS Earbuds with 42H Playtime", weight: "1 Unit", price: 999, mrp: 2990, discount: 67, rating: 4.6, reviews: 5600, image: "p1.jpg", category: "electronics", brand: "boAt", inStock: true },
+  { id: 239, name: "Noise ColorFit Pulse 2 Max Smartwatch 1.85\" Display", weight: "1 Unit", price: 1499, mrp: 5999, discount: 75, rating: 4.7, reviews: 2890, image: "p3.jpg", category: "electronics", brand: "Noise", inStock: true },
+  { id: 240, name: "Realme Buds T300 TWS with 30dB ANC & Spatial Audio", weight: "1 Unit", price: 2199, mrp: 3999, discount: 45, rating: 4.8, reviews: 1890, image: "p1.jpg", category: "electronics", brand: "Realme", inStock: true },
+  { id: 241, name: "OnePlus Nord Buds 2 TWS Earbuds with 25dB ANC", weight: "1 Unit", price: 2799, mrp: 3299, discount: 15, rating: 4.8, reviews: 2100, image: "p1.jpg", category: "electronics", brand: "OnePlus", inStock: true },
+  { id: 242, name: "JBL Flip 6 Wireless Portable Bluetooth Speaker 20W", weight: "1 Unit", price: 8999, mrp: 13999, discount: 36, rating: 4.9, reviews: 1450, image: "p2.jpg", category: "electronics", brand: "JBL", inStock: true },
+  { id: 243, name: "Fire-Boltt Ninja Call Pro Plus 1.83\" Smartwatch", weight: "1 Unit", price: 1199, mrp: 9999, discount: 88, rating: 4.5, reviews: 4200, image: "p3.jpg", category: "electronics", brand: "Fire-Boltt", inStock: true },
+  { id: 244, name: "Fastrack Limitless FS1 Smartwatch 1.95\" Horizon Display", weight: "1 Unit", price: 1695, mrp: 3995, discount: 58, rating: 4.7, reviews: 1120, image: "p3.jpg", category: "electronics", brand: "Fastrack", inStock: true },
+  { id: 245, name: "Mi Power Bank 3i 20000mAh 18W Fast Charging", weight: "1 Unit", price: 1899, mrp: 2499, discount: 24, rating: 4.8, reviews: 3450, image: "p4.jpg", category: "electronics", brand: "Xiaomi", inStock: true },
+  { id: 246, name: "Ambrane 10000mAh Slim Power Bank 12W Fast Charge", weight: "1 Unit", price: 799, mrp: 1499, discount: 47, rating: 4.6, reviews: 1890, image: "p4.jpg", category: "electronics", brand: "Ambrane", inStock: true },
+  { id: 247, name: "SanDisk Ultra 64GB MicroSDXC Class 10 Memory Card", weight: "1 Unit", price: 429, mrp: 1000, discount: 57, rating: 4.8, reviews: 4500, image: "p4.jpg", category: "electronics", brand: "SanDisk", inStock: true },
+  { id: 248, name: "SanDisk Cruzer Blade 32GB USB 2.0 Flash Drive", weight: "1 Unit", price: 329, mrp: 650, discount: 49, rating: 4.8, reviews: 6200, image: "p4.jpg", category: "electronics", brand: "SanDisk", inStock: true },
+  { id: 249, name: "Logitech B100 Optical Wired USB Mouse", weight: "1 Unit", price: 299, mrp: 395, discount: 24, rating: 4.7, reviews: 2900, image: "p4.jpg", category: "electronics", brand: "Logitech", inStock: true },
+  { id: 250, name: "Logitech K120 Ergonomic Wired Keyboard USB", weight: "1 Unit", price: 599, mrp: 795, discount: 25, rating: 4.8, reviews: 1890, image: "p4.jpg", category: "electronics", brand: "Logitech", inStock: true },
+  { id: 251, name: "TP-Link N300 Wi-Fi Range Extender TL-WA850RE", weight: "1 Unit", price: 1299, mrp: 2999, discount: 57, rating: 4.6, reviews: 1450, image: "p4.jpg", category: "electronics", brand: "TP-Link", inStock: true },
+  { id: 252, name: "Zebronics Zeb-Warrior 2.0 RGB Gaming Speakers 10W", weight: "1 Unit", price: 699, mrp: 1299, discount: 46, rating: 4.5, reviews: 920, image: "p2.jpg", category: "electronics", brand: "Zebronics", inStock: true },
+  { id: 253, name: "Syska 12W LED Smart Bulb Wi-Fi Enabled App Control", weight: "1 Unit", price: 499, mrp: 999, discount: 50, rating: 4.6, reviews: 840, image: "p4.jpg", category: "electronics", brand: "Syska", inStock: true },
+  { id: 254, name: "Portronics Auto 10 Bluetooth Car Audio Receiver", weight: "1 Unit", price: 349, mrp: 999, discount: 65, rating: 4.5, reviews: 610, image: "p4.jpg", category: "electronics", brand: "Portronics", inStock: true },
+  { id: 255, name: "boAt Bassheads 100 In-Ear Wired Earphones with Mic", weight: "1 Unit", price: 399, mrp: 999, discount: 60, rating: 4.7, reviews: 8900, image: "p1.jpg", category: "electronics", brand: "boAt", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 12. FASHION & ACCESSORIES (catKey: 'fashion' - 23 Products)
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 256, name: "Nike Revolution 6 Next Nature Men's Running Shoes", weight: "1 Pair", price: 2995, mrp: 3695, discount: 19, rating: 4.8, reviews: 890, image: "sneakers.jpg", category: "fashion", brand: "Nike", inStock: true },
+  { id: 257, name: "Ray-Ban Aviator Classic UV Protection Sunglasses", weight: "1 Unit", price: 5490, mrp: 6590, discount: 17, rating: 4.9, reviews: 420, image: "sunglasses.jpg", category: "fashion", brand: "Ray-Ban", inStock: true },
+  { id: 258, name: "Titan Karishma Analog Dial Leather Men's Watch", weight: "1 Unit", price: 1895, mrp: 2295, discount: 17, rating: 4.8, reviews: 670, image: "p3.jpg", category: "fashion", brand: "Titan", inStock: true },
+  { id: 259, name: "Fastrack UV Protected Square Men Sunglasses", weight: "1 Unit", price: 799, mrp: 1299, discount: 38, rating: 4.7, reviews: 940, image: "sunglasses.jpg", category: "fashion", brand: "Fastrack", inStock: true },
+  { id: 260, name: "Puma Mens Comet 2 Alt Running Shoes", weight: "1 Pair", price: 1999, mrp: 3999, discount: 50, rating: 4.7, reviews: 1120, image: "sneakers.jpg", category: "fashion", brand: "Puma", inStock: true },
+  { id: 261, name: "Adidas Men's Strutter Cross Trainer Sneakers", weight: "1 Pair", price: 3299, mrp: 5599, discount: 41, rating: 4.8, reviews: 780, image: "sneakers.jpg", category: "fashion", brand: "Adidas", inStock: true },
+  { id: 262, name: "Wildhorn Genuine Leather Men's RFID Wallet", weight: "1 Unit", price: 449, mrp: 1499, discount: 70, rating: 4.8, reviews: 2340, image: "dettol-real.jpg", category: "fashion", brand: "Wildhorn", inStock: true },
+  { id: 263, name: "Fossil Minimalist Analog Black Dial Men's Watch", weight: "1 Unit", price: 6495, mrp: 8995, discount: 28, rating: 4.9, reviews: 520, image: "p3.jpg", category: "fashion", brand: "Fossil", inStock: true },
+  { id: 264, name: "Casio Vintage Digital Dial Unisex Watch Gold", weight: "1 Unit", price: 1695, mrp: 1995, discount: 15, rating: 4.9, reviews: 1890, image: "p3.jpg", category: "fashion", brand: "Casio", inStock: true },
+  { id: 265, name: "Sonata Analog Black Dial Men's Watch", weight: "1 Unit", price: 699, mrp: 899, discount: 22, rating: 4.6, reviews: 920, image: "p3.jpg", category: "fashion", brand: "Sonata", inStock: true },
+  { id: 266, name: "American Tourister 32L Casual Backpack", weight: "1 Unit", price: 1199, mrp: 2700, discount: 56, rating: 4.8, reviews: 1650, image: "surf-real.jpg", category: "fashion", brand: "American Tourister", inStock: true },
+  { id: 267, name: "Skybags Brat Black 30L Casual Backpack", weight: "1 Unit", price: 899, mrp: 2100, discount: 57, rating: 4.7, reviews: 1120, image: "surf-real.jpg", category: "fashion", brand: "Skybags", inStock: true },
+  { id: 268, name: "Safari Thorium 55cm Cabin Polycarbonate Trolley Bag", weight: "1 Unit", price: 2199, mrp: 7499, discount: 70, rating: 4.8, reviews: 890, image: "surf-real.jpg", category: "fashion", brand: "Safari", inStock: true },
+  { id: 269, name: "Bata Men's Formal Derby Synthetic Leather Shoes", weight: "1 Pair", price: 999, mrp: 1499, discount: 33, rating: 4.6, reviews: 1340, image: "sneakers.jpg", category: "fashion", brand: "Bata", inStock: true },
+  { id: 270, name: "Woodland Men's Leather Casual Boots", weight: "1 Pair", price: 3495, mrp: 4495, discount: 22, rating: 4.9, reviews: 1450, image: "sneakers.jpg", category: "fashion", brand: "Woodland", inStock: true },
+  { id: 271, name: "Campus Men's North Running Shoes", weight: "1 Pair", price: 1149, mrp: 1699, discount: 32, rating: 4.7, reviews: 1890, image: "sneakers.jpg", category: "fashion", brand: "Campus", inStock: true },
+  { id: 272, name: "Sparx Men's Canvas Sneakers Shoes", weight: "1 Pair", price: 799, mrp: 999, discount: 20, rating: 4.6, reviews: 2100, image: "sneakers.jpg", category: "fashion", brand: "Sparx", inStock: true },
+  { id: 273, name: "Lavie Women's Handbag Tote Satchel Bag", weight: "1 Unit", price: 1299, mrp: 3990, discount: 67, rating: 4.8, reviews: 780, image: "fest-sister.jpg", category: "fashion", brand: "Lavie", inStock: true },
+  { id: 274, name: "Caprese Women's Faux Leather Shoulder Bag", weight: "1 Unit", price: 1499, mrp: 4499, discount: 66, rating: 4.7, reviews: 620, image: "fest-sister.jpg", category: "fashion", brand: "Caprese", inStock: true },
+  { id: 275, name: "Zaveri Pearls Gold Tone Traditional Kundan Necklace Set", weight: "1 Set", price: 499, mrp: 2990, discount: 83, rating: 4.8, reviews: 1890, image: "fest-sister.jpg", category: "fashion", brand: "Zaveri Pearls", inStock: true },
+  { id: 276, name: "YouBella Gold Plated Designer Earrings Set for Women", weight: "1 Set", price: 299, mrp: 1999, discount: 85, rating: 4.7, reviews: 1420, image: "fest-sister.jpg", category: "fashion", brand: "YouBella", inStock: true },
+  { id: 277, name: "Tommy Hilfiger Men's Leather Belt with Reversible Buckle", weight: "1 Unit", price: 1499, mrp: 2499, discount: 40, rating: 4.9, reviews: 540, image: "dettol-real.jpg", category: "fashion", brand: "Tommy Hilfiger", inStock: true },
+  { id: 278, name: "Levi's Men's Solid Cotton Canvas Cap", weight: "1 Unit", price: 599, mrp: 999, discount: 40, rating: 4.8, reviews: 410, image: "sneakers.jpg", category: "fashion", brand: "Levi's", inStock: true }
+];
+
+export const getProductById = (id) => {
+  return products.find(p => p.id === Number(id)) || null;
+};
+
+export const searchProducts = (query) => {
+  if (!query) return products.slice(0, 45);
+  const q = query.toLowerCase().trim();
+  
+  if (q === 'trending' || q === 'popular' || q === 'top' || q === 'best') {
+    return products.filter(p => ['snacks','dairy','beverages','staples','household'].includes(p.category));
+  }
+  if (q === 'deals' || q === 'offers' || q === 'discount') {
+    return products.filter(p => p.discount >= 15);
+  }
+  if (q === 'all') {
+    return products;
+  }
+
+  const matches = products.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    p.category.toLowerCase().includes(q) ||
+    p.brand.toLowerCase().includes(q) ||
+    (p.weight && p.weight.toLowerCase().includes(q))
+  );
+
+  return matches.length > 0 ? matches : products.filter(p => p.rating >= 4.7).slice(0, 30);
+};
