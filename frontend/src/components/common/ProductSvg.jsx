@@ -11,13 +11,69 @@ export default function ProductSvg({ name, size = 100 }) {
     );
   }
 
-  // 1. Direct Image Handling for file extensions (.png, .jpg) or public folder images (p1.jpg..p35.jpg)
-  if (name.endsWith('.jpg') || name.endsWith('.png') || name.startsWith('/')) {
-    const src = name.startsWith('/') ? name : `/${name}`;
+  // 1. Direct Image Handling for URLs (http/https), file extensions (.png, .jpg) or public folder images (p1.jpg..p35.jpg)
+  if (typeof name === 'string' && (name.startsWith('http://') || name.startsWith('https://') || name.endsWith('.jpg') || name.endsWith('.png') || name.startsWith('/'))) {
+    const src = (name.startsWith('http://') || name.startsWith('https://') || name.startsWith('/')) ? name : `/${name}`;
     return (
       <img
         src={src}
         alt="Product"
+        style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px' }}
+      />
+    );
+  }
+
+  // 1.1 Category Slugs & Names Lookup
+  const CATEGORY_IMAGE_LOOKUP = {
+    'atta-rice-dal': '/aashirvaad-atta-real.jpg',
+    'staples': '/aashirvaad-atta-real.jpg',
+    'atta,-rice-&-dal': '/aashirvaad-atta-real.jpg',
+    'biscuits-cookies': '/oreo-biscuits-real.jpg',
+    'biscuits': '/oreo-biscuits-real.jpg',
+    'biscuits-&-cookies': '/oreo-biscuits-real.jpg',
+    'chocolates-sweets': '/cadbury-silk-real.jpg',
+    'chocolates': '/cadbury-silk-real.jpg',
+    'chocolates-&-sweets': '/cadbury-silk-real.jpg',
+    'cold-drinks-juices': '/coca-cola-real.jpg',
+    'beverages': '/coca-cola-real.jpg',
+    'cold-drinks-&-juices': '/coca-cola-real.jpg',
+    'dairy-bakery': '/amul-butter-real.jpg',
+    'dairy': '/amul-butter-real.jpg',
+    'dairy-&-bakery': '/amul-butter-real.jpg',
+    'edible-oils-ghee': '/fortune-oil-real.jpg',
+    'oil': '/fortune-oil-real.jpg',
+    'edible-oils-&-ghee': '/fortune-oil-real.jpg',
+    'electronics-gadgets': '/electronics-hero-banner.jpg',
+    'electronics': '/electronics-hero-banner.jpg',
+    'electronics-&-gadgets': '/electronics-hero-banner.jpg',
+    'fashion-accessories': '/sneakers.jpg',
+    'fashion': '/sneakers.jpg',
+    'fashion-&-accessories': '/sneakers.jpg',
+    'fresh-fruits-veggies': '/fresh-produce-splash.jpg',
+    'produce': '/fresh-produce-splash.jpg',
+    'fresh-fruits-&-veggies': '/fresh-produce-splash.jpg',
+    'household-essentials': '/surf-excel-real.jpg',
+    'household': '/surf-excel-real.jpg',
+    'instant-frozen-food': '/instant-noodles-hero-transparent.png',
+    'instant-food': '/instant-noodles-hero-transparent.png',
+    'instant-&-frozen-food': '/instant-noodles-hero-transparent.png',
+    'personal-care': '/dettol-handwash-real.jpg',
+    'personal': '/dettol-handwash-real.jpg',
+    'snacks-munchies': '/category-snacks-banner.png',
+    'snacks': '/category-snacks-banner.png',
+    'snacks-&-munchies': '/category-snacks-banner.png',
+    'tea-coffee-drinks': '/tea-coffee-hero-transparent.png',
+    'tea-coffee': '/tea-coffee-hero-transparent.png',
+    'tea,-coffee-&-drinks': '/tea-coffee-hero-transparent.png',
+  };
+
+  const normKey = typeof name === 'string' ? name.toLowerCase().trim().replace(/\s+/g, '-') : '';
+  if (CATEGORY_IMAGE_LOOKUP[name] || CATEGORY_IMAGE_LOOKUP[normKey]) {
+    const src = CATEGORY_IMAGE_LOOKUP[name] || CATEGORY_IMAGE_LOOKUP[normKey];
+    return (
+      <img
+        src={src}
+        alt={name}
         style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px' }}
       />
     );

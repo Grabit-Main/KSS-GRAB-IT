@@ -37,6 +37,121 @@ import { DealCountdownTimer } from '../components/common/DealCountdownTimer';
 import { QuickCommerceProductCard } from '../components/products/QuickCommerceProductCard';
 import { compressImageFile } from '../utils/imageCompressor';
 
+const CustomSelectDropdown = ({ value, options, onChange, placeholder, activeColor = '#0071E3' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  const selectedOpt = options.find((o) => String(o.value) === String(value)) || options[0];
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: 0 }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          height: 40,
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 10px',
+          fontSize: '12px',
+          fontWeight: 700,
+          color: value && value !== 'all' ? activeColor : '#0F172A',
+          backgroundColor: '#FFFFFF',
+          border: isOpen ? `2px solid ${activeColor}` : value && value !== 'all' ? `1px solid ${activeColor}` : '1px solid #CBD5E1',
+          borderRadius: 'var(--radius-md)',
+          cursor: 'pointer',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'all 0.15s ease',
+          outline: 'none',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedOpt ? selectedOpt.label : placeholder}
+        </span>
+        <ChevronDown
+          size={14}
+          color={isOpen ? activeColor : '#64748B'}
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', flexShrink: 0, marginLeft: 4 }}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 99999,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.14), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+            padding: '4px',
+            maxHeight: '260px',
+            overflowY: 'auto',
+          }}
+        >
+          {options.map((opt) => {
+            const isSelected = String(opt.value) === String(value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: isSelected ? '#EFF6FF' : 'transparent',
+                  color: isSelected ? activeColor : '#334155',
+                  fontSize: '12px',
+                  fontWeight: isSelected ? 800 : 600,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background-color 0.12s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = '#F8FAFC';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.label}</span>
+                {isSelected && <Check size={14} color={activeColor} style={{ flexShrink: 0, marginLeft: 4 }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SellerProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -113,8 +228,15 @@ export const SellerProductsPage = () => {
 
   useEffect(() => {
     loadData(true);
+    const handleProductsUpdated = () => loadData(false);
+    window.addEventListener('grabit_products_updated', handleProductsUpdated);
+    window.addEventListener('storage', handleProductsUpdated);
     const interval = setInterval(() => loadData(false), 4000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('grabit_products_updated', handleProductsUpdated);
+      window.removeEventListener('storage', handleProductsUpdated);
+      clearInterval(interval);
+    };
   }, [loadData]);
 
   // Compute stock counts for filter pills
@@ -482,18 +604,17 @@ export const SellerProductsPage = () => {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           marginBottom: 16,
-          flexWrap: 'wrap',
           gap: 12,
         }}
       >
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-graphite)', letterSpacing: '-0.3px', margin: 0 }}>
-            Products & Inventory
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.4px', margin: 0, lineHeight: 1.2 }}>
+            Products &amp; Inventory
           </h2>
-          <p style={{ color: 'var(--color-soft-gray)', fontSize: '13px', margin: '3px 0 0' }}>
-            Live quick-commerce catalog, stock alerts, and deals
+          <p style={{ color: '#64748B', fontSize: '12.5px', margin: '3px 0 0', lineHeight: 1.3 }}>
+            Manage catalog products, stock quantity alerts, and pricing.
           </p>
         </div>
 
@@ -502,7 +623,7 @@ export const SellerProductsPage = () => {
           icon={Plus}
           onClick={handleOpenAddModal}
           disabled={categories.length === 0}
-          style={{ height: 38, fontSize: '13px' }}
+          style={{ height: 36, padding: '0 14px', fontSize: '12.5px', fontWeight: 800, flexShrink: 0, borderRadius: '10px' }}
         >
           Add Product
         </Button>
@@ -548,100 +669,28 @@ export const SellerProductsPage = () => {
         {/* Side-by-Side Dropdown Row: All Categories (Left) + All Stock Status (Right) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
           {/* Custom Styled 'All Categories' Dropdown Selector */}
-          <div style={{ position: 'relative', width: '100%', minWidth: 0 }}>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="form-control"
-              style={{
-                height: 40,
-                fontSize: '12px',
-                fontWeight: 600,
-                color: selectedCategory ? 'var(--color-blue)' : 'var(--color-graphite)',
-                backgroundColor: '#FFFFFF',
-                border: selectedCategory ? '1px solid var(--color-blue)' : '1px solid var(--color-border-gray)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0 26px 0 10px',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                cursor: 'pointer',
-                boxShadow: 'var(--shadow-sm)',
-                width: '100%',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              <option value="">All Categories ({categories.length})</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <div
-              style={{
-                position: 'absolute',
-                right: 8,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                color: selectedCategory ? 'var(--color-blue)' : 'var(--color-graphite)',
-              }}
-            >
-              <ChevronDown size={14} />
-            </div>
-          </div>
+          <CustomSelectDropdown
+            value={selectedCategory}
+            onChange={(val) => setSelectedCategory(val)}
+            activeColor="#0071E3"
+            options={[
+              { value: '', label: `All Categories (${categories.length})` },
+              ...categories.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+          />
 
           {/* Stock Status Dropdown Filter */}
-          <div style={{ position: 'relative', width: '100%', minWidth: 0 }}>
-            <select
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value)}
-              className="form-control"
-              style={{
-                height: 40,
-                fontSize: '12px',
-                fontWeight: 600,
-                color: stockFilter !== 'all' ? 'var(--color-green)' : 'var(--color-graphite)',
-                backgroundColor: '#FFFFFF',
-                border: stockFilter !== 'all' ? '1px solid var(--color-green)' : '1px solid var(--color-border-gray)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0 26px 0 10px',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                cursor: 'pointer',
-                boxShadow: 'var(--shadow-sm)',
-                width: '100%',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              <option value="all">All Stock Status ({stockCounts.all})</option>
-              <option value="in_stock">In Stock ({stockCounts.in_stock})</option>
-              <option value="low_stock">Low Stock ({stockCounts.low_stock})</option>
-              <option value="out_of_stock">Out of Stock ({stockCounts.out_of_stock})</option>
-            </select>
-            <div
-              style={{
-                position: 'absolute',
-                right: 8,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                color: stockFilter !== 'all' ? 'var(--color-green)' : 'var(--color-graphite)',
-              }}
-            >
-              <ChevronDown size={14} />
-            </div>
-          </div>
+          <CustomSelectDropdown
+            value={stockFilter}
+            onChange={(val) => setStockFilter(val)}
+            activeColor="#059669"
+            options={[
+              { value: 'all', label: `All Stock Status (${stockCounts.all})` },
+              { value: 'in_stock', label: `In Stock (${stockCounts.in_stock})` },
+              { value: 'low_stock', label: `Low Stock (${stockCounts.low_stock})` },
+              { value: 'out_of_stock', label: `Out of Stock (${stockCounts.out_of_stock})` },
+            ]}
+          />
         </div>
       </div>
 
@@ -673,9 +722,9 @@ export const SellerProductsPage = () => {
         </Card>
       ) : (
         <div className="product-grid">
-          {displayedProducts.map((prod) => (
+          {displayedProducts.map((prod, idx) => (
             <QuickCommerceProductCard
-              key={prod.id}
+              key={prod.id ? `prod-${prod.id}` : `prod-idx-${idx}`}
               product={prod}
               dealSeconds={getProductDealSeconds(prod)}
               onEdit={handleOpenEditModal}

@@ -80,19 +80,31 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
 
       {/* Top Right Wishlist Heart */}
       <button
+        type="button"
         onClick={handleWishlist}
+        aria-label="Add to Wishlist"
         style={{
           position: 'absolute', top: '8px', right: '8px',
-          background: 'white', border: '1px solid #D2D2D7',
-          borderRadius: '50%', width: '24px', height: '24px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(0, 0, 0, 0.1)',
+          borderRadius: '50%',
+          width: '26px', height: '26px',
+          minWidth: '26px', maxWidth: '26px',
+          minHeight: '26px', maxHeight: '26px',
+          padding: 0, margin: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 2, cursor: 'pointer'
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06)',
+          zIndex: 3, cursor: 'pointer',
+          transition: 'transform 0.15s ease'
         }}
+        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'none'}
       >
         <Heart
-          size={12}
+          size={13}
           fill={wishlisted ? '#FF3B30' : 'none'}
-          color={wishlisted ? '#FF3B30' : '#86868B'}
+          color={wishlisted ? '#FF3B30' : '#8E8E93'}
+          strokeWidth={2}
         />
       </button>
 
@@ -186,23 +198,24 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#34C759',
+              background: '#0071E3',
               borderRadius: '6px',
               padding: '3px 8px',
-              height: '28px'
+              height: '28px',
+              boxShadow: '0 2px 6px rgba(0, 113, 227, 0.25)'
             }}>
               <button
                 onClick={handleMinus}
                 style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', padding: 0 }}
               >
-                <Minus size={12} />
+                <Minus size={12} strokeWidth={2.5} />
               </button>
               <span style={{ fontSize: '12px', fontWeight: 800, color: 'white' }}>{qty}</span>
               <button
                 onClick={handlePlus}
                 style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', padding: 0 }}
               >
-                <Plus size={12} />
+                <Plus size={12} strokeWidth={2.5} />
               </button>
             </div>
           )}

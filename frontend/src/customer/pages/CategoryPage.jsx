@@ -119,6 +119,26 @@ const CATEGORY_MAP = {
     accentColor: '#38BDF8',
     bannerIcons: ['https://res.cloudinary.com/hmx3azp6/image/upload/v1787645101/grabit_media/p1.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645109/grabit_media/p4.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645112/grabit_media/p6.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645078/grabit_media/p9.jpg']
   },
+  'tea-coffee': {
+    title: 'Tea, Coffee & Drinks',
+    sub: 'Rich instant coffee, aromatic chai leaves & morning beverages.',
+    catKey: 'tea-coffee',
+    isDark: true,
+    heroImg: '/tea-coffee-hero-transparent.png',
+    gradient: 'linear-gradient(135deg, #180B04 0%, #331808 40%, #5E2C0C 75%, #854D0E 100%)',
+    accentColor: '#EAB308',
+    bannerIcons: ['nescafe-coffee', 'tea-coffee-hero-transparent.png'],
+  },
+  'instant-food': {
+    title: 'Instant & Frozen Food',
+    sub: 'Quick 2-minute noodles, hot soups, pasta & ready-to-eat meals.',
+    catKey: 'instant-food',
+    isDark: true,
+    heroImg: '/instant-noodles-hero-transparent.png',
+    gradient: 'linear-gradient(135deg, #1C0A00 0%, #3D1400 40%, #7C2D12 75%, #B45309 100%)',
+    accentColor: '#F59E0B',
+    bannerIcons: ['maggi-noodles', 'instant-noodles-hero-transparent.png'],
+  },
   'fashion': {
     title: 'Fashion & Accessories',
     sub: 'Trendy sneakers, sunglasses, watches & lifestyle items.',
@@ -127,9 +147,32 @@ const CATEGORY_MAP = {
     heroImg: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645139/grabit_media/fashion_hero_cutout.png',
     gradient: 'linear-gradient(135deg, #2A0413 0%, #4D0922 40%, #881337 75%, #9F1239 100%)',
     accentColor: '#FB7185',
-    bannerIcons: ['https://res.cloudinary.com/hmx3azp6/image/upload/v1787645101/grabit_media/p1.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645094/grabit_media/p2.jpg']
-  }
+    bannerIcons: ['https://res.cloudinary.com/hmx3azp6/image/upload/v1787645101/grabit_media/p1.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645094/grabit_media/p2.jpg'],
+  },
 };
+
+// Aliases for all common slug variants
+CATEGORY_MAP['snacks'] = CATEGORY_MAP['snacks-munchies'];
+CATEGORY_MAP['dairy'] = CATEGORY_MAP['dairy-bakery'];
+CATEGORY_MAP['cold-drinks-juices'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['cold-drinks'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['drinks'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['atta-rice-dal'] = CATEGORY_MAP['staples'];
+CATEGORY_MAP['atta-rice-dals'] = CATEGORY_MAP['staples'];
+CATEGORY_MAP['chocolates-sweets'] = CATEGORY_MAP['chocolates'];
+CATEGORY_MAP['household-essentials'] = CATEGORY_MAP['household'];
+CATEGORY_MAP['fresh-fruits-veggies'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['fresh-produce'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['fruits-vegetables'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['tea-coffee-drinks'] = CATEGORY_MAP['tea-coffee'];
+CATEGORY_MAP['biscuits-cookies'] = CATEGORY_MAP['biscuits'];
+CATEGORY_MAP['cookies'] = CATEGORY_MAP['biscuits'];
+CATEGORY_MAP['instant-frozen-food'] = CATEGORY_MAP['instant-food'];
+CATEGORY_MAP['edible-oils-ghee'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['oils-ghee'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['oils'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['electronics-gadgets'] = CATEGORY_MAP['electronics'];
+CATEGORY_MAP['fashion-accessories'] = CATEGORY_MAP['fashion'];
 
 const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'];
 
@@ -197,12 +240,6 @@ const matchesSubCategory = (product, subCat) => {
     return name.includes('glucose') || name.includes('parle-g') || name.includes('marie') || name.includes('digestive') || name.includes('sunfeast') || name.includes('gold');
   }
 
-  // Snacks & Munchies
-  if (sub.includes('potato')) return name.includes('chips') || name.includes('potato') || name.includes('lays') || name.includes('pringles') || name.includes('uncle') || name.includes('wafers');
-  if (sub.includes('tortilla') || sub.includes('nacho')) return name.includes('doritos') || name.includes('nacho') || name.includes('tortilla') || name.includes('cornitos') || name.includes('bingo');
-  if (sub.includes('namkeen') || sub.includes('mix')) return name.includes('haldiram') || name.includes('bhujia') || name.includes('namkeen') || name.includes('mixture') || name.includes('sev') || name.includes('boondi') || name.includes('kurkure') || name.includes('chana');
-
-  // Dairy & Bakery
   if (sub.includes('milk') || sub.includes('butter')) return name.includes('milk') || name.includes('butter');
   if (sub.includes('paneer') || sub.includes('cheese')) return name.includes('paneer') || name.includes('cheese');
   if (sub.includes('bread') || sub.includes('bakery')) return name.includes('bread') || name.includes('bakery') || name.includes('bun');
@@ -887,7 +924,9 @@ export default function CategoryPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: prodGridCols, gap: isMobile ? '10px' : '16px' }}>
-              {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+              {filtered.map((p, pIdx) => (
+                <ProductCard key={`${p.id}-${pIdx}`} product={p} />
+              ))}
             </div>
           )}
         </div>

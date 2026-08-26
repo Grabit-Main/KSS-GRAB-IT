@@ -33,7 +33,7 @@ export const Modal = ({
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content"
-        style={{ maxWidth }}
+        style={{ maxWidth: `min(${maxWidth}, calc(100vw - 20px))`, width: '100%', boxSizing: 'border-box' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

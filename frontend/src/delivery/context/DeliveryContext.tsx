@@ -19,9 +19,49 @@ import {
   initialNotifications,
   initialSupportTickets,
   initialSettings,
-  initialIncentiveCampaigns
+  initialIncentiveCampaigns,
+  grabitSupermarket
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
+import { get, patch } from '../../api';
+
+function getLiveOrdersPool(): Order[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+    const liveOrders: Order[] = stored
+      .filter((o: any) => o.status !== 'delivered' && o.status !== 'cancelled')
+      .map((o: any, idx: number) => ({
+        id: o.rawId || `live-ord-${idx}`,
+        orderNumber: o.id || o.orderNumber || `ORD-${8900 + idx}`,
+        status: (o.status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' : 'ASSIGNED') as OrderStatus,
+        supermarketId: 'STORE-001' as const,
+        merchant: grabitSupermarket,
+        customer: {
+          id: `CUST-${idx}`,
+          name: o.customer_name || 'Customer',
+          phone: o.customer_phone || '',
+          address: o.delivery_address || o.address || 'Delivery Address',
+          landmark: 'Customer Location',
+          deliveryNotes: '10-minute instant delivery',
+          coordinates: { x: 260, y: 190, lat: 12.9340, lng: 77.6200 }
+        },
+        items: (o.items || []).map((it: any, iIdx: number) => ({
+          id: `item-${iIdx}`,
+          name: it.name,
+          quantity: it.qty || it.quantity || 1,
+          price: it.price || 50,
+          category: 'Snacks' as const
+        })),
+        paymentMethod: (o.payment_method === 'COD' ? 'COD' : 'PREPAID') as any,
+        totalAmount: o.total_amount || 199,
+        distanceKm: 2.2,
+        estimatedMinutes: 12
+      }));
+
+    return liveOrders;
+  } catch {}
+  return [];
+}
 
 interface DeliveryState {
   agentStatus: AgentStatus;
@@ -52,18 +92,29 @@ type DeliveryAction =
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'CREATE_SUPPORT_TICKET'; payload: { category: SupportTicket['category']; subject: string; description: string } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppSettings> }
-  | { type: 'RESET_DEMO' };
+  | { type: 'RESET_DEMO' }
+  | { type: 'SYNC_ORDERS_POOL'; payload: Order[] };
 
 const initialDeliveryState: DeliveryState = {
   agentStatus: 'AVAILABLE',
   currentOrder: null,
   incomingOrder: null,
   incomingCountdown: 0,
-  orderPool: [...initialOrdersPool],
-  history: [...initialHistory],
-  stats: { ...initialStats },
-  notifications: [...initialNotifications],
-  supportTickets: [...initialSupportTickets],
+  orderPool: getLiveOrdersPool(),
+  history: [],
+  stats: {
+    completedToday: 0,
+    totalDeliveries: 0,
+    failedToday: 0,
+    returnedToday: 0,
+    rating: 5.0,
+    onTimePercentage: 100,
+    completionRate: 100,
+    totalDistanceKm: 0,
+    activeShiftMinutes: 0
+  },
+  notifications: [],
+  supportTickets: [],
   settings: { ...initialSettings },
   incentiveCampaigns: [...initialIncentiveCampaigns],
   activeModal: null,
@@ -324,14 +375,21 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       };
     }
 
+    case 'SYNC_ORDERS_POOL': {
+      return {
+        ...state,
+        orderPool: action.payload
+      };
+    }
+
     case 'RESET_DEMO': {
       return {
         ...initialDeliveryState,
-        orderPool: [...initialOrdersPool],
-        history: [...initialHistory],
+        orderPool: getLiveOrdersPool(),
+        history: [],
         stats: { ...initialStats },
-        notifications: [...initialNotifications],
-        supportTickets: [...initialSupportTickets],
+        notifications: [],
+        supportTickets: [],
         settings: { ...initialSettings }
       };
     }
@@ -372,12 +430,56 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const advanceStatus = useCallback((next: OrderStatus) => {
     soundEngine.playStepAdvance();
     dispatch({ type: 'ADVANCE_ORDER_STATUS', payload: next });
-  }, []);
+
+    try {
+      const orderNum = state.currentOrder?.orderNumber;
+      const rawId = state.currentOrder?.id;
+      if (orderNum || rawId) {
+        const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        const updated = stored.map((o: any) => {
+          if (o.id === orderNum || o.orderNumber === orderNum || o.rawId === rawId || o.id === rawId) {
+            return { ...o, status: next === 'DELIVERED' ? 'delivered' : 'out_for_delivery' };
+          }
+          return o;
+        });
+        localStorage.setItem('grabit_orders', JSON.stringify(updated));
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('grabit_orders_updated'));
+      }
+
+      if (rawId) {
+        patch(`/orders/${encodeURIComponent(rawId)}/status`, {
+          status: next === 'DELIVERED' ? 'delivered' : 'out_for_delivery'
+        }).catch(() => {});
+      }
+    } catch {}
+  }, [state.currentOrder]);
 
   const completeDelivery = useCallback((pod: ProofOfDelivery) => {
     soundEngine.playSuccessChime();
     dispatch({ type: 'COMPLETE_DELIVERY', payload: { pod } });
-  }, []);
+
+    try {
+      const orderNum = state.currentOrder?.orderNumber;
+      const rawId = state.currentOrder?.id;
+      if (orderNum || rawId) {
+        const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        const updated = stored.map((o: any) => {
+          if (o.id === orderNum || o.orderNumber === orderNum || o.rawId === rawId || o.id === rawId) {
+            return { ...o, status: 'delivered' };
+          }
+          return o;
+        });
+        localStorage.setItem('grabit_orders', JSON.stringify(updated));
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('grabit_orders_updated'));
+      }
+
+      if (rawId) {
+        patch(`/orders/${encodeURIComponent(rawId)}/status`, { status: 'delivered' }).catch(() => {});
+      }
+    } catch {}
+  }, [state.currentOrder]);
 
   const reportIssue = useCallback((issue: IssueReport) => {
     soundEngine.playWarning();
@@ -436,6 +538,76 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const resetDemo = useCallback(() => {
     dispatch({ type: 'RESET_DEMO' });
+  }, []);
+
+  // Real-time synchronization with Cloud Database and localStorage customer orders
+  useEffect(() => {
+    const handleSyncOrders = async () => {
+      let apiOrders: any[] = [];
+      try {
+        const res = await get('/orders/');
+        if (Array.isArray(res)) apiOrders = res;
+      } catch {}
+
+      let localOrders: any[] = [];
+      try {
+        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      } catch {}
+
+      const allRaw = [...localOrders, ...apiOrders];
+      const seen = new Set();
+      const unique: any[] = [];
+      for (const o of allRaw) {
+        const key = o.rawId || o.id;
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          unique.push(o);
+        }
+      }
+
+      const liveOrders: Order[] = unique
+        .filter((o: any) => o.status !== 'delivered' && o.status !== 'cancelled' && Array.isArray(o.items) && o.items.length > 0 && Number(o.total_amount || o.total || 0) > 0)
+        .map((o: any, idx: number) => ({
+          id: o.rawId || o.id || `live-ord-${idx}`,
+          orderNumber: o.id || o.orderNumber || `ORD-${8900 + idx}`,
+          status: (o.status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' : 'ASSIGNED') as OrderStatus,
+          supermarketId: 'STORE-001' as const,
+          merchant: grabitSupermarket,
+          customer: {
+            id: `CUST-${idx}`,
+            name: o.customer_name || 'Customer',
+            phone: o.customer_phone || '',
+            address: o.delivery_address || o.address || 'Delivery Address',
+            landmark: 'Customer Location',
+            deliveryNotes: '10-minute instant delivery',
+            coordinates: { x: 260, y: 190, lat: 12.9340, lng: 77.6200 }
+          },
+          items: (o.items || []).map((it: any, iIdx: number) => ({
+            id: `item-${iIdx}`,
+            name: it.name,
+            quantity: it.qty || it.quantity || 1,
+            price: it.price || 50,
+            category: 'Snacks' as const
+          })),
+          paymentMethod: (o.payment_method === 'COD' ? 'COD' : 'PREPAID') as any,
+          totalAmount: Number(o.total_amount || o.total || 0),
+          distanceKm: 2.2,
+          estimatedMinutes: 12
+        }));
+
+      dispatch({ type: 'SYNC_ORDERS_POOL', payload: liveOrders });
+    };
+
+    handleSyncOrders();
+    window.addEventListener('storage', handleSyncOrders);
+    window.addEventListener('grabit_orders_updated', handleSyncOrders);
+    const interval = setInterval(handleSyncOrders, 2500);
+
+    return () => {
+      window.removeEventListener('storage', handleSyncOrders);
+      window.removeEventListener('grabit_orders_updated', handleSyncOrders);
+      clearInterval(interval);
+    };
   }, []);
 
   // Automated simulated direct order assignment when AVAILABLE and IDLE

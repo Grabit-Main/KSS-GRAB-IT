@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Sparkles, Zap, Search, ShieldCheck, Clock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
+import { categories } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 const CATEGORY_DETAILS = [
   {
     slug: 'produce',
-    name: 'Fresh Produce',
+    name: 'Fresh Fruits & Veggies',
     sub: 'Farm fresh fruits, organic veggies & eggs',
     group: 'fresh',
     badgeColor: '#16A34A',
@@ -16,11 +17,11 @@ const CATEGORY_DETAILS = [
     accentColor: '#15803D',
     sla: '15 mins',
     tags: ['Fresh Fruits', 'Green Veggies', 'Organic Eggs'],
-    icons: ['fresh-red-apples', 'fresh-bananas']
+    icons: ['/fresh-produce-splash.jpg']
   },
   {
     slug: 'snacks-munchies',
-    name: 'Snacks & Chips',
+    name: 'Snacks & Munchies',
     sub: 'Lay\'s, Doritos, Bingo & crispy munchies',
     group: 'snacks',
     badgeColor: '#EA580C',
@@ -28,7 +29,7 @@ const CATEGORY_DETAILS = [
     accentColor: '#C2410C',
     sla: '12 mins',
     tags: ['Potato Chips', 'Nachos', 'Namkeens'],
-    icons: ['lays-cream-onion', 'doritos-nacho']
+    icons: ['/category-snacks-banner.png']
   },
   {
     slug: 'dairy-bakery',
@@ -40,19 +41,19 @@ const CATEGORY_DETAILS = [
     accentColor: '#0369A1',
     sla: '15 mins',
     tags: ['Amul Milk', 'Butter & Ghee', 'Fresh Paneer'],
-    icons: ['amul-butter', 'amul-milk']
+    icons: ['/amul-butter-real.jpg']
   },
   {
     slug: 'beverages',
-    name: 'Cold Drinks',
-    sub: 'Coca-Cola, Paper Boat, Nescafe & juices',
+    name: 'Cold Drinks & Juices',
+    sub: 'Coca-Cola, Real juices & cold beverages',
     group: 'snacks',
     badgeColor: '#0D9488',
     badgeBg: '#F0FDFA',
     accentColor: '#0F766E',
     sla: '15 mins',
-    tags: ['Soft Drinks', 'Fruit Juices', 'Iced Coffee'],
-    icons: ['coca-cola', 'real-mango']
+    tags: ['Soft Drinks', 'Fruit Juices', 'Energy Drinks'],
+    icons: ['/coca-cola-real.jpg']
   },
   {
     slug: 'staples',
@@ -64,7 +65,7 @@ const CATEGORY_DETAILS = [
     accentColor: '#B45309',
     sla: '20 mins',
     tags: ['Chakki Atta', 'Basmati Rice', 'Moong Dal'],
-    icons: ['aashirvaad-atta', 'daawat-rice']
+    icons: ['/aashirvaad-atta-real.jpg']
   },
   {
     slug: 'chocolates',
@@ -76,7 +77,7 @@ const CATEGORY_DETAILS = [
     accentColor: '#7E22CE',
     sla: '15 mins',
     tags: ['Cadbury Silk', 'Ferrero Rocher', 'Sweets'],
-    icons: ['dairy-milk-silk', 'ferrero-rocher']
+    icons: ['/cadbury-silk-real.jpg']
   },
   {
     slug: 'personal-care',
@@ -88,67 +89,91 @@ const CATEGORY_DETAILS = [
     accentColor: '#0E7490',
     sla: '20 mins',
     tags: ['Dettol Wash', 'Dove Soaps', 'Shampoos'],
-    icons: ['dettol-handwash', 'dove-soap']
+    icons: ['/dettol-handwash-real.jpg']
   },
   {
     slug: 'household',
-    name: 'Cleaning & Household',
-    sub: 'Surf Excel, Vim gel & cleaners',
+    name: 'Household Essentials',
+    sub: 'Surf Excel, Vim gel & home cleaners',
     group: 'care',
     badgeColor: '#4F46E5',
     badgeBg: '#EEF2FF',
     accentColor: '#4338CA',
     sla: '20 mins',
     tags: ['Detergents', 'Dishwash Gels', 'Cleaners'],
-    icons: ['surf-excel-powder', 'vim-gel']
+    icons: ['/surf-excel-real.jpg']
+  },
+  {
+    slug: 'tea-coffee',
+    name: 'Tea, Coffee & Drinks',
+    sub: 'Nescafe instant coffee, Tata tea & cocoa',
+    group: 'snacks',
+    badgeColor: '#059669',
+    badgeBg: '#ECFDF5',
+    accentColor: '#047857',
+    sla: '15 mins',
+    tags: ['Nescafe Coffee', 'Tata Tea', 'Green Tea'],
+    icons: ['/nescafe-coffee-real.jpg']
   },
   {
     slug: 'biscuits',
     name: 'Biscuits & Cookies',
-    sub: 'Oreo, Parle-G, Hide & Seek cookies',
+    sub: 'Oreo, Parle-G, Britannia cookies',
     group: 'snacks',
     badgeColor: '#CA8A04',
     badgeBg: '#FEFCE8',
     accentColor: '#A16207',
     sla: '15 mins',
     tags: ['Oreo Cookies', 'Parle-G', 'Wafers'],
-    icons: ['oreo-biscuits', 'parle-g-biscuits']
+    icons: ['/oreo-biscuits-real.jpg']
+  },
+  {
+    slug: 'instant-food',
+    name: 'Instant & Frozen Food',
+    sub: 'Maggi 2-Min noodles, frozen snacks & soups',
+    group: 'staples',
+    badgeColor: '#EF4444',
+    badgeBg: '#FEF2F2',
+    accentColor: '#DC2626',
+    sla: '10 mins',
+    tags: ['Maggi Noodles', 'Frozen Snacks', 'Instant Soup'],
+    icons: ['/maggi-noodles-real.jpg']
   },
   {
     slug: 'oil',
     name: 'Edible Oils & Ghee',
-    sub: 'Fortune sunflower oil & mustard oil',
+    sub: 'Fortune sunflower oil & pure Desi ghee',
     group: 'staples',
     badgeColor: '#EAB308',
     badgeBg: '#FEF08A20',
     accentColor: '#854D0E',
     sla: '20 mins',
-    tags: ['Sunflower Oil', 'Mustard Oil', 'Ghee'],
-    icons: ['fortune-oil', 'fortune-mustard-oil']
+    tags: ['Sunflower Oil', 'Mustard Oil', 'Desi Ghee'],
+    icons: ['/fortune-oil-real.jpg']
   },
   {
     slug: 'electronics',
-    name: 'Electronics & Audio',
-    sub: 'Bluetooth earphones & smartwatches',
+    name: 'Electronics & Gadgets',
+    sub: 'Bluetooth earphones, smartwatches & accessories',
     group: 'lifestyle',
     badgeColor: '#F97316',
     badgeBg: '#FFF7ED',
     accentColor: '#C2410C',
     sla: '20 mins',
     tags: ['Earphones', 'Smartwatches', 'Audio'],
-    icons: ['p1.jpg', 'p4.jpg']
+    icons: ['/electronics-hero-banner.jpg']
   },
   {
     slug: 'fashion',
-    name: 'Fashion & Wear',
-    sub: 'Sneakers, sunglasses & accessories',
+    name: 'Fashion & Accessories',
+    sub: 'Sneakers, watches & stylish accessories',
     group: 'lifestyle',
     badgeColor: '#DB2777',
     badgeBg: '#FDF2F8',
     accentColor: '#BE185D',
     sla: '25 mins',
     tags: ['Sneakers', 'Sunglasses', 'Accessories'],
-    icons: ['p1.jpg', 'p2.jpg']
+    icons: ['/sneakers.jpg']
   }
 ];
 
@@ -159,8 +184,51 @@ export default function CategoriesOverviewPage() {
 
   const [activeGroup, setActiveGroup] = useState('all');
   const [filterQuery, setFilterQuery] = useState('');
+  const [liveCategories, setLiveCategories] = useState(() => [...categories]);
 
-  const filteredCategories = CATEGORY_DETAILS.filter(cat => {
+  useEffect(() => {
+    const handleSync = () => setLiveCategories([...categories]);
+    handleSync();
+    window.addEventListener('grabit_categories_synced', handleSync);
+    window.addEventListener('grabit_categories_updated', handleSync);
+    return () => {
+      window.removeEventListener('grabit_categories_synced', handleSync);
+      window.removeEventListener('grabit_categories_updated', handleSync);
+    };
+  }, []);
+
+  const OBSOLETE_NAMES = new Set([
+    'bakery & breads',
+    'beverages & drinks',
+    'dairy & breakfast',
+    'fruits & vegetables',
+    'gourmet organic sweets',
+    'gourmet organic...'
+  ]);
+
+  const mergedCategories = useMemo(() => {
+    const customList = liveCategories
+      .filter((c) => {
+        const nameLower = String(c.name || '').toLowerCase().trim();
+        if (OBSOLETE_NAMES.has(nameLower)) return false;
+        return !CATEGORY_DETAILS.some((cd) => cd.slug === c.slug || String(cd.name).toLowerCase().trim() === nameLower);
+      })
+      .map((c) => ({
+        slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+        name: c.name,
+        sub: `${c.name} quick-commerce essentials`,
+        group: 'lifestyle',
+        badgeColor: '#0071E3',
+        badgeBg: '#EFF6FF',
+        accentColor: '#0071E3',
+        sla: '15 mins',
+        tags: [c.name, 'Essentials'],
+        icons: [c.image || c.image_url || 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645084/grabit_media/fresh_groceries_basket_only.png'],
+      }));
+    return [...CATEGORY_DETAILS, ...customList];
+  }, [liveCategories]);
+
+  const filteredCategories = mergedCategories.filter(cat => {
     if (activeGroup !== 'all' && cat.group !== activeGroup) return false;
     if (filterQuery.trim() && !cat.name.toLowerCase().includes(filterQuery.toLowerCase()) && !cat.sub.toLowerCase().includes(filterQuery.toLowerCase())) return false;
     return true;
@@ -249,7 +317,7 @@ export default function CategoriesOverviewPage() {
             if (isMobile) {
               return (
                 <Link
-                  key={cat.slug}
+                  key={`${cat.slug}-${cat.name}`}
                   to={`/category/${cat.slug}`}
                   style={{
                     background: '#FFFFFF',
@@ -290,7 +358,7 @@ export default function CategoriesOverviewPage() {
             {/* DESKTOP PREMIUM STORE CARD DESIGN */}
             return (
               <div
-                key={cat.slug}
+                key={`${cat.slug}-${cat.name}`}
                 style={{
                   background: '#FFFFFF',
                   borderRadius: '20px',

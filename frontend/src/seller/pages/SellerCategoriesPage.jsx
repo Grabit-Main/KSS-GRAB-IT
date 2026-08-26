@@ -127,13 +127,35 @@ export const SellerCategoriesPage = () => {
 
   return (
     <div>
-      {/* Page Header */}
+      {/* Page Header with Total Categories Pill Badge */}
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-graphite)', letterSpacing: '-0.4px' }}>
-          Categories Catalog
-        </h2>
-        <p style={{ color: 'var(--color-soft-gray)', fontSize: '14px', marginTop: 4 }}>
-          Manage your grocery & daily essential categories, nesting structures, and catalog visibility.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-graphite)', letterSpacing: '-0.4px', margin: 0 }}>
+              Categories Catalog
+            </h2>
+            <span
+              style={{
+                backgroundColor: '#EFF6FF',
+                color: '#0071E3',
+                border: '1.5px solid #BFDBFE',
+                borderRadius: '20px',
+                padding: '4px 14px',
+                fontSize: '13px',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 2px 6px rgba(0, 113, 227, 0.08)',
+              }}
+            >
+              <FolderTree size={15} color="#0071E3" />
+              <span>Total Categories: {totalCount}</span>
+            </span>
+          </div>
+        </div>
+        <p style={{ color: 'var(--color-soft-gray)', fontSize: '14px', marginTop: 6, marginBottom: 0 }}>
+          Manage your official customer portal categories, product counts, and storefront visibility.
         </p>
       </div>
 

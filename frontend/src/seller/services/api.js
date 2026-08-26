@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : 'https://grabit-api.vercel.app/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,7 +12,7 @@ const api = axios.create({
 // Request Interceptor: Attach JWT Token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('grabit_seller_access');
+    const token = localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_session');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -57,11 +57,14 @@ api.interceptors.response.use(
           return Promise.reject(refreshErr);
         }
       } else {
-        // No refresh token available - redirect to login
-        localStorage.removeItem('grabit_seller_access');
-        localStorage.removeItem('grabit_seller_profile');
-        if (window.location.pathname.startsWith('/seller')) {
-          window.location.href = '/login';
+        // No refresh token available - only redirect if no grabit_session
+        const session = localStorage.getItem('grabit_session');
+        if (!session) {
+          localStorage.removeItem('grabit_seller_access');
+          localStorage.removeItem('grabit_seller_profile');
+          if (window.location.pathname.startsWith('/seller')) {
+            window.location.href = '/login';
+          }
         }
       }
     }

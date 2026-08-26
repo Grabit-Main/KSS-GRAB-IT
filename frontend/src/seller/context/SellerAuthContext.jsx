@@ -12,10 +12,10 @@ export const SellerAuthProvider = ({ children }) => {
         if (u.role === 'seller' || u.role === 'admin') {
           return {
             id: u.id || 1,
-            email: u.email || 'seller@grabit.com',
-            store_name: u.full_name || 'Fresh Mart Supermarket',
-            phone: u.phone || '+91 99999 00002',
-            business_address: 'Bangalore Vendor Hub',
+            email: u.email || '',
+            store_name: u.store_name || u.full_name || u.name || 'Seller Store',
+            phone: u.phone || '',
+            business_address: u.business_address || '',
             status: 'approved',
             role: u.role,
           };
@@ -38,10 +38,10 @@ export const SellerAuthProvider = ({ children }) => {
         if (u.role === 'seller' || u.role === 'admin') {
           setSeller({
             id: u.id || 1,
-            email: u.email || 'seller@grabit.com',
-            store_name: u.full_name || 'Fresh Mart Supermarket',
-            phone: u.phone || '+91 99999 00002',
-            business_address: 'Bangalore Vendor Hub',
+            email: u.email || '',
+            store_name: u.store_name || u.full_name || u.name || 'Seller Store',
+            phone: u.phone || '',
+            business_address: u.business_address || '',
             status: 'approved',
             role: u.role,
           });

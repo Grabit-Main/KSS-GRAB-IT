@@ -4,7 +4,7 @@ import { Sparkles, Zap, Flame, Truck, Gift, Clock, ShieldCheck, ChevronRight } f
 import useWindowWidth from '../../hooks/useWindowWidth';
 
 const ANNOUNCEMENTS = [
-  { text: '⚡ 15-Min Express Delivery Active in Banaswadi', bg: '#DCFCE7', color: '#15803D', border: '#BBF7D0', icon: <Zap size={13} fill="#16A34A" color="#16A34A" /> },
+  { text: '⚡ 15-Min Express Delivery Active to Your Location', bg: '#DCFCE7', color: '#15803D', border: '#BBF7D0', icon: <Zap size={13} fill="#16A34A" color="#16A34A" /> },
   { text: '🎁 Code: GRABIT50 for 50% OFF on 1st Order', bg: '#FEF3C7', color: '#B45309', border: '#FDE68A', icon: <Gift size={13} color="#D97706" /> },
   { text: '🚚 FREE Delivery on All Orders Above ₹199', bg: '#DBEAFE', color: '#1E40AF', border: '#BFDBFE', icon: <Truck size={13} color="#2563EB" /> },
   { text: '🪢 Raksha Bandhan & Onam Festival Deals Live!', bg: '#FCE7F3', color: '#9D174D', border: '#FBCFE8', icon: <Sparkles size={13} color="#DB2777" /> },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
+import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Store, Truck, ShieldCheck } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useDeliveryLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -66,7 +66,7 @@ const CATEGORY_HEADER_THEMES = {
     bg: '#F5F5F7',
     border: '#D2D2D7',
     accent: '#0071E3',
-    placeholder: 'Search for "milk", "chips", "coke"...'
+    placeholder: 'Search for milk, butter, chips, snacks...'
   },
   '/category/produce': {
     bg: '#EAF8F0',
@@ -145,7 +145,7 @@ const CATEGORY_HEADER_THEMES = {
 export default function Header() {
   const { totalItems, toPay } = useCart();
   const locationCtx = useDeliveryLocation() || {};
-  const location = locationCtx.location || { area: 'Banaswadi', city: 'Bengaluru', pincode: '560043', radius: '5 km' };
+  const location = locationCtx.location || { area: 'Select Location', city: '', pincode: '', radius: '' };
   const setIsModalOpen = locationCtx.setIsModalOpen || (() => {});
   const { wishlistCount } = useWishlist();
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,6 +157,7 @@ export default function Header() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
+  const [showLoginConfirmModal, setShowLoginConfirmModal] = useState(false);
 
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -202,6 +203,64 @@ export default function Header() {
     setIsProfileMenuOpen(false);
   };
 
+  const handleSelectPortal = (role, targetPath) => {
+    setIsProfileMenuOpen(false);
+
+    if (role === 'customer') {
+      const userObj = {
+        id: 4,
+        role: 'customer',
+        name: 'Rahul Sharma',
+        full_name: 'Rahul Sharma',
+        phone: '+919999900004',
+        email: 'customer@grabit.local'
+      };
+      localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      navigate('/');
+    } else if (role === 'seller') {
+      const userObj = {
+        id: 2,
+        role: 'seller',
+        name: 'Fresh Mart Supermarket',
+        full_name: 'Fresh Mart Supermarket',
+        phone: '+919999900002',
+        email: 'seller@grabit.local'
+      };
+      localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      localStorage.setItem('grabit_seller_access', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
+      navigate('/seller/dashboard');
+    } else if (role === 'delivery_agent') {
+      const userObj = {
+        id: 3,
+        role: 'delivery_agent',
+        name: 'Speedy Express Delivery',
+        full_name: 'Speedy Express Delivery',
+        phone: '+919999900003',
+        email: 'rider@grabit.local'
+      };
+      localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      navigate('/delivery/dashboard');
+    } else if (role === 'admin') {
+      const userObj = {
+        id: 1,
+        role: 'admin',
+        name: 'Admin Supervisor',
+        full_name: 'Admin Supervisor',
+        phone: '+919999900001',
+        email: 'admin@grabit.local'
+      };
+      localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      localStorage.setItem('grabit_seller_access', localStorage.getItem('grabit_session') || 'demo-token');
+      localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
+      navigate('/admin');
+    }
+  };
+
   const isProfilePage = routerLocation.pathname === '/profile';
 
   const matchingProducts = searchQuery.trim() ? searchProducts(searchQuery.trim()).slice(0, 5) : [];
@@ -236,7 +295,7 @@ export default function Header() {
       >
         {searchQuery.trim().length === 0 ? (
           <div>
-            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Sparkles size={12} color="#0071E3" /> Trending Searches
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 8px' }}>
@@ -251,10 +310,20 @@ export default function Header() {
                   }}
                   style={{
                     background: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: '20px', padding: '6px 12px', fontSize: '12px',
-                    fontWeight: 800, color: '#0F172A', cursor: 'pointer',
+                    borderRadius: '20px', padding: '6px 13px', fontSize: '12.5px',
+                    fontWeight: 600, color: '#334155', cursor: 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#F1F5F9';
+                    e.currentTarget.style.borderColor = '#CBD5E1';
+                    e.currentTarget.style.color = '#0F172A';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#F8FAFC';
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                    e.currentTarget.style.color = '#334155';
                   }}
                 >
                   <span>{t.icon}</span>
@@ -265,11 +334,11 @@ export default function Header() {
           </div>
         ) : (
           <div>
-            <div style={{ padding: '4px 16px 6px', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ padding: '4px 16px 6px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               Product Suggestions ({matchingProducts.length})
             </div>
             {matchingProducts.length === 0 ? (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 600 }}>
+              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 500 }}>
                 No direct product matches for "{searchQuery}". Press Enter to view full catalog.
               </div>
             ) : (
@@ -294,15 +363,15 @@ export default function Header() {
                       <ProductSvg name={prod.image} size={28} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {prod.name}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{prod.volume || prod.weight}</span>
                         <span>•</span>
-                        <span style={{ fontWeight: 900, color: '#0071E3' }}>₹{prod.price}</span>
+                        <span style={{ fontWeight: 700, color: '#0071E3' }}>₹{prod.price}</span>
                         {prod.originalPrice > prod.price && (
-                          <span style={{ textDecoration: 'line-through', color: '#94A3B8', fontSize: '10px' }}>₹{prod.originalPrice}</span>
+                          <span style={{ textDecoration: 'line-through', color: '#94A3B8', fontSize: '10.5px' }}>₹{prod.originalPrice}</span>
                         )}
                       </div>
                     </div>
@@ -423,19 +492,34 @@ export default function Header() {
                   </div>
                 </div>
 
-                {/* Right Side: Cart Button with Badge */}
+                {/* Right Side: Login & Cart Buttons */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginConfirmModal(true)}
+                    style={{
+                      width: '38px', height: '38px', borderRadius: '50%',
+                      background: '#EFF6FF', border: '1.5px solid #BFDBFE',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(0, 113, 227, 0.1)', cursor: 'pointer', color: '#0071E3',
+                      padding: 0
+                    }}
+                    title="Login & Portals"
+                  >
+                    <LogIn size={18} color="#0071E3" />
+                  </button>
+
                   <Link
                     to="/cart"
                     style={{
-                      width: '40px', height: '40px', borderRadius: '50%',
+                      width: '38px', height: '38px', borderRadius: '50%',
                       background: '#FFFFFF', border: '1.5px solid #CBD5E1',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: '0 2px 6px rgba(0,0,0,0.06)', textDecoration: 'none', color: '#0F172A',
                       position: 'relative'
                     }}
                   >
-                    <ShoppingBag size={20} color="#0071E3" />
+                    <ShoppingBag size={18} color="#0071E3" />
                     {totalItems > 0 && (
                       <span style={{
                         position: 'absolute', top: '-4px', right: '-4px',
@@ -856,6 +940,82 @@ export default function Header() {
             >
               Shop & Apply Code Now
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔐 CONFIRMATION MODAL BEFORE REDIRECTING TO LOGIN */}
+      {showLoginConfirmModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999999,
+          background: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '20px',
+            maxWidth: '380px', width: '100%', padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.18)', textAlign: 'center',
+            border: '1px solid #E2E8F0', position: 'relative'
+          }}>
+            <button
+              type="button"
+              onClick={() => setShowLoginConfirmModal(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: '#F1F5F9', border: 'none', fontSize: '14px',
+                fontWeight: 700, color: '#64748B', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              background: '#EFF6FF', color: '#0071E3',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 14px', border: '1.5px solid #BFDBFE'
+            }}>
+              <LogIn size={24} color="#0071E3" />
+            </div>
+
+            <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: '0 0 6px' }}>
+              Redirect to Login Page?
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Are you sure you want to open the Login & Authentication portal?
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowLoginConfirmModal(false)}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: '12px',
+                  background: '#F1F5F9', border: '1px solid #CBD5E1',
+                  color: '#475569', fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLoginConfirmModal(false);
+                  navigate('/login');
+                }}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: '12px',
+                  background: '#0071E3', border: 'none',
+                  color: '#FFFFFF', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,113,227,0.3)'
+                }}
+              >
+                Go to Login
+              </button>
+            </div>
           </div>
         </div>
       )}

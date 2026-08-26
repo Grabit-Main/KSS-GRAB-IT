@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Check, Search, SlidersHorizontal, X, ArrowUpDown, Filter, ChevronDown } from 'lucide-react';
@@ -49,7 +49,40 @@ const CATEGORY_NAMES = {
 export default function SearchResultsPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const initialResults = searchProducts(query);
+  const [allProducts, setAllProducts] = useState(() => [...products]);
+
+  useEffect(() => {
+    const handleSync = () => setAllProducts([...products]);
+    handleSync();
+    window.addEventListener('grabit_products_synced', handleSync);
+    window.addEventListener('grabit_products_updated', handleSync);
+    return () => {
+      window.removeEventListener('grabit_products_synced', handleSync);
+      window.removeEventListener('grabit_products_updated', handleSync);
+    };
+  }, []);
+
+  const initialResults = useMemo(() => {
+    if (!query) return allProducts.slice(0, 45);
+    const q = query.toLowerCase().trim();
+    if (q === 'trending' || q === 'popular' || q === 'top' || q === 'best') {
+      return allProducts.filter(p => ['snacks','dairy','beverages','staples','household'].includes(p.category || p.category_slug));
+    }
+    if (q === 'deals' || q === 'offers' || q === 'discount') {
+      return allProducts.filter(p => (p.discount || 0) >= 15);
+    }
+    if (q === 'all') return allProducts;
+
+    const matches = allProducts.filter(p =>
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.category && String(p.category).toLowerCase().includes(q)) ||
+      (p.category_name && p.category_name.toLowerCase().includes(q)) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      (p.unit && p.unit.toLowerCase().includes(q)) ||
+      (p.weight && p.weight.toLowerCase().includes(q))
+    );
+    return matches.length > 0 ? matches : allProducts.filter(p => (p.rating || 0) >= 4.7).slice(0, 30);
+  }, [query, allProducts]);
 
   const [sort, setSort] = useState('Relevance');
   const [activeCat, setActiveCat] = useState('All');

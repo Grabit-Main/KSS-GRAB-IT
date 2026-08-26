@@ -5,7 +5,7 @@ import {
   Home,
   Bike,
   User,
-  Settings
+  History
 } from 'lucide-react';
 
 export const MobileBottomNav: React.FC = () => {
@@ -16,11 +16,11 @@ export const MobileBottomNav: React.FC = () => {
     { to: '/delivery/dashboard', label: 'Dashboard', icon: Home },
     {
       to: '/delivery/active-delivery',
-      label: 'Active',
+      label: 'Active Order',
       icon: Bike,
       hasActiveOrder: agentStatus === 'ON_DELIVERY'
     },
-    { to: '/delivery/settings', label: 'Settings', icon: Settings },
+    { to: '/delivery/delivery-history', label: 'History', icon: History },
     { to: '/delivery/profile', label: 'Profile', icon: User }
   ];
 

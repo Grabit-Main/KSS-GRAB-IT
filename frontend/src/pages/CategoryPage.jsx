@@ -119,6 +119,26 @@ const CATEGORY_MAP = {
     accentColor: '#38BDF8',
     bannerIcons: ['p1.jpg', 'p4.jpg', 'p6.jpg', 'p9.jpg']
   },
+  'tea-coffee': {
+    title: 'Tea, Coffee & Drinks',
+    sub: 'Rich instant coffee, aromatic chai leaves & morning beverages.',
+    catKey: 'tea-coffee',
+    isDark: true,
+    heroImg: '/tea-coffee-hero-transparent.png',
+    gradient: 'linear-gradient(135deg, #180B04 0%, #331808 40%, #5E2C0C 75%, #854D0E 100%)',
+    accentColor: '#EAB308',
+    bannerIcons: ['nescafe-coffee', 'tea-coffee-hero-transparent.png'],
+  },
+  'instant-food': {
+    title: 'Instant & Frozen Food',
+    sub: 'Quick 2-minute noodles, hot soups, pasta & ready-to-eat meals.',
+    catKey: 'instant-food',
+    isDark: true,
+    heroImg: '/instant-noodles-hero-transparent.png',
+    gradient: 'linear-gradient(135deg, #1C0A00 0%, #3D1400 40%, #7C2D12 75%, #B45309 100%)',
+    accentColor: '#F59E0B',
+    bannerIcons: ['maggi-noodles', 'instant-noodles-hero-transparent.png'],
+  },
   'fashion': {
     title: 'Fashion & Accessories',
     sub: 'Trendy sneakers, sunglasses, watches & lifestyle items.',
@@ -127,9 +147,32 @@ const CATEGORY_MAP = {
     heroImg: '/fashion-hero-cutout.png',
     gradient: 'linear-gradient(135deg, #2A0413 0%, #4D0922 40%, #881337 75%, #9F1239 100%)',
     accentColor: '#FB7185',
-    bannerIcons: ['p1.jpg', 'p2.jpg']
-  }
+    bannerIcons: ['p1.jpg', 'p2.jpg'],
+  },
 };
+
+// Aliases for all common slug variants
+CATEGORY_MAP['snacks'] = CATEGORY_MAP['snacks-munchies'];
+CATEGORY_MAP['dairy'] = CATEGORY_MAP['dairy-bakery'];
+CATEGORY_MAP['cold-drinks-juices'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['cold-drinks'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['drinks'] = CATEGORY_MAP['beverages'];
+CATEGORY_MAP['atta-rice-dal'] = CATEGORY_MAP['staples'];
+CATEGORY_MAP['atta-rice-dals'] = CATEGORY_MAP['staples'];
+CATEGORY_MAP['chocolates-sweets'] = CATEGORY_MAP['chocolates'];
+CATEGORY_MAP['household-essentials'] = CATEGORY_MAP['household'];
+CATEGORY_MAP['fresh-fruits-veggies'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['fresh-produce'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['fruits-vegetables'] = CATEGORY_MAP['produce'];
+CATEGORY_MAP['tea-coffee-drinks'] = CATEGORY_MAP['tea-coffee'];
+CATEGORY_MAP['biscuits-cookies'] = CATEGORY_MAP['biscuits'];
+CATEGORY_MAP['cookies'] = CATEGORY_MAP['biscuits'];
+CATEGORY_MAP['instant-frozen-food'] = CATEGORY_MAP['instant-food'];
+CATEGORY_MAP['edible-oils-ghee'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['oils-ghee'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['oils'] = CATEGORY_MAP['oil'];
+CATEGORY_MAP['electronics-gadgets'] = CATEGORY_MAP['electronics'];
+CATEGORY_MAP['fashion-accessories'] = CATEGORY_MAP['fashion'];
 
 const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'];
 
@@ -197,26 +240,9 @@ const matchesSubCategory = (product, subCat) => {
     return name.includes('glucose') || name.includes('parle-g') || name.includes('marie') || name.includes('digestive') || name.includes('sunfeast') || name.includes('gold');
   }
 
-  // Snacks & Munchies
-  if (sub.includes('potato')) return name.includes('chips') || name.includes('potato') || name.includes('lays') || name.includes('pringles') || name.includes('uncle') || name.includes('wafers');
-  if (sub.includes('tortilla') || sub.includes('nacho')) return name.includes('doritos') || name.includes('nacho') || name.includes('tortilla') || name.includes('cornitos') || name.includes('bingo');
-  if (sub.includes('namkeen') || sub.includes('mix')) return name.includes('haldiram') || name.includes('bhujia') || name.includes('namkeen') || name.includes('mixture') || name.includes('sev') || name.includes('boondi') || name.includes('kurkure') || name.includes('chana');
-
-  // Dairy & Bakery
-  if (sub.includes('milk') || sub.includes('butter')) return name.includes('milk') || name.includes('butter');
-  if (sub.includes('paneer') || sub.includes('cheese')) return name.includes('paneer') || name.includes('cheese');
-  if (sub.includes('bread') || sub.includes('bakery')) return name.includes('bread') || name.includes('bakery') || name.includes('bun');
-  if (sub.includes('yogurt') || sub.includes('dahi')) return name.includes('yogurt') || name.includes('dahi') || name.includes('curd');
-
-  // Cold Drinks & Juices
-  if (sub.includes('soft')) return name.includes('coke') || name.includes('coca') || name.includes('sprite') || name.includes('fanta') || name.includes('pepsi') || name.includes('thums') || name.includes('limca') || name.includes('soda');
-  if (sub.includes('juice')) return name.includes('juice') || name.includes('real') || name.includes('tropicana') || name.includes('maaza') || name.includes('frooti') || name.includes('paper boat') || name.includes('appy');
-  if (sub.includes('tea') || sub.includes('coffee')) return name.includes('tea') || name.includes('coffee') || name.includes('nescafe');
-  if (sub.includes('energy')) return name.includes('red bull') || name.includes('monster') || name.includes('energy');
-
-  // Atta, Rice & Dal
-  if (sub.includes('atta') || sub.includes('flour')) return name.includes('atta') || name.includes('flour') || name.includes('aashirvaad');
-  if (sub.includes('rice') || sub.includes('grain')) return name.includes('rice') || name.includes('basmati') || name.includes('daawat') || name.includes('india gate');
+  // Staples
+  if (sub.includes('atta') || sub.includes('flour')) return name.includes('atta') || name.includes('flour') || name.includes('maida') || name.includes('sooji') || name.includes('besan') || name.includes('aashirvaad');
+  if (sub.includes('rice')) return name.includes('rice') || name.includes('basmati') || name.includes('daawat') || name.includes('india gate') || name.includes('kolam');
   if (sub.includes('dal') || sub.includes('pulse')) return name.includes('dal') || name.includes('pulse') || name.includes('toor') || name.includes('moong') || name.includes('chana');
 
   // Fresh Fruits & Veggies
@@ -231,7 +257,61 @@ const matchesSubCategory = (product, subCat) => {
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const catInfo = CATEGORY_MAP[slug] || CATEGORY_MAP['snacks-munchies'];
+  const [allCategories, setAllCategories] = useState(() => {
+    try {
+      const stored = localStorage.getItem('grabit_custom_categories');
+      const customList = stored ? JSON.parse(stored) : [];
+      return [...customList, ...(window.__grabit_categories || [])];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const updateCategories = () => {
+      try {
+        const stored = localStorage.getItem('grabit_custom_categories');
+        const customList = stored ? JSON.parse(stored) : [];
+        setAllCategories([...customList, ...(window.__grabit_categories || [])]);
+      } catch {}
+    };
+    updateCategories();
+    window.addEventListener('grabit_categories_synced', updateCategories);
+    window.addEventListener('grabit_categories_updated', updateCategories);
+    return () => {
+      window.removeEventListener('grabit_categories_synced', updateCategories);
+      window.removeEventListener('grabit_categories_updated', updateCategories);
+    };
+  }, []);
+
+  const cleanSlug = String(slug || '').toLowerCase();
+  const matchedCatObj = allCategories.find(c => 
+    (c.slug && c.slug.toLowerCase() === cleanSlug) ||
+    String(c.id) === cleanSlug ||
+    (c.name && c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug) ||
+    (c.name && c.name.toLowerCase() === cleanSlug.replace(/-/g, ' '))
+  );
+
+  const catInfo = CATEGORY_MAP[cleanSlug] || (matchedCatObj ? {
+    title: matchedCatObj.name,
+    sub: `Fresh selection & top offers in ${matchedCatObj.name}.`,
+    catKey: matchedCatObj.slug || matchedCatObj.id || cleanSlug,
+    isDark: false,
+    heroImg: matchedCatObj.image_url || matchedCatObj.image || matchedCatObj.icon || '/grabit-logo.png',
+    gradient: 'linear-gradient(135deg, #EEF4FF 0%, #E0EDFF 50%, #BFDBFE 100%)',
+    accentColor: '#0066FF',
+    bannerIcons: []
+  } : {
+    title: (slug || 'Category').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    sub: 'Explore all products in this category.',
+    catKey: cleanSlug,
+    isDark: false,
+    heroImg: '/grabit-logo.png',
+    gradient: 'linear-gradient(135deg, #EEF4FF 0%, #E0EDFF 50%, #BFDBFE 100%)',
+    accentColor: '#0066FF',
+    bannerIcons: []
+  });
+
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
@@ -243,12 +323,50 @@ export default function CategoryPage() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
 
+  const [allProducts, setAllProducts] = useState(() => [...products]);
+
   useEffect(() => {
     setActiveSubCat('All');
     setActiveBrands([]);
   }, [slug]);
 
-  const categoryProducts = products.filter(p => p.category === catInfo.catKey || p.category === slug);
+  useEffect(() => {
+    const updateData = () => setAllProducts([...products]);
+    updateData();
+    window.addEventListener('grabit_products_synced', updateData);
+    window.addEventListener('grabit_products_updated', updateData);
+    return () => {
+      window.removeEventListener('grabit_products_synced', updateData);
+      window.removeEventListener('grabit_products_updated', updateData);
+    };
+  }, []);
+
+  const categoryProducts = allProducts.filter(p => {
+    if (!slug) return true;
+    const targetSlug = cleanSlug;
+    const targetClean = targetSlug.replace(/-/g, ' ');
+    const pCat = String(p.category || '').toLowerCase();
+    const pSlug = String(p.category_slug || '').toLowerCase();
+    const pCatName = String(p.category_name || '').toLowerCase();
+    const catKey = String(catInfo.catKey || '').toLowerCase();
+
+    if (matchedCatObj) {
+      if (String(p.category_id) === String(matchedCatObj.id)) return true;
+      if (String(p.category) === String(matchedCatObj.id)) return true;
+      if (pCat === matchedCatObj.name.toLowerCase()) return true;
+      if (matchedCatObj.slug && (pCat === matchedCatObj.slug.toLowerCase() || pSlug === matchedCatObj.slug.toLowerCase())) return true;
+    }
+
+    return (
+      pCat === targetSlug ||
+      pSlug === targetSlug ||
+      pCat === catKey ||
+      pSlug === catKey ||
+      pCatName.includes(targetClean) ||
+      targetClean.includes(pCat) ||
+      pCat.includes(targetClean)
+    );
+  });
   const rawSubCats = subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
 
   const subCats = rawSubCats.map(s => {
@@ -863,7 +981,9 @@ export default function CategoryPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: prodGridCols, gap: isMobile ? '10px' : '16px' }}>
-              {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+              {filtered.map((p, pIdx) => (
+                <ProductCard key={`${p.id}-${pIdx}`} product={p} />
+              ))}
             </div>
           )}
         </div>

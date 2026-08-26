@@ -505,16 +505,16 @@ export default function ProductDetailPage() {
                 </span>
               </button>
             ) : (
-              /* Clean Full-Width Emerald Quantity Selector */
+              /* Clean Full-Width Blue Quantity Selector */
               <div
                 className="animate-cta-swap"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: 'linear-gradient(135deg, #0F9D58 0%, #0B8043 100%)',
+                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
                   color: '#FFFFFF',
                   borderRadius: '16px', padding: '0 12px',
                   height: '54px', width: '100%',
-                  boxShadow: '0 10px 28px rgba(15, 157, 88, 0.35)', boxSizing: 'border-box',
+                  boxShadow: '0 10px 28px rgba(0, 113, 227, 0.35)', boxSizing: 'border-box',
                   border: '1px solid rgba(255, 255, 255, 0.3)'
                 }}
               >

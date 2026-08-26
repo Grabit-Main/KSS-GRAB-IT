@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X } from 'lucide-react';
-import { orders, orderStats, trackerSteps } from '../data/orders';
+import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X, RefreshCw } from 'lucide-react';
+import { orders as defaultOrders, trackerSteps } from '../data/orders';
 import ProductSvg from '../components/common/ProductSvg';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
@@ -19,7 +19,66 @@ export default function OrdersPage() {
   const w = useWindowWidth();
   const isMobile = w <= 768;
 
-  const filtered = orders.filter(o => {
+  const loadAllOrders = useCallback(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const formatted = stored.map(o => {
+        let normStatus = 'confirmed';
+        let step = 1;
+        if (o.status === 'delivered') { normStatus = 'delivered'; step = 3; }
+        else if (o.status === 'out_for_delivery' || o.status === 'out-for-delivery') { normStatus = 'out-for-delivery'; step = 2; }
+        else if (o.status === 'cancelled') { normStatus = 'cancelled'; step = 0; }
+        else if (o.status === 'preparing') { normStatus = 'confirmed'; step = 1; }
+
+        return {
+          id: o.id || `GB${o.rawId?.slice(-6) || '9921'}`,
+          rawId: o.rawId,
+          date: o.date ? `${o.date}, ${o.time || '10:00 AM'}` : 'Just now',
+          status: normStatus,
+          eta: o.estimated_time || 'Arriving in 15 min',
+          trackerStep: step,
+          items: (o.items || []).map(it => ({
+            name: it.name,
+            qty: it.qty || it.quantity || 1,
+            price: it.price || 50,
+            image: it.image || 'lays-classic-salted'
+          })),
+          totalItems: (o.items || []).reduce((acc, it) => acc + (it.qty || it.quantity || 1), 0),
+          total: o.total_amount || 199,
+          address: o.delivery_address || o.address || 'Customer Delivery Address',
+          paymentMethod: o.payment_method || 'UPI',
+          deliverySlot: o.estimated_time || '10-15 min express delivery',
+          discount: o.discount || 0
+        };
+      });
+      return formatted;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const [ordersList, setOrdersList] = useState(loadAllOrders);
+
+  useEffect(() => {
+    const sync = () => setOrdersList(loadAllOrders());
+    window.addEventListener('storage', sync);
+    const interval = setInterval(sync, 2000);
+    return () => {
+      window.removeEventListener('storage', sync);
+      clearInterval(interval);
+    };
+  }, [loadAllOrders]);
+
+  const dynamicStats = useMemo(() => {
+    const total = ordersList.length;
+    const delivered = ordersList.filter(o => o.status === 'delivered').length;
+    const ongoing = ordersList.filter(o => o.status === 'out-for-delivery' || o.status === 'confirmed').length;
+    const cancelled = ordersList.filter(o => o.status === 'cancelled').length;
+    const totalSpent = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
+    return { total, delivered, ongoing, cancelled, totalSpent };
+  }, [ordersList]);
+
+  const filtered = ordersList.filter(o => {
     if (activeTab === 'All Orders') return true;
     if (activeTab === 'Ongoing') return o.status === 'out-for-delivery' || o.status === 'confirmed';
     if (activeTab === 'Delivered') return o.status === 'delivered';
@@ -28,8 +87,14 @@ export default function OrdersPage() {
   });
 
   const handleReorder = (order) => {
-    order.items.forEach(item => addItem(item));
-    showToast(`Added items from Order #GB${order.id} to your Cart!`);
+    (order.items || []).forEach(item => addItem({
+      id: item.name,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      qty: 1
+    }));
+    showToast(`Added ${order.items?.length || 1} items from Order #${order.id} to your Cart!`);
   };
 
   return (
@@ -141,7 +206,7 @@ export default function OrdersPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '15px', color: '#0F172A' }}>
-                          Order ID: #GB{order.id}
+                          Order #{order.id.replace(/^#?GB-?/i, 'GB-')}
                         </span>
                         <ChevronRight size={16} color="#94A3B8" />
                       </div>
@@ -154,12 +219,13 @@ export default function OrdersPage() {
                     <span style={{
                       padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 900,
                       display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      background: order.status === 'out-for-delivery' ? '#EFF6FF' : order.status === 'delivered' ? '#ECFDF5' : '#FEF2F2',
-                      color: order.status === 'out-for-delivery' ? '#0071E3' : order.status === 'delivered' ? '#10B981' : '#EF4444',
-                      border: order.status === 'out-for-delivery' ? '1px solid #BFDBFE' : order.status === 'delivered' ? '1px solid #A7F3D0' : '1px solid #FECACA'
+                      background: order.status === 'out-for-delivery' ? '#EFF6FF' : order.status === 'delivered' ? '#ECFDF5' : order.status === 'confirmed' ? '#FFFBEB' : '#FEF2F2',
+                      color: order.status === 'out-for-delivery' ? '#0071E3' : order.status === 'delivered' ? '#10B981' : order.status === 'confirmed' ? '#D97706' : '#EF4444',
+                      border: order.status === 'out-for-delivery' ? '1px solid #BFDBFE' : order.status === 'delivered' ? '1px solid #A7F3D0' : order.status === 'confirmed' ? '1px solid #FDE68A' : '1px solid #FECACA'
                     }}>
                       {order.status === 'delivered' && <>✓ Delivered</>}
                       {order.status === 'out-for-delivery' && <>🛵 Out for Delivery</>}
+                      {order.status === 'confirmed' && <>⏱️ Preparing Order</>}
                       {order.status === 'cancelled' && <>✕ Cancelled</>}
                     </span>
                   </div>
@@ -282,10 +348,10 @@ export default function OrdersPage() {
               </h3>
 
               {[
-                ['Total Orders', orderStats.total],
-                ['Delivered', orderStats.delivered],
-                ['Ongoing', orderStats.ongoing],
-                ['Cancelled', orderStats.cancelled],
+                ['Total Orders', dynamicStats.total],
+                ['Delivered', dynamicStats.delivered],
+                ['Ongoing', dynamicStats.ongoing],
+                ['Cancelled', dynamicStats.cancelled],
               ].map(([label, val]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F1F5F9', fontSize: '13px' }}>
                   <span style={{ color: '#64748B', fontWeight: 600 }}>{label}</span>
@@ -295,7 +361,7 @@ export default function OrdersPage() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: 900 }}>
                 <span style={{ color: '#0F172A' }}>Total Spent</span>
-                <span style={{ color: '#0071E3' }}>₹{orderStats.totalSpent.toLocaleString()}</span>
+                <span style={{ color: '#0071E3' }}>₹{dynamicStats.totalSpent.toLocaleString()}</span>
               </div>
             </div>
           </div>

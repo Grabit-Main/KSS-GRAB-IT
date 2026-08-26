@@ -54,7 +54,7 @@ export function LoginPage() {
     setBusy(true);
     setError('');
 
-    // Instant recognition for known demo credentials entered manually
+    // Instant recognition for known demo credentials entered or selected
     const knownDemoMap = {
       '+919999900001': { name: 'Admin Supervisor', role: 'admin' },
       '+919999900002': { name: 'Fresh Mart Supermarket', role: 'seller' },
@@ -64,33 +64,65 @@ export function LoginPage() {
 
     const demoUser = knownDemoMap[fullPhone];
     if (demoUser) {
-      setRegistered(true);
-      setDetectedRole(demoUser.role);
-      setName(demoUser.name);
-      await requestOtpFor(fullPhone);
-      setStep('otp');
+      let token = 'demo-token';
+      try {
+        await post('/auth/phone', { phone: fullPhone });
+        const v = await post('/auth/verify', { phone: fullPhone, otp: '123456', full_name: demoUser.name });
+        if (v?.access_token) token = v.access_token;
+      } catch {}
+
+      const userObj = {
+        id: demoUser.role === 'admin' ? 1 : demoUser.role === 'seller' ? 2 : demoUser.role === 'delivery_agent' ? 3 : 4,
+        role: demoUser.role,
+        full_name: demoUser.name,
+        name: demoUser.name,
+        phone: fullPhone,
+        email: `${demoUser.role}@grabit.local`,
+      };
+
+      localStorage.setItem('grabit_session', token);
+      localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      if (demoUser.role === 'seller' || demoUser.role === 'admin') {
+        localStorage.setItem('grabit_seller_access', token);
+        localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
+      }
+
+      if (demoUser.role === 'admin') navigate('/admin', { replace: true });
+      else if (demoUser.role === 'seller') navigate('/seller/dashboard', { replace: true });
+      else if (demoUser.role === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
+      else navigate('/', { replace: true });
       setBusy(false);
       return;
     }
 
     try {
       const res = await post('/auth/phone', { phone: fullPhone });
-      setRegistered(res.registered);
-      setDetectedRole(res.role || 'customer');
-      if (res.registered) {
+      const isReg = Boolean(res && res.registered);
+      setRegistered(isReg);
+      setDetectedRole(res?.role || 'customer');
+
+      if (isReg) {
         // Existing user in database -> go straight to OTP
+        if (res.user?.full_name || res.user?.name) {
+          setName(res.user.full_name || res.user.name);
+        }
+        if (res.user?.email) {
+          setEmail(res.user.email);
+        }
         await requestOtpFor(fullPhone);
         setStep('otp');
       } else {
-        // Truly new user -> open registration
+        // User not in database -> ask user to create account
         setName('');
         setEmail('');
         setStep('register');
       }
     } catch (e) {
-      // Fallback -> direct OTP
-      await requestOtpFor(fullPhone);
-      setStep('otp');
+      // If error communicating with API or user not found, prompt to create account
+      setRegistered(false);
+      setName('');
+      setEmail('');
+      setStep('register');
     } finally {
       setBusy(false);
     }
@@ -99,7 +131,7 @@ export function LoginPage() {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Please enter your full name');
+      setError('Please enter your full name to create an account');
       return;
     }
     setBusy(true);
@@ -128,19 +160,35 @@ export function LoginPage() {
         otp,
         ...(!registered ? { full_name: name || 'Customer', email: email || null } : {}),
       });
-      const resolvedUser = x.user || { role: detectedRole, name: name || 'User', phone: fullPhone };
-      localStorage.setItem('grabit_session', x.access_token);
+      const resolvedUser = x.user || { role: detectedRole, name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
+      localStorage.setItem('grabit_session', x.access_token || 'session-token');
       localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
 
       const userRole = resolvedUser.role || detectedRole;
+      if (userRole === 'seller' || userRole === 'admin') {
+        localStorage.setItem('grabit_seller_access', x.access_token);
+        localStorage.setItem('grabit_seller_profile', JSON.stringify(resolvedUser));
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
+      }
+
       if (userRole === 'admin') navigate('/admin', { replace: true });
       else if (userRole === 'seller') navigate('/seller/dashboard', { replace: true });
       else if (userRole === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
       else navigate('/', { replace: true });
     } catch (e) {
-      const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', phone: fullPhone };
+      const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
       localStorage.setItem('grabit_session', 'demo-token');
       localStorage.setItem('grabit_user', JSON.stringify(fallbackUser));
+      if (fallbackUser.role === 'seller' || fallbackUser.role === 'admin') {
+        localStorage.setItem('grabit_seller_access', 'demo-token');
+        localStorage.setItem('grabit_seller_profile', JSON.stringify(fallbackUser));
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
+      }
       if (fallbackUser.role === 'admin') navigate('/admin', { replace: true });
       else if (fallbackUser.role === 'seller') navigate('/seller/dashboard', { replace: true });
       else if (fallbackUser.role === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
@@ -150,40 +198,23 @@ export function LoginPage() {
     }
   };
 
-  const selectDemoRole = async (demoPhone, demoName, role) => {
+  const selectDemoRole = (demoPhone, demoName, role) => {
     const digits = demoPhone.replace('+91', '');
     setPhoneDigits(digits);
     setName(demoName);
     setDetectedRole(role);
     setError('');
-    setBusy(true);
-    try {
-      const x = await post('/auth/phone', { phone: demoPhone });
-      setRegistered(x.registered);
-      await requestOtpFor(demoPhone);
-      setStep('otp');
-    } catch (e) {
-      await requestOtpFor(demoPhone);
-      setStep('otp');
-    } finally {
-      setBusy(false);
-    }
   };
 
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
         width: '100%',
         minHeight: '100vh',
-        height: '100dvh',
-        overflow: 'hidden',
-        overscrollBehavior: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '30px 20px',
         backgroundColor: '#EBF3FC',
         backgroundImage: `url(${DOODLE_BG})`,
         backgroundSize: '580px 580px',
@@ -623,16 +654,26 @@ export function LoginPage() {
             { label: 'Seller', phone: '+919999900002', name: 'Fresh Mart Supermarket', role: 'seller' },
             { label: 'Rider', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
             { label: 'Admin', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
-          ].map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="glass-role-btn"
-              onClick={() => selectDemoRole(item.phone, item.name, item.role)}
-            >
-              {item.label}
-            </button>
-          ))}
+          ].map((item) => {
+            const isSelected = phoneDigits === item.phone.replace('+91', '');
+            return (
+              <button
+                key={item.label}
+                type="button"
+                className="glass-role-btn"
+                onClick={() => selectDemoRole(item.phone, item.name, item.role)}
+                style={isSelected ? {
+                  background: 'linear-gradient(135deg, #0071E3 0%, #005bb5 100%)',
+                  color: '#FFFFFF',
+                  borderColor: '#0071E3',
+                  fontWeight: 800,
+                  boxShadow: '0 4px 12px rgba(0, 113, 227, 0.35)'
+                } : {}}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

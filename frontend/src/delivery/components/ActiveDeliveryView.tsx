@@ -476,12 +476,60 @@ export const ActiveDeliveryView: React.FC = () => {
               </button>
             </div>
           </div>
-          <div style={{ fontSize: '13px', color: '#86868B', marginBottom: '10px' }}>
+          <div style={{ fontSize: '13px', color: '#86868B', marginBottom: '12px' }}>
             <p style={{ margin: '0 0 2px', color: '#1D1D1F', fontWeight: '600' }}>{currentOrder.customer.address}</p>
             {currentOrder.customer.apartment && <p style={{ margin: 0 }}>{currentOrder.customer.apartment}</p>}
           </div>
-          <div style={{ backgroundColor: 'rgba(52,199,89,0.06)', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', border: '1px solid rgba(52,199,89,0.18)', color: '#1D1D1F' }}>
-            <b>Delivery Note:</b> {currentOrder.customer.deliveryNotes}
+
+          {/* 1-Tap Google Maps External Navigation Launcher */}
+          <button
+            type="button"
+            onClick={() => {
+              const query = encodeURIComponent(currentOrder.customer.address || 'Bengaluru, Karnataka');
+              window.open(`https://www.google.com/maps/dir/?api=1&destination=${query}`, '_blank');
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              backgroundColor: '#EFF6FF',
+              border: '1.5px solid #BFDBFE',
+              color: '#0071E3',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              marginBottom: '12px',
+              boxShadow: '0 2px 8px rgba(0, 113, 227, 0.08)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Navigation size={15} color="#0071E3" />
+            <span>Open in Google Maps (Turn-by-Turn GPS)</span>
+          </button>
+
+          {/* Customer Doorstep Instruction Badges */}
+          <div style={{ backgroundColor: 'rgba(52,199,89,0.06)', borderRadius: '12px', padding: '12px 14px', fontSize: '12.5px', border: '1px solid rgba(52,199,89,0.2)', color: '#1D1D1F' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#16A34A', marginBottom: '6px' }}>
+              <ShieldCheck size={15} /> Customer Doorstep Instructions
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
+                🚪 Leave at Doorstep
+              </span>
+              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
+                🔕 Do Not Ring Bell
+              </span>
+              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
+                🏢 Lift Available
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '12px', color: '#4B5563' }}>
+              <b>Note:</b> {currentOrder.customer.deliveryNotes || 'Please handle groceries carefully.'}
+            </p>
           </div>
         </div>
 

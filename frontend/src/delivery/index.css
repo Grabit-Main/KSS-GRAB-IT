@@ -76,17 +76,21 @@ body {
   font-family: var(--font-system);
   background-color: var(--color-warm-white);
   color: var(--color-graphite);
-  min-height: 100vh;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
   overflow-x: hidden;
   position: relative;
   width: 100%;
   max-width: 100vw;
 }
 
-button, a, input, select, textarea {
+.portal-layout {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button, input, textarea, select {
   font-family: inherit;
   touch-action: manipulation;
 }
@@ -96,6 +100,10 @@ button {
   background: none;
   cursor: pointer;
   outline: none;
+}
+
+.portal-layout .btn,
+.portal-layout .action-btn {
   min-height: 44px;
 }
 
@@ -104,7 +112,9 @@ button {
   max-height: 28px !important;
 }
 
-input, textarea, select {
+.portal-layout input,
+.portal-layout textarea,
+.portal-layout select {
   color: var(--color-graphite);
   font-size: 15px;
   min-height: 44px;
@@ -998,7 +1008,7 @@ a {
    ========================================================================== */
 
 /* ── 1. Global Touch Target & Image Responsiveness ───────────────────────── */
-button, a, input, select, textarea {
+.portal-layout button, .portal-layout a.btn, .portal-layout input, .portal-layout select, .portal-layout textarea {
   min-height: 44px;
   touch-action: manipulation;
 }

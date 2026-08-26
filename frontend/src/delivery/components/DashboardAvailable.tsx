@@ -26,6 +26,15 @@ export const DashboardAvailable: React.FC = () => {
   const { stats, history, agentStatus, orderPool, currentOrder } = state;
   const navigate = useNavigate();
 
+  const loggedInUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('grabit_user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const agentName = loggedInUser.name || loggedInUser.full_name || 'Delivery Partner';
+
   const isUnavailable = agentStatus === 'UNAVAILABLE';
   const isOnDelivery = agentStatus === 'ON_DELIVERY' && currentOrder !== null;
 
@@ -59,15 +68,56 @@ export const DashboardAvailable: React.FC = () => {
         }}
       >
         <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 3px', letterSpacing: '-0.4px' }}>
-          Good afternoon, Alex
+          Welcome, {agentName}
         </h1>
         <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', margin: 0 }}>
           {isOnDelivery
             ? `You have an active delivery in progress (${currentOrder?.orderNumber}).`
             : isUnavailable
-            ? 'You are currently Unavailable. Toggle to Available to receive deliveries.'
+            ? 'You are currently Inactive. Toggle to Active to receive deliveries.'
             : 'Ready for your next delivery from GrabIt Supermarket Central Hub?'}
         </p>
+
+        {/* Live Surge & Weather Allowance Banner */}
+        <div
+          style={{
+            marginTop: '14px',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(249, 115, 22, 0.10) 100%)',
+            border: '1px solid rgba(234, 179, 8, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>⚡</span>
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#92400E' }}>
+                Peak Demand Surge Active: +₹25 Extra / Trip
+              </span>
+              <span style={{ fontSize: '11px', color: '#A16207', display: 'block' }}>
+                🌧️ Rain & Rush Hour Bonus automatically applied to all completed deliveries
+              </span>
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: '800',
+              backgroundColor: '#FEF3C7',
+              color: '#B45309',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: '1px solid #FDE68A',
+            }}
+          >
+            ACTIVE NOW
+          </span>
+        </div>
       </div>
 
       {/* Main Top Section: Active Delivery Banner OR Incoming Request Card OR Waiting Radar */}
@@ -252,7 +302,7 @@ export const DashboardAvailable: React.FC = () => {
                 Dispatch Radar Paused
               </h2>
               <p style={{ fontSize: '14px', color: 'var(--color-soft-gray)', maxWidth: '440px', margin: '0 auto 22px', lineHeight: '1.45' }}>
-                You are currently offline and will not receive delivery assignments. Click below to go Available whenever you are ready!
+                You are currently offline and will not receive delivery assignments. Click below to go Active whenever you are ready!
               </p>
 
               <button
@@ -267,7 +317,7 @@ export const DashboardAvailable: React.FC = () => {
                   cursor: 'pointer'
                 }}
               >
-                Go Available (Start Receiving Orders)
+                Go Active (Start Receiving Orders)
               </button>
             </div>
           ) : (

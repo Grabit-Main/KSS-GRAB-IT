@@ -21,14 +21,14 @@ export const AgentStatusPill: React.FC<AgentStatusPillProps> = ({ toggleOnly = f
 
   const getLabel = () => {
     if (isOnDelivery) return 'On Delivery';
-    if (isUnavailable) return 'Unavailable';
-    return 'Available';
+    if (isUnavailable) return 'Inactive';
+    return 'Active';
   };
 
   const getTitle = () => {
     if (isOnDelivery) return 'On Active Delivery (Fulfilling order)';
-    if (isUnavailable) return 'Currently Unavailable • Click to go Available (Online)';
-    return 'Currently Available • Click to go Unavailable (Offline)';
+    if (isUnavailable) return 'Currently Inactive • Click to go Active';
+    return 'Currently Active • Click to go Inactive';
   };
 
   const getBackground = () => {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Zap, Clock, Check, ChevronRight, Plus, CreditCard, Smartphone, Building2, Wallet, Banknote, Tag, FileText, ArrowLeft, Pencil, X, CheckCircle2, Navigation } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
+import { post } from '../api';
 import ProductSvg from '../components/common/ProductSvg';
 import useWindowWidth from '../hooks/useWindowWidth';
 
@@ -28,76 +29,152 @@ export default function CheckoutPage() {
   const isMobile = w <= 768;
 
   // ── LOCATION & ADDRESS STATE ──
+  const getStoredUser = () => {
+    try {
+      const u = localStorage.getItem('grabit_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  };
+  const activeUser = getStoredUser();
+  const currentName = activeUser?.full_name || activeUser?.name || 'Customer';
+  const currentPhone = (activeUser?.phone || '').replace('+91', '').trim();
+
+  const getAddressesKey = (phone) => `grabit_addresses_${(phone || 'default').replace(/\D/g, '')}`;
+  const loadUserAddresses = () => {
+    try {
+      const data = localStorage.getItem(getAddressesKey(activeUser?.phone));
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [savedAddresses, setSavedAddresses] = useState(loadUserAddresses);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState({
-    title: 'Home',
-    name: 'Akash',
-    phone: '93608 43281',
-    address: '#12, 3rd Cross, Banaswadi Main Road, Banaswadi, Bengaluru 560043, Karnataka',
-    tag: 'WITHIN 5 KM RADIUS',
-    time: '30-45 min delivery'
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    const list = loadUserAddresses();
+    if (list.length > 0) {
+      const def = list.find(a => a.isDefault) || list[0];
+      return {
+        title: def.title || 'Home',
+        name: currentName,
+        phone: currentPhone,
+        address: def.address + (def.city ? `, ${def.city}` : ''),
+        tag: 'SAVED LOCATION',
+        time: '15-25 min delivery'
+      };
+    }
+    return {
+      title: 'Current Location',
+      name: currentName,
+      phone: currentPhone,
+      address: 'Enter your delivery address',
+      tag: 'DIRECT DELIVERY',
+      time: '15-25 min delivery'
+    };
   });
 
   const [customAddressInput, setCustomAddressInput] = useState('');
 
-  const savedAddresses = [
-    {
-      title: 'Home',
-      name: 'Akash',
-      phone: '93608 43281',
-      address: '#12, 3rd Cross, Banaswadi Main Road, Banaswadi, Bengaluru 560043, Karnataka',
-      tag: 'WITHIN 5 KM RADIUS',
-      time: '30-45 min delivery',
-      isDefault: true
-    },
-    {
-      title: 'Work Office',
-      name: 'Akash (Office)',
-      phone: '93608 43281',
-      address: 'Suite 402, 100ft Road, Indiranagar, Bengaluru 560038',
-      tag: 'WITHIN 3.8 KM RADIUS',
-      time: '15-25 min delivery',
-      isDefault: false
-    },
-    {
-      title: 'Parents House',
-      name: 'Akash (Parents)',
-      phone: '98450 12345',
-      address: '2nd Block, HRBR Layout, Kalyan Nagar, Bengaluru 560043',
-      tag: 'WITHIN 1.5 KM RADIUS',
-      time: '10-15 min express delivery',
-      isDefault: false
-    }
-  ];
-
   const handleSelectAddress = (addr) => {
-    setSelectedAddress(addr);
+    const formatted = {
+      title: addr.title,
+      name: currentName,
+      phone: currentPhone,
+      address: addr.address + (addr.city ? `, ${addr.city}` : ''),
+      tag: 'SAVED LOCATION',
+      time: '15-25 min delivery'
+    };
+    setSelectedAddress(formatted);
     setIsLocationModalOpen(false);
-    showToast(`Delivery location updated to ${addr.title}!`);
+    showToast(`Delivery location set to "${addr.title}"!`);
   };
 
   const handleAddCustomAddress = (e) => {
     e.preventDefault();
     if (!customAddressInput.trim()) return;
     const newAddr = {
-      title: 'Custom Location',
-      name: 'Akash',
-      phone: '93608 43281',
-      address: customAddressInput,
-      tag: 'WITHIN 5 KM RADIUS',
-      time: '20-30 min delivery',
-      isDefault: false
+      title: 'Delivery Address',
+      name: currentName,
+      phone: currentPhone,
+      address: customAddressInput.trim(),
+      tag: 'DIRECT LOCATION',
+      time: '15-25 min delivery',
+      isDefault: savedAddresses.length === 0
     };
+    const updated = [...savedAddresses, { title: newAddr.title, address: newAddr.address, city: '', isDefault: newAddr.isDefault }];
+    setSavedAddresses(updated);
+    try {
+      localStorage.setItem(getAddressesKey(activeUser?.phone), JSON.stringify(updated));
+    } catch {}
     setSelectedAddress(newAddr);
     setCustomAddressInput('');
     setIsLocationModalOpen(false);
-    showToast(`Delivery location updated to "${newAddr.address}"!`);
+    showToast(`Delivery location set to "${newAddr.address}"!`);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `GB-${randomNum}`;
+    const rawId = `ord-${Date.now()}`;
+    const orderItems = items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      qty: item.qty || 1,
+      quantity: item.qty || 1,
+      price: item.price,
+      image: item.image,
+    }));
+
+    const newOrder = {
+      id: orderNumber,
+      orderNumber: orderNumber,
+      rawId: rawId,
+      customer_name: selectedAddress.name || currentName || 'Customer',
+      customer_phone: selectedAddress.phone || currentPhone || '',
+      delivery_address: selectedAddress.address,
+      address: selectedAddress.address,
+      items: orderItems,
+      total_amount: toPay,
+      subtotal: itemTotal,
+      delivery_fee: deliveryFee,
+      discount: discount || 0,
+      status: 'preparing',
+      payment_method: (selectedPayment || 'upi').toUpperCase(),
+      estimated_time: selectedAddress.time || '15-25 min delivery',
+      created_at: new Date().toISOString(),
+      date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      localStorage.setItem('grabit_orders', JSON.stringify([newOrder, ...existing]));
+      window.dispatchEvent(new Event('grabit_orders_updated'));
+    } catch (e) {
+      console.warn('Storage sync:', e);
+    }
+
+    try {
+      await post('/orders/', {
+        store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+        delivery_address: selectedAddress.address,
+        items: orderItems,
+        total_amount: toPay,
+        customer_name: newOrder.customer_name,
+        customer_phone: newOrder.customer_phone,
+        payment_method: newOrder.payment_method,
+        latitude: 12.9716,
+        longitude: 77.5946,
+        status: 'preparing'
+      }).catch(() => {});
+    } catch {}
+
     setOrderPlaced(true);
     clearCart();
-    setTimeout(() => navigate('/orders'), 2500);
+    setTimeout(() => navigate('/orders'), 2000);
   };
 
   if (orderPlaced) {
@@ -216,17 +293,27 @@ export default function CheckoutPage() {
                   <MapPin size={20} color="#0071E3" /> 1. Select Delivery Address
                 </h3>
                 
-                {/* Active Delivery Address Box (INTERACTIVE) */}
-                <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: '16px', background: '#EFF6FF', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} /></div>
-                      <span style={{ fontWeight: 900, fontSize: '14px', color: '#0F172A' }}>🏠 {selectedAddress.title} (Selected)</span>
-                      <span style={{ fontSize: '9px', background: '#0071E3', color: '#FFF', fontWeight: 900, padding: '2px 8px', borderRadius: '6px' }}>{selectedAddress.tag}</span>
+                {/* Active Delivery Address Box (INTERACTIVE & MOBILE RESPONSIVE) */}
+                <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: isMobile ? '14px' : '16px', background: '#EFF6FF', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />
+                      </div>
+                      <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', whiteSpace: 'nowrap' }}>🏠 {selectedAddress.title} (Selected)</span>
+                      <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFFFFF', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap' }}>{selectedAddress.tag}</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setIsLocationModalOpen(true)}
-                      style={{ color: '#0071E3', fontSize: '12.5px', fontWeight: 900, background: '#FFFFFF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{
+                        color: '#0071E3', fontSize: '12px', fontWeight: 800,
+                        background: '#FFFFFF', border: '1px solid #BFDBFE',
+                        borderRadius: '8px', padding: '5px 12px', cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                        boxShadow: '0 1px 3px rgba(0,113,227,0.1)'
+                      }}
                     >
                       <Pencil size={12} /> Edit
                     </button>
@@ -238,14 +325,15 @@ export default function CheckoutPage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setIsLocationModalOpen(true)}
-                  style={{ width: '100%', padding: '14px', border: '1.5px dashed #0071E3', borderRadius: '12px', color: '#0071E3', fontWeight: 900, fontSize: '13.5px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                  style={{ width: '100%', padding: '12px 14px', border: '1.5px dashed #0071E3', borderRadius: '12px', color: '#0071E3', fontWeight: 800, fontSize: '13.5px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
                 >
                   <Plus size={16} /> Choose / Add New Address
                 </button>
 
-                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '12px 14px', marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '12.5px', color: '#065F46', fontWeight: 800 }}>
-                  <Check size={16} color="#10B981" /> Express delivery in {selectedAddress.time} within 5 km radius.
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '12px 14px', marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12.5px', color: '#065F46', fontWeight: 700 }}>
+                  <Check size={16} color="#10B981" style={{ flexShrink: 0 }} /> Express delivery in {selectedAddress.time} within 5 km radius.
                 </div>
               </div>
             </div>

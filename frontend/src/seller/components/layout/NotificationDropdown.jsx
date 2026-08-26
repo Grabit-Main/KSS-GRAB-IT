@@ -1,72 +1,101 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   CheckCheck,
-  Trash2
+  Trash2,
+  ShoppingBag,
+  AlertTriangle,
+  Package,
+  Truck,
+  Sparkles,
+  Inbox
 } from 'lucide-react';
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'order',
-    title: 'New Fast Order #GB-9821',
-    message: '2x Organic Hass Avocados received. Dispatch in 10 mins!',
-    time: '2 mins ago',
-    unread: true,
-    link: '/seller/orders',
-  },
-  {
-    id: 2,
-    type: 'low_stock',
-    title: 'Critical Stock: 1 Unit Left',
-    message: 'Organic Hass Avocados is about to run out of stock.',
-    time: '8 mins ago',
-    unread: true,
-    link: '/seller/products',
-  },
-  {
-    id: 3,
-    type: 'out_of_stock',
-    title: 'Product Out of Stock',
-    message: 'Valencia Orange Juice 250ml reached 0 inventory.',
-    time: '22 mins ago',
-    unread: true,
-    link: '/seller/products',
-  },
-  {
-    id: 4,
-    type: 'delivery',
-    title: 'Rider Assigned for Dispatch',
-    message: 'Delivery rider Suresh Gowda is on the way for pickup.',
-    time: '45 mins ago',
-    unread: false,
-    link: '/seller/orders',
-  },
-  {
-    id: 5,
-    type: 'payout',
-    title: 'Daily Payout Settled',
-    message: '₹4,850.00 deposited into your registered bank account.',
-    time: 'Yesterday',
-    unread: false,
-    link: '/seller/dashboard',
-  },
-];
+import { get } from '../../../api';
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('grabit_seller_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-  });
+  const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread'
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  // Dynamically build real-time notifications from active orders and inventory
+  const syncLiveNotifications = useCallback(async () => {
+    try {
+      let orders = [];
+      try {
+        const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        orders = stored;
+      } catch {}
+
+      let prods = [];
+      try {
+        const res = await get('/products/');
+        if (Array.isArray(res)) prods = res;
+      } catch {}
+
+      const realNotifs = [];
+
+      // 1. Real Order Notifications
+      orders.forEach((o, idx) => {
+        const itemNames = (o.items || []).map((it) => `${it.qty || 1}x ${it.name}`).join(', ') || 'Grocery items';
+        const isPreparing = o.status === 'preparing' || o.status === 'placed';
+        realNotifs.push({
+          id: `order-${o.id || o.rawId || idx}`,
+          type: 'order',
+          title: `New Order #${o.id || `GB-${idx + 1000}`}`,
+          message: `${itemNames} • ₹${o.total_amount || o.total || 0} (${o.customer_name || 'Customer'})`,
+          time: o.date ? `${o.date} ${o.time || ''}` : 'Just now',
+          unread: isPreparing,
+          link: '/seller/orders',
+        });
+      });
+
+      // 2. Real Low Stock Alerts from catalog
+      prods.forEach((p) => {
+        const stockNum = parseInt(p.stock || p.stock_quantity, 10);
+        if (!isNaN(stockNum) && stockNum === 0) {
+          realNotifs.push({
+            id: `stock-out-${p.id}`,
+            type: 'out_of_stock',
+            title: 'Out of Stock Alert',
+            message: `${p.name} has 0 units left in inventory.`,
+            time: 'Inventory Alert',
+            unread: true,
+            link: '/seller/products',
+          });
+        } else if (!isNaN(stockNum) && stockNum > 0 && stockNum <= 5) {
+          realNotifs.push({
+            id: `stock-low-${p.id}`,
+            type: 'low_stock',
+            title: `Low Stock: ${stockNum} Left`,
+            message: `${p.name} is running critically low.`,
+            time: 'Inventory Alert',
+            unread: false,
+            link: '/seller/products',
+          });
+        }
+      });
+
+      setNotifications(realNotifs);
+    } catch (e) {
+      console.warn('Failed to sync live notifications:', e);
+    }
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem('grabit_seller_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    syncLiveNotifications();
+    window.addEventListener('storage', syncLiveNotifications);
+    window.addEventListener('grabit_orders_updated', syncLiveNotifications);
+    const interval = setInterval(syncLiveNotifications, 3000);
+
+    return () => {
+      window.removeEventListener('storage', syncLiveNotifications);
+      window.removeEventListener('grabit_orders_updated', syncLiveNotifications);
+      clearInterval(interval);
+    };
+  }, [syncLiveNotifications]);
 
   // Click outside to close
   useEffect(() => {
@@ -103,9 +132,10 @@ export const NotificationDropdown = () => {
     }
   };
 
-  const filteredNotifications = notifications.filter((n) =>
-    activeTab === 'unread' ? n.unread : true
-  );
+  const filteredNotifications =
+    activeTab === 'unread'
+      ? notifications.filter((n) => n.unread)
+      : notifications;
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
@@ -113,39 +143,44 @@ export const NotificationDropdown = () => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="btn-icon btn-secondary"
-        title="Notifications"
+        className="notification-trigger-btn"
+        title="Store Notifications & Live Alerts"
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 'var(--radius-sm)',
-          position: 'relative',
-          border: isOpen ? '1px solid var(--color-blue)' : '1px solid var(--color-border-gray)',
-          backgroundColor: isOpen ? '#F5F9FF' : 'var(--color-pure-white)',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          border: isOpen ? '1.5px solid #0071E3' : '1px solid #E2E8F0',
+          backgroundColor: isOpen ? '#EFF6FF' : '#FFFFFF',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           cursor: 'pointer',
+          position: 'relative',
+          transition: 'all 0.15s ease',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <Bell size={17} color={isOpen ? 'var(--color-blue)' : 'var(--color-graphite)'} />
+        <Bell size={18} color={isOpen ? '#0071E3' : '#475569'} />
 
-        {/* Unread Pill Badge */}
         {unreadCount > 0 && (
           <span
             style={{
               position: 'absolute',
-              top: -3,
-              right: -3,
-              backgroundColor: 'var(--color-red)',
+              top: -2,
+              right: -2,
+              backgroundColor: '#EF4444',
               color: '#FFFFFF',
-              fontSize: '10px',
+              fontSize: '10.5px',
               fontWeight: 800,
-              width: 18,
-              height: 18,
-              borderRadius: 'var(--radius-full)',
+              minWidth: '18px',
+              height: '18px',
+              padding: '0 4px',
+              borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               border: '2px solid #FFFFFF',
-              boxShadow: '0 2px 4px rgba(255, 59, 48, 0.4)',
+              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
             }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -161,11 +196,11 @@ export const NotificationDropdown = () => {
             top: 48,
             right: 0,
             width: 360,
-            maxHeight: 500,
-            backgroundColor: 'var(--color-pure-white)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.04)',
-            border: '1px solid var(--color-border-gray)',
+            maxHeight: 480,
+            backgroundColor: '#FFFFFF',
+            borderRadius: '18px',
+            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #E2E8F0',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 1000,
@@ -177,26 +212,26 @@ export const NotificationDropdown = () => {
           <div
             style={{
               padding: '14px 18px',
-              borderBottom: '1px solid var(--color-border-gray)',
+              borderBottom: '1px solid #F1F5F9',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#FAFAFC',
+              backgroundColor: '#F8FAFC',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-graphite)', margin: 0 }}>
-                Notifications
+              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Store Notifications
               </h3>
               {unreadCount > 0 && (
                 <span
                   style={{
-                    backgroundColor: 'var(--color-red)',
+                    backgroundColor: '#EF4444',
                     color: '#FFF',
                     fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 7px',
-                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
                   }}
                 >
                   {unreadCount} New
@@ -204,36 +239,34 @@ export const NotificationDropdown = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  style={{
-                    fontSize: '11px',
-                    color: 'var(--color-blue)',
-                    fontWeight: 600,
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    padding: 0,
-                  }}
-                  title="Mark all as read"
-                >
-                  <CheckCheck size={13} /> Mark read
-                </button>
-              )}
-            </div>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                style={{
+                  fontSize: '11.5px',
+                  color: '#0071E3',
+                  fontWeight: 700,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: 0,
+                }}
+                title="Mark all as read"
+              >
+                <CheckCheck size={13} /> Mark read
+              </button>
+            )}
           </div>
 
           {/* Filter Tabs */}
           <div
             style={{
               padding: '8px 14px',
-              borderBottom: '1px solid #EDEDF0',
+              borderBottom: '1px solid #F1F5F9',
               display: 'flex',
               alignItems: 'center',
               backgroundColor: '#FFFFFF',
@@ -245,13 +278,14 @@ export const NotificationDropdown = () => {
                 onClick={() => setActiveTab('all')}
                 style={{
                   fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  padding: '4px 12px',
+                  borderRadius: '20px',
                   border: 'none',
-                  backgroundColor: activeTab === 'all' ? 'var(--color-graphite)' : 'transparent',
-                  color: activeTab === 'all' ? '#FFFFFF' : 'var(--color-soft-gray)',
+                  backgroundColor: activeTab === 'all' ? '#0F172A' : '#F1F5F9',
+                  color: activeTab === 'all' ? '#FFFFFF' : '#64748B',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 All ({notifications.length})
@@ -262,13 +296,14 @@ export const NotificationDropdown = () => {
                 onClick={() => setActiveTab('unread')}
                 style={{
                   fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  padding: '4px 12px',
+                  borderRadius: '20px',
                   border: 'none',
-                  backgroundColor: activeTab === 'unread' ? 'var(--color-graphite)' : 'transparent',
-                  color: activeTab === 'unread' ? '#FFFFFF' : 'var(--color-soft-gray)',
+                  backgroundColor: activeTab === 'unread' ? '#0F172A' : '#F1F5F9',
+                  color: activeTab === 'unread' ? '#FFFFFF' : '#64748B',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 Unread ({unreadCount})
@@ -276,11 +311,17 @@ export const NotificationDropdown = () => {
             </div>
           </div>
 
-          {/* Notifications List without left icons */}
-          <div style={{ overflowY: 'auto', maxHeight: 340 }}>
+          {/* Notifications List */}
+          <div style={{ overflowY: 'auto', maxHeight: 320 }}>
             {filteredNotifications.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-soft-gray)' }}>
-                <p style={{ fontSize: '13px', fontWeight: 500 }}>No notifications to display</p>
+              <div style={{ padding: '36px 20px', textAlign: 'center', color: '#64748B' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: '#94A3B8' }}>
+                  <Inbox size={22} />
+                </div>
+                <p style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px' }}>No new notifications</p>
+                <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
+                  Real-time alerts for customer orders and low stock will appear here.
+                </p>
               </div>
             ) : (
               filteredNotifications.map((item) => (
@@ -288,33 +329,31 @@ export const NotificationDropdown = () => {
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
                   style={{
-                    padding: '12px 18px',
-                    borderBottom: '1px solid #F0F0F2',
-                    backgroundColor: item.unread ? '#F7FAFF' : '#FFFFFF',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid #F1F5F9',
+                    backgroundColor: item.unread ? '#F0F7FF' : '#FFFFFF',
                     cursor: 'pointer',
                     transition: 'background-color 0.15s ease',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = item.unread ? '#EEF5FF' : '#FAFAFC')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = item.unread ? '#F7FAFF' : '#FFFFFF')}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = item.unread ? '#E0EFFF' : '#F8FAFC')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = item.unread ? '#F0F7FF' : '#FFFFFF')}
                 >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', fontWeight: item.unread ? 700 : 600, color: 'var(--color-graphite)' }}>
-                        {item.title}
-                      </span>
-                      {item.unread && (
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: 'var(--color-blue)', flexShrink: 0, marginLeft: 8 }} />
-                      )}
-                    </div>
-
-                    <p style={{ fontSize: '12px', color: 'var(--color-soft-gray)', margin: '3px 0 4px', lineHeight: 1.4 }}>
-                      {item.message}
-                    </p>
-
-                    <span style={{ fontSize: '11px', color: '#A1A1A6', fontWeight: 500 }}>
-                      {item.time}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: item.unread ? 800 : 700, color: '#0F172A', lineHeight: 1.3 }}>
+                      {item.title}
                     </span>
+                    {item.unread && (
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#0071E3', flexShrink: 0, marginTop: 4 }} />
+                    )}
                   </div>
+
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 4px', lineHeight: 1.4 }}>
+                    {item.message}
+                  </p>
+
+                  <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
+                    {item.time}
+                  </span>
                 </div>
               ))
             )}
@@ -324,9 +363,9 @@ export const NotificationDropdown = () => {
           {notifications.length > 0 && (
             <div
               style={{
-                padding: '10px 18px',
-                borderTop: '1px solid var(--color-border-gray)',
-                backgroundColor: '#FAFAFC',
+                padding: '10px 16px',
+                borderTop: '1px solid #F1F5F9',
+                backgroundColor: '#F8FAFC',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -337,7 +376,7 @@ export const NotificationDropdown = () => {
                 onClick={handleClearAll}
                 style={{
                   fontSize: '12px',
-                  color: 'var(--color-soft-gray)',
+                  color: '#64748B',
                   border: 'none',
                   background: 'none',
                   cursor: 'pointer',
@@ -345,13 +384,14 @@ export const NotificationDropdown = () => {
                   alignItems: 'center',
                   gap: 4,
                   padding: 0,
+                  fontWeight: 600
                 }}
               >
-                <Trash2 size={12} /> Clear all
+                <Trash2 size={13} /> Clear all
               </button>
 
-              <span style={{ fontSize: '11px', color: 'var(--color-soft-gray)' }}>
-                10-Min Fast Alerts
+              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
+                Live Cloud Alerts
               </span>
             </div>
           )}
@@ -360,3 +400,5 @@ export const NotificationDropdown = () => {
     </div>
   );
 };
+
+export default NotificationDropdown;

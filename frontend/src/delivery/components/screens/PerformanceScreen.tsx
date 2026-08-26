@@ -17,17 +17,19 @@ export const PerformanceScreen: React.FC = () => {
   const { state } = useDelivery();
   const { stats } = state;
 
-  const weeklyData = [
-    { day: 'Mon', count: 18, onTime: 95 },
-    { day: 'Tue', count: 22, onTime: 98 },
-    { day: 'Wed', count: 19, onTime: 94 },
-    { day: 'Thu', count: 24, onTime: 96 },
-    { day: 'Fri', count: 26, onTime: 97 },
-    { day: 'Sat', count: 28, onTime: 98 },
-    { day: 'Sun', count: stats.completedToday + 12, onTime: stats.onTimePercentage }
-  ];
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const currentDayIdx = (new Date().getDay() + 6) % 7; // Monday = 0, Sunday = 6
 
-  const maxCount = Math.max(...weeklyData.map((d) => d.count), 30);
+  const weeklyData = daysOfWeek.map((day, idx) => {
+    const isToday = idx === currentDayIdx;
+    return {
+      day,
+      count: isToday ? stats.completedToday : 0,
+      onTime: stats.onTimePercentage || 100,
+    };
+  });
+
+  const maxCount = Math.max(...weeklyData.map((d) => d.count), 5);
 
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -79,7 +81,7 @@ export const PerformanceScreen: React.FC = () => {
             {stats.rating.toFixed(2)} <span style={{ fontSize: '14px', color: 'var(--color-soft-gray)', fontWeight: '500' }}>★</span>
           </div>
           <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>
-            Based on 118 verified customer ratings
+            Based on {stats.totalDeliveries} completed deliveries
           </span>
         </div>
 
@@ -95,7 +97,7 @@ export const PerformanceScreen: React.FC = () => {
             {stats.onTimePercentage}%
           </div>
           <span style={{ fontSize: '12px', color: 'var(--color-green)', fontWeight: '600' }}>
-            +2.4% above hub target (94%)
+            Hub 10-Minute SLA Target Active
           </span>
         </div>
 

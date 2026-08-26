@@ -6,9 +6,11 @@ import {
   Package,
   ShoppingBag,
   Store,
+  User,
   LogOut,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -27,11 +29,45 @@ export const SellerSidebar = ({ isOpen, onClose }) => {
     navigate('/login', { replace: true });
   };
 
+  const [pendingCount, setPendingCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const calculateCount = () => {
+      try {
+        const sharedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        if (sharedOrders.length > 0) {
+          const activeShared = sharedOrders.filter((o) =>
+            ['placed', 'preparing', 'ready', 'ready_for_pickup', 'out_for_delivery'].includes(o.status) &&
+            Array.isArray(o.items) && o.items.length > 0
+          );
+          setPendingCount(activeShared.length);
+          return;
+        }
+
+        setPendingCount(0);
+      } catch {
+        setPendingCount(0);
+      }
+    };
+
+    calculateCount();
+    window.addEventListener('storage', calculateCount);
+    window.addEventListener('grabit_orders_updated', calculateCount);
+    const interval = setInterval(calculateCount, 1000);
+
+    return () => {
+      window.removeEventListener('storage', calculateCount);
+      window.removeEventListener('grabit_orders_updated', calculateCount);
+      clearInterval(interval);
+    };
+  }, []);
+
   const navItems = [
     { label: 'Dashboard', path: '/seller/dashboard', icon: LayoutDashboard },
+    { label: 'Products & Stock', path: '/seller/products', icon: Package },
+    { label: 'Live Orders', path: '/seller/orders', icon: ShoppingBag, badge: pendingCount > 0 ? pendingCount : null },
     { label: 'Categories', path: '/seller/categories', icon: FolderTree },
-    { label: 'Products', path: '/seller/products', icon: Package },
-    { label: 'Live Orders', path: '/seller/orders', icon: ShoppingBag },
+    { label: 'Store Profile', path: '/seller/profile', icon: User },
   ];
 
   return (
@@ -42,23 +78,26 @@ export const SellerSidebar = ({ isOpen, onClose }) => {
           <img
             src={grabitLogoImg}
             alt="Grabit"
-            style={{ height: '52px', width: 'auto', maxWidth: '200px', objectFit: 'contain' }}
+            style={{ height: '44px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
           />
           <button
             type="button"
             onClick={onClose}
             className="seller-mobile-close-btn"
             style={{
-              display: 'none',
-              background: 'none',
+              background: '#F1F5F9',
               border: 'none',
-              padding: 4,
-              color: 'var(--color-graphite)',
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              color: '#0F172A',
               cursor: 'pointer',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
             title="Close Menu"
           >
-            ✕
+            <X size={16} strokeWidth={2.5} />
           </button>
         </div>
 
@@ -142,12 +181,27 @@ export const SellerSidebar = ({ isOpen, onClose }) => {
           </div>
 
           <button
+            type="button"
             onClick={handleLogout}
-            className="btn-icon btn-secondary"
-            title="Log Out"
-            style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
+            title="Log Out of Seller Portal"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              border: '1px solid #FECACA',
+              background: '#FEF2F2',
+              color: '#EF4444',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+              flexShrink: 0
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.borderColor = '#FCA5A5'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = '#FECACA'; }}
           >
-            <LogOut size={13} color="var(--color-soft-gray)" />
+            <LogOut size={15} color="#EF4444" strokeWidth={2} />
           </button>
         </div>
       </div>

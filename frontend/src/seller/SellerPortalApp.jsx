@@ -27,7 +27,7 @@ export function SellerPortalApp() {
                 <Route path="categories" element={<SellerCategoriesPage />} />
                 <Route path="products" element={<SellerProductsPage />} />
                 <Route path="orders" element={<SellerOrdersPage />} />
-                <Route path="profile" element={<Navigate to="dashboard" replace />} />
+                <Route path="profile" element={<SellerProfilePage />} />
               </Route>
             </Route>
 

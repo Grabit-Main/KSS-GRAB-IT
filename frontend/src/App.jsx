@@ -24,6 +24,8 @@ import './styles/components.css';
 
 import SellerPortalApp from './seller/SellerPortalApp';
 import DeliveryPortalApp from './delivery/DeliveryPortalApp';
+import AdminPortalApp from './admin/AdminPortalApp';
+import LoginPage from './pages/LoginPage';
 
 // Automatically scroll to top synchronously BEFORE paint on route change
 function ScrollToTop() {
@@ -40,30 +42,74 @@ function ScrollToTop() {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const isPortalOrAuth =
+    location.pathname === '/login' ||
+    location.pathname.startsWith('/seller') ||
+    location.pathname.startsWith('/delivery') ||
+    location.pathname.startsWith('/admin');
+
+  const routes = (
+    <Routes location={location}>
+      {/* Customer Portal Routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/categories" element={<CategoriesOverviewPage />} />
+      <Route path="/category/:slug" element={<CategoryPage />} />
+      <Route path="/product/:id" element={<ProductDetailPage />} />
+      <Route path="/festival/:festivalId" element={<FestivalPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/orders" element={<OrdersPage />} />
+      <Route path="/search" element={<SearchResultsPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/wishlist" element={<WishlistPage />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/help/:tab" element={<HelpPage />} />
+
+      {/* Unified Auth Route */}
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Seller / Merchant Portal Route */}
+      <Route path="/seller/*" element={<SellerPortalApp />} />
+
+      {/* Delivery Partner Portal Route */}
+      <Route path="/delivery/*" element={<DeliveryPortalApp />} />
+
+      {/* Admin Portal Route */}
+      <Route path="/admin/*" element={<AdminPortalApp />} />
+    </Routes>
+  );
+
+  if (isPortalOrAuth) {
+    return routes;
+  }
+
   return (
     <div key={location.pathname} className="page-route-transition">
-      <Routes location={location}>
-        {/* Customer Portal Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/categories" element={<CategoriesOverviewPage />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/product/:id" element={<ProductDetailPage />} />
-        <Route path="/festival/:festivalId" element={<FestivalPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/search" element={<SearchResultsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/help" element={<HelpPage />} />
-        <Route path="/help/:tab" element={<HelpPage />} />
+      {routes}
+    </div>
+  );
+}
 
-        {/* Seller / Merchant Portal Route */}
-        <Route path="/seller/*" element={<SellerPortalApp />} />
+function AppContent() {
+  const location = useLocation();
+  const isPortalOrAuth =
+    location.pathname === '/login' ||
+    location.pathname.startsWith('/seller') ||
+    location.pathname.startsWith('/delivery') ||
+    location.pathname.startsWith('/admin');
 
-        {/* Delivery Partner Portal Route */}
-        <Route path="/delivery/*" element={<DeliveryPortalApp />} />
-      </Routes>
+  if (isPortalOrAuth) {
+    return <AnimatedRoutes />;
+  }
+
+  return (
+    <div className="page-wrapper">
+      <Header />
+      <main className="page-content">
+        <AnimatedRoutes />
+      </main>
+      <FloatingCartBar />
+      <Footer />
     </div>
   );
 }
@@ -76,14 +122,7 @@ export default function App() {
         <LocationProvider>
           <WishlistProvider>
             <CartProvider>
-              <div className="page-wrapper">
-                <Header />
-                <main className="page-content">
-                  <AnimatedRoutes />
-                </main>
-                <FloatingCartBar />
-                <Footer />
-              </div>
+              <AppContent />
             </CartProvider>
           </WishlistProvider>
         </LocationProvider>

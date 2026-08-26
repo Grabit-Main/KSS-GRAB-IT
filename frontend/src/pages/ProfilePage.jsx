@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   User, ShoppingBag, MessageSquare, Heart, Wallet, ChevronRight, 
   Settings, RefreshCw, CreditCard, MapPin, Gift, Sliders, Star, 
-  Bell, Info, LogOut, ArrowLeft, Check, Sparkles, X, Plus, Edit2, ShieldCheck, CheckCircle2
+  Bell, Info, LogOut, ArrowLeft, Check, Sparkles, X, Plus, Edit2, ShieldCheck, CheckCircle2,
+  Store, Truck, LogIn
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -14,13 +15,39 @@ export default function ProfilePage() {
   const w = useWindowWidth();
   const isMobile = w <= 768;
 
+  const getStoredUser = () => {
+    try {
+      const u = localStorage.getItem('grabit_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const initialUser = getStoredUser();
   // ── USER STATE & WALLET ──
-  const [userName, setUserName] = useState('Akash');
-  const [userPhone, setUserPhone] = useState('+91 93608 43281');
-  const [userEmail, setUserEmail] = useState('akash.dev@grabit.com');
+  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || 'Customer');
+  const [userPhone, setUserPhone] = useState(initialUser?.phone || '');
+  const [userEmail, setUserEmail] = useState(initialUser?.email || '');
   const [walletBalance, setWalletBalance] = useState(0);
   const [addAmount, setAddAmount] = useState('100');
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
+
+  // Sync profile when auth state updates
+  useState(() => {
+    const syncUser = () => {
+      const u = getStoredUser();
+      if (u) {
+        setUserName(u.full_name || u.name || 'Customer');
+        setUserPhone(u.phone || '');
+        setUserEmail(u.email || '');
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('grabit_auth_updated', syncUser);
+      window.addEventListener('storage', syncUser);
+    }
+  });
 
   // ── MODAL VISIBILITY STATES ──
   const [activeModal, setActiveModal] = useState(null); // 'add-balance' | 'refunds' | 'gift-cards' | 'addresses' | 'edit-profile' | 'rewards' | 'payments' | 'app-icon' | 'suggest' | 'notifications' | 'info'
@@ -36,34 +63,78 @@ export default function ProfilePage() {
   // ── GIFT CARD CODE ──
   const [giftCardCode, setGiftCardCode] = useState('');
 
-  // ── SAVED ADDRESSES STATE ──
-  const [profileAddresses, setProfileAddresses] = useState([
-    { title: 'Home (Primary)', address: 'Banaswadi 1st Main Rd, HRBR Layout', city: 'Bengaluru, Karnataka 560043', isDefault: true },
-    { title: 'Work Office', address: '100ft Road, Indiranagar', city: 'Bengaluru, Karnataka 560038', isDefault: false },
-    { title: 'Parents House', address: '2nd Block, HRBR Layout, Kalyan Nagar', city: 'Bengaluru, Karnataka 560043', isDefault: false }
-  ]);
+  // ── SAVED ADDRESSES STATE (Dynamic per user account) ──
+  const getAddressesKey = (phone) => `grabit_addresses_${(phone || userPhone || 'default').replace(/\D/g, '')}`;
+  const loadUserAddresses = (phone) => {
+    try {
+      const data = localStorage.getItem(getAddressesKey(phone));
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [profileAddresses, setProfileAddresses] = useState(() => loadUserAddresses(initialUser?.phone));
   const [editingAddrIdx, setEditingAddrIdx] = useState(null);
-  const [editAddrForm, setEditAddrForm] = useState({ title: '', address: '', city: '' });
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [editAddrForm, setEditAddrForm] = useState({ title: '', address: '', city: '', isDefault: false });
 
   const handleStartEditAddress = (idx, addr) => {
     setEditingAddrIdx(idx);
-    setEditAddrForm({ title: addr.title, address: addr.address, city: addr.city });
+    setIsAddingAddress(false);
+    setEditAddrForm({ title: addr.title, address: addr.address, city: addr.city, isDefault: addr.isDefault || false });
+  };
+
+  const handleStartAddAddress = () => {
+    setEditingAddrIdx(null);
+    setIsAddingAddress(true);
+    setEditAddrForm({ title: 'Home', address: '', city: '', isDefault: profileAddresses.length === 0 });
   };
 
   const handleSaveEditAddress = (e) => {
     e.preventDefault();
-    if (editingAddrIdx !== null) {
-      const updated = [...profileAddresses];
+    if (!editAddrForm.address.trim()) {
+      showToast('Please enter the delivery address.');
+      return;
+    }
+
+    let updated = [...profileAddresses];
+    if (isAddingAddress) {
+      if (editAddrForm.isDefault) {
+        updated = updated.map(a => ({ ...a, isDefault: false }));
+      }
+      updated.push({ ...editAddrForm, isDefault: editAddrForm.isDefault || updated.length === 0 });
+      showToast(`Address "${editAddrForm.title}" saved successfully!`);
+    } else if (editingAddrIdx !== null) {
+      if (editAddrForm.isDefault) {
+        updated = updated.map(a => ({ ...a, isDefault: false }));
+      }
       updated[editingAddrIdx] = { ...updated[editingAddrIdx], ...editAddrForm };
-      setProfileAddresses(updated);
-      setEditingAddrIdx(null);
       showToast(`Address "${editAddrForm.title}" updated successfully!`);
     }
+
+    setProfileAddresses(updated);
+    try {
+      localStorage.setItem(getAddressesKey(userPhone), JSON.stringify(updated));
+    } catch {}
+    setEditingAddrIdx(null);
+    setIsAddingAddress(false);
+  };
+
+  const handleDeleteAddress = (idx) => {
+    const updated = profileAddresses.filter((_, i) => i !== idx);
+    setProfileAddresses(updated);
+    try {
+      localStorage.setItem(getAddressesKey(userPhone), JSON.stringify(updated));
+    } catch {}
+    showToast('Delivery address removed.');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('grabit_session');
+    localStorage.removeItem('grabit_user');
     showToast('Logged out of Grabit successfully!');
-    setTimeout(() => navigate('/'), 600);
+    setTimeout(() => navigate('/login'), 600);
   };
 
   const handleAddBalance = (e) => {
@@ -94,7 +165,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '12px 12px 90px' : '24px 24px 60px' }}>
+    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '8px 10px 0' : '12px 14px 0' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         
         {/* ── 1. HEADER BAR ── */}
@@ -281,14 +352,14 @@ export default function ProfilePage() {
         </div>
 
         {/* ── 6. YOUR INFORMATION SECTION ── */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 12px 4px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 4px' }}>
             Your Information
           </h3>
 
           <div style={{
-            background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.03)', overflow: 'hidden'
+            background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)', overflow: 'hidden'
           }}>
             {[
               {
@@ -318,7 +389,7 @@ export default function ProfilePage() {
               {
                 icon: <MapPin size={18} color="#0F172A" />,
                 title: 'Saved Addresses',
-                desc: '3 Addresses',
+                desc: profileAddresses.length > 0 ? `${profileAddresses.length} ${profileAddresses.length === 1 ? 'Address' : 'Addresses'}` : '0 Addresses',
                 action: () => setActiveModal('addresses')
               },
               {
@@ -345,52 +416,47 @@ export default function ProfilePage() {
                 onClick={item.action}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '14px 18px', cursor: 'pointer',
+                  padding: '12px 16px', cursor: 'pointer',
                   borderBottom: idx < arr.length - 1 ? '1px dashed #F1F5F9' : 'none',
                   transition: 'background 0.15s ease'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
+                  <div style={{
+                    width: '34px', height: '34px', borderRadius: '10px',
+                    background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid #E2E8F0'
+                  }}>
                     {item.icon}
                   </div>
                   <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
-                      {item.title}
-                    </div>
-                    {item.desc && (
-                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
-                        {item.desc}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>{item.title}</div>
+                    {item.desc && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px' }}>{item.desc}</div>}
                   </div>
                 </div>
-                <ChevronRight size={18} color="#94A3B8" />
+                <ChevronRight size={16} color="#94A3B8" />
               </div>
             ))}
           </div>
         </div>
 
-
-
-        {/* ── 8. LOG OUT BUTTON ── */}
-        <button
-          onClick={handleLogout}
-          style={{
-            width: '100%', background: '#FFFFFF', border: '1px solid #E2E8F0',
-            borderRadius: '16px', padding: '16px', fontSize: '15px',
-            fontWeight: 900, color: '#0F172A', cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.02)', textAlign: 'center',
-            marginBottom: '18px', transition: 'all 0.15s ease'
-          }}
-        >
-          Log Out
-        </button>
-
-        {/* ── 9. VERSION FOOTER ── */}
-        <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '12px', fontWeight: 600, paddingBottom: '20px' }}>
-          <div>App version 26.8.4</div>
-          <div style={{ fontSize: '11px', marginTop: '2px' }}>v204-6</div>
+        {/* ── 8. LOG OUT BUTTON & VERSION FOOTER ── */}
+        <div style={{ textAlign: 'center', padding: '4px 0 2px', margin: '0 0 0' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: '#FFFFFF', border: '1px solid #E2E8F0',
+              borderRadius: '12px', padding: '7px 20px',
+              fontSize: '12.5px', fontWeight: 800, color: '#EF4444',
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '8px'
+            }}
+          >
+            <LogOut size={14} /> Log Out
+          </button>
+          <div style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: 600, letterSpacing: '0.2px', margin: 0, padding: 0 }}>
+            App version 0.0.1
+          </div>
         </div>
 
       </div>
@@ -404,16 +470,16 @@ export default function ProfilePage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '400px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
             <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: '#0F172A' }}>Add Balance to Grabit Cash</h3>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px' }}>Instant 1-click checkout for express grocery delivery.</p>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: '#0F172A' }}>Top-up Grabit Cash</h3>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px' }}>Add money for 1-click checkout on all grocery orders.</p>
             <form onSubmit={handleAddBalance}>
-              <input type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)} placeholder="100" style={{ width: '100%', height: '44px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '15px', fontWeight: 800, outline: 'none', marginBottom: '12px' }} />
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                {['100', '250', '500', '1000'].map(val => (
-                  <button key={val} type="button" onClick={() => setAddAmount(val)} style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>+₹{val}</button>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                {['100', '250', '500', '1000'].map(amt => (
+                  <button key={amt} type="button" onClick={() => setAddAmount(amt)} style={{ flex: 1, padding: '10px 0', borderRadius: '12px', border: addAmount === amt ? '2px solid #0071E3' : '1px solid #E2E8F0', background: addAmount === amt ? '#EFF6FF' : '#FFFFFF', color: addAmount === amt ? '#0071E3' : '#0F172A', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>₹{amt}</button>
                 ))}
               </div>
-              <button type="submit" style={{ width: '100%', background: '#0071E3', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '14px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Add Now</button>
+              <input type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)} placeholder="Custom Amount" style={{ width: '100%', height: '44px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 800, outline: 'none', marginBottom: '14px' }} />
+              <button type="submit" style={{ width: '100%', background: '#0071E3', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '14px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Proceed to Pay ₹{addAmount || 0}</button>
             </form>
           </div>
         </div>
@@ -422,21 +488,15 @@ export default function ProfilePage() {
       {/* 2. YOUR REFUNDS MODAL */}
       {activeModal === 'refunds' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '420px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
             <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <RefreshCw size={22} color="#0071E3" />
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Refund History</h3>
-            </div>
-            <div style={{ background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '14px', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>REF#84920 • Lay's Potato Chips</span>
-                <span style={{ fontSize: '13px', fontWeight: 900, color: '#10B981' }}>+₹40</span>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 16px', color: '#0F172A' }}>Your Refunds</h3>
+            <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '14px', border: '1px solid #E2E8F0', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>Order #GB-8921</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#16A34A', background: '#DCFCE7', padding: '2px 8px', borderRadius: '10px' }}>PROCESSED</span>
               </div>
-              <div style={{ fontSize: '11px', color: '#64748B' }}>Refunded to Original UPI ID • Aug 22, 2026</div>
-              <div style={{ fontSize: '10px', color: '#10B981', fontWeight: 800, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={12} color="#10B981" /> Completed Successfully
-              </div>
+              <div style={{ fontSize: '11px', color: '#64748B' }}>₹140 refunded to original source (UPI) on 24 Aug 2026.</div>
             </div>
             <div style={{ textAlign: 'center', fontSize: '12px', color: '#94A3B8' }}>No other pending refund requests.</div>
           </div>
@@ -458,64 +518,87 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* 4. SAVED ADDRESSES MODAL WITH EDIT & DELETE OPTIONS */}
+      {/* 4. SAVED ADDRESSES MODAL WITH ADD, EDIT & DELETE */}
       {activeModal === 'addresses' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); }} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#0F172A" /></button>
+            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#0F172A" /></button>
             <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 14px', color: '#0F172A' }}>
-              {editingAddrIdx !== null ? 'Edit Delivery Address' : 'Saved Delivery Locations'}
+              {isAddingAddress ? 'Add New Delivery Address' : editingAddrIdx !== null ? 'Edit Delivery Address' : 'Saved Delivery Locations'}
             </h3>
 
-            {editingAddrIdx !== null ? (
+            {(isAddingAddress || editingAddrIdx !== null) ? (
               <form onSubmit={handleSaveEditAddress}>
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px' }}>Address Title</label>
-                  <input type="text" value={editAddrForm.title} onChange={e => setEditAddrForm({ ...editAddrForm, title: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} />
+                  <input type="text" placeholder="e.g. Home, Work, Apartment" value={editAddrForm.title} onChange={e => setEditAddrForm({ ...editAddrForm, title: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} required />
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px' }}>Street / House / Building Address</label>
-                  <input type="text" value={editAddrForm.address} onChange={e => setEditAddrForm({ ...editAddrForm, address: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} />
+                  <input type="text" placeholder="Flat No, Building, Street Name" value={editAddrForm.address} onChange={e => setEditAddrForm({ ...editAddrForm, address: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} required />
                 </div>
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: '14px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px' }}>City, State &amp; Pincode</label>
-                  <input type="text" value={editAddrForm.city} onChange={e => setEditAddrForm({ ...editAddrForm, city: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} />
+                  <input type="text" placeholder="e.g. Bengaluru, Karnataka 560043" value={editAddrForm.city} onChange={e => setEditAddrForm({ ...editAddrForm, city: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <input type="checkbox" id="addrDef" checked={editAddrForm.isDefault} onChange={e => setEditAddrForm({ ...editAddrForm, isDefault: e.target.checked })} style={{ cursor: 'pointer' }} />
+                  <label htmlFor="addrDef" style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}>Set as Default Delivery Address</label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="button" onClick={() => setEditingAddrIdx(null)} style={{ flex: 1, background: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 800, color: '#475569', cursor: 'pointer' }}>Cancel</button>
-                  <button type="submit" style={{ flex: 1, background: '#0071E3', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Save Changes</button>
+                  <button type="button" onClick={() => { setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ flex: 1, background: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 800, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" style={{ flex: 1, background: '#0071E3', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>{isAddingAddress ? 'Save Address' : 'Save Changes'}</button>
                 </div>
               </form>
             ) : (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  {profileAddresses.map((addr, i) => (
-                    <div key={i} style={{ background: addr.isDefault ? '#EFF6FF' : '#F8FAFC', borderRadius: '16px', border: addr.isDefault ? '1.5px solid #BFDBFE' : '1px solid #E2E8F0', padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 900, color: addr.isDefault ? '#0071E3' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <MapPin size={16} /> {addr.title}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {addr.isDefault && <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFF', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>DEFAULT</span>}
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditAddress(i, addr)}
-                            style={{
-                              background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px',
-                              padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#0071E3',
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
-                            }}
-                          >
-                            <Edit2 size={11} /> Edit
-                          </button>
+                {profileAddresses.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '28px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
+                    <MapPin size={32} color="#94A3B8" style={{ margin: '0 auto 8px', display: 'block' }} />
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>No saved addresses</div>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Add your real delivery address to receive quick 10-minute grocery delivery.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                    {profileAddresses.map((addr, i) => (
+                      <div key={i} style={{ background: addr.isDefault ? '#EFF6FF' : '#F8FAFC', borderRadius: '16px', border: addr.isDefault ? '1.5px solid #BFDBFE' : '1px solid #E2E8F0', padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 900, color: addr.isDefault ? '#0071E3' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <MapPin size={16} /> {addr.title}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {addr.isDefault && <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFF', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>DEFAULT</span>}
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditAddress(i, addr)}
+                              style={{
+                                background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px',
+                                padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#0071E3',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
+                              }}
+                            >
+                              <Edit2 size={11} /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAddress(i)}
+                              style={{
+                                background: '#FFFFFF', border: '1px solid #FCA5A5', borderRadius: '8px',
+                                padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#EF4444',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>{addr.address}</div>
+                        {addr.city && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{addr.city}</div>}
                       </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>{addr.address}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{addr.city}</div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => { showToast('New location pin active!'); setActiveModal(null); }} style={{ width: '100%', background: '#F8FAFC', border: '1px dashed #0071E3', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: 800, color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Plus size={16} /> Add New Delivery Address</button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleStartAddAddress} style={{ width: '100%', background: '#F8FAFC', border: '1px dashed #0071E3', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: 800, color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Plus size={16} /> Add New Delivery Address</button>
               </>
             )}
           </div>

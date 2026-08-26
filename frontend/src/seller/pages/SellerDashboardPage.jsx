@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree,
@@ -20,7 +20,10 @@ import {
   Star,
   Activity,
   ArrowUpRight,
-  Check
+  Check,
+  Minus,
+  X,
+  Printer
 } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -31,6 +34,10 @@ import { useToast } from '../context/ToastContext';
 import { categoryService } from '../services/categoryService';
 import { productService } from '../services/productService';
 import { mockDb } from '../services/mockData';
+import { resolveMediaUrl, DEFAULT_PRODUCT_FALLBACK } from '../utils/mediaResolver';
+import { get, patch } from '../../api';
+import { PackingSlipModal } from '../components/orders/PackingSlipModal';
+import { playNewOrderChime } from '../utils/orderAudioAlert';
 
 export const SellerDashboardPage = () => {
   const { seller } = useSellerAuth();
@@ -38,13 +45,13 @@ export const SellerDashboardPage = () => {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
-    totalCategories: 5,
-    activeCategories: 5,
-    totalProducts: 4,
-    activeProducts: 4,
-    todaySales: 18450,
-    todayOrders: 48,
-    avgPackingTime: '6.2 mins',
+    totalCategories: 0,
+    activeCategories: 0,
+    totalProducts: 0,
+    activeProducts: 0,
+    todaySales: 0,
+    todayOrders: 0,
+    avgPackingTime: '5.0 mins',
     storeOnline: true,
   });
 
@@ -52,27 +59,93 @@ export const SellerDashboardPage = () => {
   const [criticalStockProducts, setCriticalStockProducts] = useState([]);
   const [liveOrders, setLiveOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSlipOrder, setSelectedSlipOrder] = useState(null);
+  const prevLiveCountRef = useRef(0);
+  const isInitialFetchRef = useRef(true);
 
   const loadDashboardData = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
     try {
-      const [catRes, prodRes, ordersRes] = await Promise.all([
-        categoryService.getCategories({ page_size: 10 }),
-        productService.getProducts({ page_size: 20 }),
-        mockDb.getOrders(),
+      let apiOrders = [];
+      try {
+        const data = await get('/orders/');
+        if (Array.isArray(data)) apiOrders = data;
+      } catch {}
+
+      let localOrders = [];
+      try {
+        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      } catch {}
+
+      const allRaw = [...localOrders, ...apiOrders];
+      const seen = new Set();
+      const unique = [];
+      for (const o of allRaw) {
+        const key = o.rawId || o.id;
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          unique.push(o);
+        }
+      }
+
+      let orders = unique.map((o) => {
+        let itemsList = [];
+        if (Array.isArray(o.items) && o.items.length > 0) {
+          itemsList = o.items.map((it) => ({
+            name: it.name || it.product_name || 'Express Grocery Item',
+            qty: it.qty || it.quantity || 1,
+            price: it.price || 0,
+          }));
+        }
+
+        const totalAmt = Number(o.total_amount || o.total || 0) || 0;
+
+        return {
+          id: o.id?.slice?.(0, 8) || o.id,
+          rawId: o.rawId || o.id,
+          customer_name: o.customer_name || 'Customer',
+          customer_phone: o.customer_phone || '',
+          delivery_address: o.delivery_address || o.address || 'Delivery Address',
+          items: itemsList,
+          total_amount: totalAmt,
+          status: o.status === 'placed' ? 'preparing' : (o.status || 'preparing'),
+          created_at: o.created_at || new Date().toISOString(),
+          payment_method: o.payment_method || 'UPI (Paid)',
+        };
+      });
+
+      const validOrders = orders.filter((o) => o.items && o.items.length > 0 && o.total_amount > 0);
+
+      // Acoustic chime on newly placed orders
+      const activeCount = validOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
+      if (!isInitialFetchRef.current && activeCount > prevLiveCountRef.current) {
+        playNewOrderChime();
+        showToast({ type: 'info', message: '🔔 New Customer Order received!' });
+      }
+      prevLiveCountRef.current = activeCount;
+      isInitialFetchRef.current = false;
+
+      const [catRes, prodRes] = await Promise.all([
+        categoryService.getCategories({ page_size: 100 }).catch(() => ({ count: 0, results: [] })),
+        productService.getProducts({ page_size: 200 }).catch(() => ({ count: 0, results: [] })),
       ]);
 
-      const cats = catRes.results || catRes || [];
-      const prods = prodRes.results || prodRes || [];
-      const orders = Array.isArray(ordersRes) ? ordersRes : [];
+      const cats = Array.isArray(catRes?.results) ? catRes.results : (Array.isArray(catRes) ? catRes : []);
+      const prods = Array.isArray(prodRes?.results) ? prodRes.results : (Array.isArray(prodRes) ? prodRes : []);
+      const totalSalesToday = validOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+      const totalCats = catRes?.count !== undefined ? catRes.count : cats.length;
+      const activeCats = cats.filter((c) => c.is_active !== false).length;
+      const totalProds = prodRes?.count !== undefined ? prodRes.count : prods.length;
+      const activeProds = prods.filter((p) => p.is_active !== false).length;
 
       setStats((prev) => ({
         ...prev,
-        totalCategories: catRes.count ?? cats.length,
-        activeCategories: cats.filter((c) => c.is_active).length,
-        totalProducts: prodRes.count ?? prods.length,
-        activeProducts: prods.filter((p) => p.is_active).length,
-        todayOrders: orders.length > 0 ? orders.length : 48,
+        totalCategories: totalCats,
+        activeCategories: activeCats,
+        totalProducts: totalProds,
+        activeProducts: activeProds,
+        todaySales: totalSalesToday,
+        todayOrders: validOrders.length,
       }));
 
       setRecentCategories(cats.slice(0, 4));
@@ -83,13 +156,13 @@ export const SellerDashboardPage = () => {
         return isNaN(q) || q <= 5;
       });
       setCriticalStockProducts(critical);
-      setLiveOrders(orders.slice(0, 3));
+      setLiveOrders(validOrders.slice(0, 3));
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
       if (isInitial) setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     loadDashboardData(true);
@@ -97,11 +170,20 @@ export const SellerDashboardPage = () => {
     return () => clearInterval(interval);
   }, [loadDashboardData]);
 
-  const handleQuickRestock = async (prodId, prodName) => {
+  const [activeRestockId, setActiveRestockId] = useState(null);
+  const [restockAmounts, setRestockAmounts] = useState({});
+
+  const handleQuickRestock = async (prodId, prodName, customQty = 10) => {
+    const qtyToAdd = parseInt(customQty, 10) || 10;
     try {
-      await productService.updateProduct(prodId, { stock_quantity: 30, is_active: true });
+      const prod = criticalStockProducts.find((p) => p.id === prodId);
+      const currentStock = parseInt(prod?.stock_quantity, 10) || 0;
+      const newStock = currentStock + qtyToAdd;
+
+      await productService.updateProduct(prodId, { stock_quantity: newStock, is_active: true });
       setCriticalStockProducts((prev) => prev.filter((p) => p.id !== prodId));
-      showToast({ type: 'success', message: `Restocked "${prodName}" with 30 units!` });
+      setActiveRestockId(null);
+      showToast({ type: 'success', message: `Added +${qtyToAdd} units to "${prodName}" (Total: ${newStock})` });
     } catch (err) {
       showToast({ type: 'error', message: 'Failed to restock product.' });
     }
@@ -121,19 +203,16 @@ export const SellerDashboardPage = () => {
   const handleOrderStatusChange = (orderId, nextStatus) => {
     const updated = liveOrders.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o));
     setLiveOrders(updated);
-    mockDb.saveOrders(updated);
+    try {
+      const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const up = stored.map(o => o.id === orderId || o.rawId === orderId ? { ...o, status: nextStatus } : o);
+      localStorage.setItem('grabit_orders', JSON.stringify(up));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
     showToast({ type: 'success', message: `Order #${orderId} marked as ${nextStatus.replace('_', ' ')}!` });
   };
 
   const statCards = [
-    {
-      title: "Today's Revenue",
-      value: `₹${stats.todaySales.toLocaleString()}`,
-      subtitle: '+18.4% vs yesterday',
-      trendUp: true,
-      icon: DollarSign,
-      color: 'var(--color-green)',
-    },
     {
       title: 'Catalog Products',
       value: stats.totalProducts,
@@ -150,38 +229,31 @@ export const SellerDashboardPage = () => {
       color: '#0EA5E9',
       link: '/seller/categories',
     },
-    {
-      title: 'Store Rating',
-      value: '4.9 ★',
-      subtitle: '99.4% On-time deliveries',
-      icon: Star,
-      color: '#EAB308',
-    },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', maxWidth: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: '100%' }}>
       {/* Top Store Status & Quick Actions Banner - Pure White Card */}
       <div
         style={{
           backgroundColor: 'var(--color-pure-white)',
           color: 'var(--color-graphite)',
           borderRadius: 'var(--radius-lg)',
-          padding: '18px 22px',
+          padding: '14px 18px',
           border: '1px solid var(--color-border-gray)',
           boxShadow: 'var(--shadow-sm)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: 14,
+          gap: 12,
           width: '100%',
           boxSizing: 'border-box',
         }}
       >
         <div style={{ minWidth: 0, flex: '1 1 240px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.4px', color: 'var(--color-graphite)', margin: '0 0 4px', wordBreak: 'break-word' }}>
-            {seller?.store_name || 'Fresh Mart Supermarket'}
+            {seller?.store_name || seller?.full_name || seller?.name || 'Seller Store'}
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--color-soft-gray)', margin: 0, lineHeight: 1.4 }}>
             Vendor Control Center • Fast grocery fulfillment & dispatch
@@ -257,134 +329,224 @@ export const SellerDashboardPage = () => {
       {/* Mid-Row: Live Orders Dispatch Feed & Critical Stock Watchlist */}
       <div className="dashboard-grid-2col">
         {/* 1. Live Orders & Dispatch Feed */}
-        <Card style={{ padding: 22, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: '#EAF2FC', color: 'var(--color-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={15} fill="var(--color-blue)" />
+        <Card style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#EFF6FF', color: '#0071E3', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Zap size={18} fill="#0071E3" color="#0071E3" />
               </div>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-graphite)' }}>
-                  Live Store Orders
-                </h3>
-                <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>Real-time packing queue</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
+                    Live Store Orders
+                  </h3>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      borderRadius: '10px',
+                      backgroundColor: liveOrders.length > 0 ? '#ECFDF5' : '#F1F5F9',
+                      color: liveOrders.length > 0 ? '#059669' : '#64748B',
+                      border: liveOrders.length > 0 ? '1px solid #A7F3D0' : '1px solid #CBD5E1',
+                    }}
+                  >
+                    {liveOrders.length} active
+                  </span>
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#64748B', marginTop: 2, display: 'block' }}>Real-time packing queue</span>
               </div>
             </div>
 
-            <Button variant="secondary" size="sm" onClick={() => navigate('/seller/orders')}>
-              View All Orders <ArrowRight size={13} style={{ marginLeft: 4 }} />
+            <Button variant="secondary" size="sm" onClick={() => navigate('/seller/orders')} style={{ padding: '6px 12px', fontSize: '12px', flexShrink: 0 }}>
+              View Orders <ArrowRight size={13} style={{ marginLeft: 4 }} />
             </Button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-            {liveOrders.map((order) => (
-              <div
-                key={order.id}
-                style={{
-                  padding: '14px 16px',
-                  backgroundColor: '#F9F9FB',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border-gray)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-graphite)' }}>
-                      Order #{order.id}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: order.status === 'preparing' ? '#FFFBEB' : '#E8F9EE',
-                        color: order.status === 'preparing' ? '#D97706' : 'var(--color-green)',
-                        padding: '2px 7px',
-                        borderRadius: 'var(--radius-full)',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {order.status.replace('_', ' ')}
-                    </span>
-                  </div>
-
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-graphite)' }}>
-                    ₹{(Number(order.total_amount) || 0).toFixed(2)}
-                  </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: '140px' }}>
+            {liveOrders.length === 0 ? (
+              <div style={{
+                flex: 1,
+                padding: '32px 16px',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px dashed #CBD5E1',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={22} color="#0071E3" fill="#0071E3" />
                 </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>
-                  Customer: <strong>{order.customer_name}</strong> • {(order.items || []).length} items
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: '1px solid #EDEDF0' }}>
-                  <div style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Clock size={12} /> 10-Min SLA Deadline: <strong>07:30 left</strong>
-                  </div>
-
-                  {order.status === 'preparing' ? (
-                    <button
-                      type="button"
-                      onClick={() => handleOrderStatusChange(order.id, 'ready')}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#FFFFFF',
-                        backgroundColor: 'var(--color-blue)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Mark Packed & Ready
-                    </button>
-                  ) : order.status === 'ready' ? (
-                    <button
-                      type="button"
-                      onClick={() => handleOrderStatusChange(order.id, 'out_for_delivery')}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#FFFFFF',
-                        backgroundColor: 'var(--color-green)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Handover to Rider
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: '11px', color: 'var(--color-green)', fontWeight: 600 }}>
-                      ✓ Out with Rider
-                    </span>
-                  )}
-                </div>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>No Active Orders</span>
+                <span style={{ fontSize: '12px', color: '#64748B', maxWidth: '280px' }}>Real-time orders placed by customers will appear here in your packing queue.</span>
               </div>
-            ))}
+            ) : (
+              liveOrders.map((order) => {
+                const isDelivered = order.status === 'delivered';
+                const isPreparing = order.status === 'preparing' || order.status === 'placed';
+                const isReady = order.status === 'ready' || order.status === 'ready_for_pickup';
+
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      padding: '12px 14px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#0F172A' }}>
+                          Order #{order.id}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '10.5px',
+                            fontWeight: 800,
+                            backgroundColor: isDelivered ? '#F1F5F9' : isPreparing ? '#FEF3C7' : '#DCFCE7',
+                            color: isDelivered ? '#64748B' : isPreparing ? '#D97706' : '#15803D',
+                            padding: '2px 7px',
+                            borderRadius: '10px',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          {order.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <span style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>
+                        ₹{(Number(order.total_amount) || 0).toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span>Customer: <strong style={{ color: '#0F172A' }}>{order.customer_name}</strong></span>
+                      <span>•</span>
+                      <span>{(order.items || []).length} items</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: '1px solid #F1F5F9', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={12} color="#0071E3" /> 10-Min SLA: <strong style={{ color: '#0F172A' }}>{isDelivered ? 'Fulfilled' : '07:30 left'}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSlipOrder(order)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#334155',
+                            backgroundColor: '#F1F5F9',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                          title="Print dark store packing slip"
+                        >
+                          <Printer size={12} color="#0071E3" /> Slip
+                        </button>
+                      </div>
+
+                      {isPreparing ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOrderStatusChange(order.id, 'ready')}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#FFFFFF',
+                            backgroundColor: '#0071E3',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <Check size={12} strokeWidth={3} /> Mark Ready for Pickup
+                        </button>
+                      ) : isReady ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOrderStatusChange(order.id, 'out_for_delivery')}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#FFFFFF',
+                            backgroundColor: '#10B981',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          Handover to Rider
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 800 }}>
+                          ✓ {isDelivered ? 'Delivered' : 'Out with Rider'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
 
         {/* 2. Critical Stock & Restock Watchlist */}
-        <Card style={{ padding: 22, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: '#FFF0EE', color: 'var(--color-red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Flame size={16} />
+        <Card style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Flame size={18} color="#EF4444" />
               </div>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-graphite)' }}>
-                  Inventory Alert: Low Stock ({criticalStockProducts.length})
-                </h3>
-                <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>Items needing replenishment</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
+                    Low Stock Alerts
+                  </h3>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      borderRadius: '10px',
+                      backgroundColor: criticalStockProducts.length > 0 ? '#FEF2F2' : '#F1F5F9',
+                      color: criticalStockProducts.length > 0 ? '#DC2626' : '#64748B',
+                      border: criticalStockProducts.length > 0 ? '1px solid #FECACA' : '1px solid #CBD5E1',
+                    }}
+                  >
+                    {criticalStockProducts.length} items
+                  </span>
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#64748B', marginTop: 2, display: 'block' }}>Items needing replenishment</span>
               </div>
             </div>
 
-            <Button variant="secondary" size="sm" onClick={() => navigate('/seller/products')}>
+            <Button variant="secondary" size="sm" onClick={() => navigate('/seller/products')} style={{ padding: '6px 12px', fontSize: '12px', flexShrink: 0 }}>
               Products <ArrowRight size={13} style={{ marginLeft: 4 }} />
             </Button>
           </div>
@@ -399,64 +561,313 @@ export const SellerDashboardPage = () => {
             ) : (
               criticalStockProducts.map((prod) => {
                 const q = parseInt(prod.stock_quantity, 10) || 0;
+                const isZero = q === 0;
+                const maxSafety = 30;
+                const pct = Math.min(100, Math.round((q / maxSafety) * 100));
+
                 return (
                   <div
                     key={prod.id}
                     style={{
                       padding: '12px 14px',
                       backgroundColor: '#FFFFFF',
-                      border: '1px solid var(--color-border-gray)',
-                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 12,
+                      flexDirection: 'column',
+                      gap: 10,
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
                     }}
                   >
-                    <div>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-graphite)', margin: 0 }}>
-                        {prod.name}
-                      </h4>
-                      <div style={{ fontSize: '11px', color: 'var(--color-soft-gray)', marginTop: 2 }}>
-                        {prod.category_name} • Unit: {prod.unit}
+                    {/* Top Row: Thumbnail, Product Metadata & Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+                      {/* Product Thumbnail & Meta */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 42,
+                            height: 42,
+                            minWidth: 42,
+                            borderRadius: '8px',
+                            backgroundColor: '#F8FAFC',
+                            border: '1px solid #F1F5F9',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 2,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <img
+                            src={resolveMediaUrl(prod.image || prod.image_url, DEFAULT_PRODUCT_FALLBACK)}
+                            alt={prod.name}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = DEFAULT_PRODUCT_FALLBACK;
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                          />
+                        </div>
+
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <h4
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: '#0F172A',
+                              margin: '0 0 2px',
+                              lineHeight: 1.2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={prod.name}
+                          >
+                            {prod.name}
+                          </h4>
+
+                          <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                            <span>{prod.unit || '1 unit'}</span>
+                            <span>•</span>
+                            <span style={{ fontWeight: 700, color: '#0F172A' }}>₹{prod.price}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Status Badge & Restock Trigger */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        {/* Status Badge */}
+                        <span
+                          style={{
+                            fontSize: '10.5px',
+                            fontWeight: 700,
+                            color: isZero ? '#EF4444' : '#D97706',
+                            backgroundColor: isZero ? '#FEF2F2' : '#FFFBEB',
+                            border: isZero ? '1px solid #FCA5A5' : '1px solid #FCD34D',
+                            padding: '2.5px 8px',
+                            borderRadius: '10px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {isZero ? 'Out of Stock' : `${q} Left`}
+                        </span>
+
+                        {/* Restock Button */}
+                        {activeRestockId !== prod.id && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveRestockId(prod.id);
+                              if (!restockAmounts[prod.id]) {
+                                setRestockAmounts({ ...restockAmounts, [prod.id]: 10 });
+                              }
+                            }}
+                            style={{
+                              padding: '5px 12px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: '#FFFFFF',
+                              backgroundColor: '#0F172A',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.15)',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1E293B')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0F172A')}
+                            title="Restock units"
+                          >
+                            <Plus size={13} strokeWidth={2.5} />
+                            <span>Restock</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span
+                    {/* Expandable Restock Action Drawer */}
+                    {activeRestockId === prod.id && (
+                      <div
                         style={{
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          backgroundColor: q === 0 ? '#FFF0EE' : '#FFFBEB',
-                          color: q === 0 ? '#FF3B30' : '#D97706',
-                          padding: '3px 8px',
-                          borderRadius: 'var(--radius-full)',
-                          border: q === 0 ? '1px solid rgba(255, 59, 48, 0.4)' : '1px solid rgba(217, 119, 6, 0.4)',
-                        }}
-                      >
-                        {q === 0 ? 'Out of Stock' : `⚡ ${q} Left!`}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuickRestock(prod.id, prod.name)}
-                        style={{
-                          padding: '5px 9px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: 'var(--color-green)',
-                          backgroundColor: '#E8F9EE',
-                          border: '1px solid rgba(52, 199, 89, 0.4)',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
+                          width: '100%',
+                          paddingTop: 10,
+                          marginTop: 2,
+                          borderTop: '1px solid #F1F5F9',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 4,
+                          justifyContent: 'space-between',
+                          gap: 10,
+                          flexWrap: 'wrap',
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <RotateCcw size={11} /> +30 Units
-                      </button>
-                    </div>
+                        {/* Quick Preset Buttons (+10, +25, +50) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: 2 }}>Quick:</span>
+                          {[10, 25, 50].map((amount) => (
+                            <button
+                              key={amount}
+                              type="button"
+                              onClick={() => handleQuickRestock(prod.id, prod.name, amount)}
+                              style={{
+                                padding: '4px 9px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                color: '#0071E3',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #BFDBFE',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.12s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#0071E3';
+                                e.currentTarget.style.color = '#FFFFFF';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                e.currentTarget.style.color = '#0071E3';
+                              }}
+                            >
+                              +{amount}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Stepper Input & Confirm/Cancel */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              height: '28px',
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur = parseInt(restockAmounts[prod.id] !== undefined ? restockAmounts[prod.id] : 10, 10) || 10;
+                                if (cur > 1) setRestockAmounts({ ...restockAmounts, [prod.id]: cur - 1 });
+                              }}
+                              style={{
+                                width: '26px',
+                                height: '100%',
+                                backgroundColor: '#F8FAFC',
+                                border: 'none',
+                                borderRight: '1px solid #CBD5E1',
+                                color: '#334155',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                              }}
+                            >
+                              <Minus size={11} strokeWidth={2.5} />
+                            </button>
+
+                            <input
+                              type="number"
+                              min="1"
+                              max="999"
+                              value={restockAmounts[prod.id] !== undefined ? restockAmounts[prod.id] : 10}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setRestockAmounts({ ...restockAmounts, [prod.id]: isNaN(val) ? '' : Math.max(1, val) });
+                              }}
+                              style={{
+                                width: '38px',
+                                height: '100%',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: '#0F172A',
+                                border: 'none',
+                                outline: 'none',
+                                padding: '0 2px',
+                              }}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur = parseInt(restockAmounts[prod.id] !== undefined ? restockAmounts[prod.id] : 10, 10) || 10;
+                                setRestockAmounts({ ...restockAmounts, [prod.id]: cur + 1 });
+                              }}
+                              style={{
+                                width: '26px',
+                                height: '100%',
+                                backgroundColor: '#F8FAFC',
+                                border: 'none',
+                                borderLeft: '1px solid #CBD5E1',
+                                color: '#334155',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                              }}
+                            >
+                              <Plus size={11} strokeWidth={2.5} />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleQuickRestock(prod.id, prod.name, restockAmounts[prod.id] || 10)}
+                            style={{
+                              height: '28px',
+                              padding: '0 12px',
+                              backgroundColor: '#0F172A',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <Check size={12} strokeWidth={2.5} />
+                            <span>Confirm</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveRestockId(null)}
+                            style={{
+                              height: '28px',
+                              padding: '0 8px',
+                              backgroundColor: 'transparent',
+                              color: '#64748B',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -464,6 +875,15 @@ export const SellerDashboardPage = () => {
           </div>
         </Card>
       </div>
+
+      {/* Packing Slip Modal */}
+      {selectedSlipOrder && (
+        <PackingSlipModal
+          order={selectedSlipOrder}
+          storeName={seller?.store_name || seller?.full_name || seller?.name || 'Dark Store Supermarket'}
+          onClose={() => setSelectedSlipOrder(null)}
+        />
+      )}
 
     </div>
   );

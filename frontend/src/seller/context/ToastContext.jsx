@@ -21,8 +21,10 @@ export const ToastProvider = ({ children }) => {
     }
   }, [removeToast]);
 
+  const contextValue = React.useMemo(() => ({ showToast, removeToast }), [showToast, removeToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="toast-container" aria-live="polite">
         {toasts.map((toast) => {

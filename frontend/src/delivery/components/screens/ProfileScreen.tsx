@@ -124,6 +124,17 @@ export const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
+  const loggedInUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('grabit_user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const displayName = loggedInUser.name || loggedInUser.full_name || 'Delivery Partner';
+  const displayPhone = loggedInUser.phone || agentProfile.phone;
+  const displayEmail = loggedInUser.email || agentProfile.email;
+
   const handleSignOut = () => {
     resetDemo();
     setShowSignOutModal(false);
@@ -131,7 +142,7 @@ export const ProfileScreen: React.FC = () => {
     navigate('/login', { replace: true });
   };
 
-  const shortcuts = [
+  const navCards = [
     { to: '/delivery/delivery-history', label: 'Delivery\nHistory', Icon: Clock, color: C.green, bg: `${C.green}18` },
     { to: '/delivery/performance',      label: 'Performance', Icon: BarChart2, color: C.green, bg: `${C.green}18` },
     { to: '/delivery/support',          label: 'Support',     Icon: Headphones, color: C.purple, bg: `${C.purple}18` },
@@ -182,7 +193,7 @@ export const ProfileScreen: React.FC = () => {
           {/* Name & badges */}
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ fontSize: '24px', fontWeight: '800', color: C.graphite, margin: '0 0 8px', letterSpacing: '-0.5px' }}>
-              {agentProfile.name}
+              {displayName}
             </h1>
 
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: `${C.blue}12`, border: `1px solid ${C.blue}28`, borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px', fontWeight: '700', color: C.blue, marginBottom: '10px' }}>
@@ -226,23 +237,6 @@ export const ProfileScreen: React.FC = () => {
             <span style={{ fontSize: '12px', color: C.gray, fontWeight: '600' }}>Lifetime Deliveries</span>
           </div>
         </div>
-
-        {/* Sign Out Button */}
-        <button
-          id="profile-signout-btn"
-          onClick={() => setShowSignOutModal(true)}
-          style={{
-            width: '100%', marginTop: '18px', padding: '14px',
-            borderRadius: '14px', border: `1.5px solid ${C.red}`,
-            backgroundColor: `${C.red}08`, color: C.red,
-            fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            minHeight: '50px', transition: 'background 0.15s',
-          }}
-        >
-          <LogOut size={17} />
-          Sign Out Session
-        </button>
       </div>
 
       {/* ── Registered Vehicle Card ────────────────────────── */}
@@ -317,10 +311,10 @@ export const ProfileScreen: React.FC = () => {
             <span style={{ fontSize: '13px', color: C.gray, fontWeight: '600' }}>Phone</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: C.graphite }}>{agentProfile.phone}</span>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: C.graphite }}>{displayPhone}</span>
             <button
               id="profile-call-btn"
-              onClick={() => window.open(`tel:${agentProfile.phone.replace(/\s/g, '')}`)}
+              onClick={() => window.open(`tel:${displayPhone.replace(/\s/g, '')}`)}
               style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: `${C.blue}12`, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             >
               <Phone size={15} color={C.blue} />
@@ -335,10 +329,10 @@ export const ProfileScreen: React.FC = () => {
             <span style={{ fontSize: '13px', color: C.gray, fontWeight: '600' }}>Email</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '12.5px', fontWeight: '700', color: C.graphite }}>{agentProfile.email}</span>
+            <span style={{ fontSize: '12.5px', fontWeight: '700', color: C.graphite }}>{displayEmail}</span>
             <button
               id="profile-email-btn"
-              onClick={() => window.open(`mailto:${agentProfile.email}`)}
+              onClick={() => window.open(`mailto:${displayEmail}`)}
               style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: `${C.blue}12`, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             >
               <Mail size={15} color={C.blue} />
@@ -363,7 +357,7 @@ export const ProfileScreen: React.FC = () => {
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
         justifyContent: 'center'
       }}>
-        {shortcuts.map(({ to, label, Icon, color, bg }) => (
+        {navCards.map(({ to, label, Icon, color, bg }) => (
           <button
             key={to}
             id={`shortcut-${to.replace('/', '')}`}
@@ -385,6 +379,41 @@ export const ProfileScreen: React.FC = () => {
             </span>
           </button>
         ))}
+      </div>
+
+      {/* ── Sign Out Account Card ────────────────────────────── */}
+      <div style={{ backgroundColor: C.card, borderRadius: '22px', padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+        <button
+          id="profile-signout-btn"
+          onClick={() => setShowSignOutModal(true)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '14px',
+            border: `1.5px solid ${C.red}30`,
+            backgroundColor: `${C.red}08`,
+            color: C.red,
+            fontSize: '14.5px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = `${C.red}15`;
+            e.currentTarget.style.borderColor = C.red;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = `${C.red}08`;
+            e.currentTarget.style.borderColor = `${C.red}30`;
+          }}
+        >
+          <LogOut size={16} />
+          <span>Sign Out of Delivery Session</span>
+        </button>
       </div>
 
       {/* ── Sign Out Confirmation Modal ───────────────────────── */}
@@ -413,7 +442,7 @@ export const ProfileScreen: React.FC = () => {
               Sign Out from Portal?
             </h3>
             <p style={{ fontSize: '14px', color: C.gray, margin: '0 0 26px', lineHeight: '1.55' }}>
-              This will reset the demo to its initial state — Available and ready for dispatch.
+              Are you sure you want to sign out from your active delivery partner session? You will be returned to the login screen.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

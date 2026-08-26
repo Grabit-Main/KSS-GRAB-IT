@@ -1,24 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderTree,
   Package,
   ShoppingBag,
-  Store,
+  User,
 } from 'lucide-react';
 import { mockDb } from '../../services/mockData';
 
 export const MobileBottomNav = () => {
-  const pendingOrdersCount = (mockDb.getOrders() || []).filter(
-    (o) => o.status === 'preparing' || o.status === 'ready'
-  ).length;
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+
+  useEffect(() => {
+    const calculateCount = () => {
+      try {
+        const sharedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        const activeShared = sharedOrders.filter((o) =>
+          ['placed', 'preparing', 'ready', 'ready_for_pickup', 'out_for_delivery'].includes(o.status)
+        );
+        setPendingOrdersCount(activeShared.length);
+      } catch {
+        setPendingOrdersCount(0);
+      }
+    };
+
+    calculateCount();
+    window.addEventListener('storage', calculateCount);
+    window.addEventListener('grabit_orders_updated', calculateCount);
+    const interval = setInterval(calculateCount, 1000);
+
+    return () => {
+      window.removeEventListener('storage', calculateCount);
+      window.removeEventListener('grabit_orders_updated', calculateCount);
+      clearInterval(interval);
+    };
+  }, []);
 
   const navItems = [
     { label: 'Dashboard', path: '/seller/dashboard', icon: LayoutDashboard },
     { label: 'Categories', path: '/seller/categories', icon: FolderTree },
     { label: 'Products', path: '/seller/products', icon: Package },
     { label: 'Live Orders', path: '/seller/orders', icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount : null },
+    { label: 'Profile', path: '/seller/profile', icon: User },
   ];
 
   return (

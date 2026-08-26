@@ -66,7 +66,7 @@ const CATEGORY_HEADER_THEMES = {
     bg: '#F5F5F7',
     border: '#D2D2D7',
     accent: '#0071E3',
-    placeholder: 'Search for "milk", "chips", "coke"...'
+    placeholder: 'Search for milk, butter, chips, snacks...'
   },
   '/category/produce': {
     bg: '#EAF8F0',
@@ -145,7 +145,7 @@ const CATEGORY_HEADER_THEMES = {
 export default function Header() {
   const { totalItems, toPay } = useCart();
   const locationCtx = useDeliveryLocation() || {};
-  const location = locationCtx.location || { area: 'Banaswadi', city: 'Bengaluru', pincode: '560043', radius: '5 km' };
+  const location = locationCtx.location || { area: 'Select Location', city: '', pincode: '', radius: '' };
   const setIsModalOpen = locationCtx.setIsModalOpen || (() => {});
   const { wishlistCount } = useWishlist();
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,7 +235,7 @@ export default function Header() {
       >
         {searchQuery.trim().length === 0 ? (
           <div>
-            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Sparkles size={12} color="#0071E3" /> Trending Searches
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 8px' }}>
@@ -250,10 +250,20 @@ export default function Header() {
                   }}
                   style={{
                     background: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: '20px', padding: '6px 12px', fontSize: '12px',
-                    fontWeight: 800, color: '#0F172A', cursor: 'pointer',
+                    borderRadius: '20px', padding: '6px 13px', fontSize: '12.5px',
+                    fontWeight: 600, color: '#334155', cursor: 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#F1F5F9';
+                    e.currentTarget.style.borderColor = '#CBD5E1';
+                    e.currentTarget.style.color = '#0F172A';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#F8FAFC';
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                    e.currentTarget.style.color = '#334155';
                   }}
                 >
                   <span>{t.icon}</span>
@@ -264,11 +274,11 @@ export default function Header() {
           </div>
         ) : (
           <div>
-            <div style={{ padding: '4px 16px 6px', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ padding: '4px 16px 6px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               Product Suggestions ({matchingProducts.length})
             </div>
             {matchingProducts.length === 0 ? (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 600 }}>
+              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 500 }}>
                 No direct product matches for "{searchQuery}". Press Enter to view full catalog.
               </div>
             ) : (
@@ -293,15 +303,15 @@ export default function Header() {
                       <ProductSvg name={prod.image} size={28} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {prod.name}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{prod.volume || prod.weight}</span>
                         <span>•</span>
-                        <span style={{ fontWeight: 900, color: '#0071E3' }}>₹{prod.price}</span>
+                        <span style={{ fontWeight: 700, color: '#0071E3' }}>₹{prod.price}</span>
                         {prod.originalPrice > prod.price && (
-                          <span style={{ textDecoration: 'line-through', color: '#94A3B8', fontSize: '10px' }}>₹{prod.originalPrice}</span>
+                          <span style={{ textDecoration: 'line-through', color: '#94A3B8', fontSize: '10.5px' }}>₹{prod.originalPrice}</span>
                         )}
                       </div>
                     </div>

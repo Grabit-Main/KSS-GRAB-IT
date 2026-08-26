@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Sparkles, Zap, Search, ShieldCheck, Clock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
+import { categories } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 const CATEGORY_DETAILS = [

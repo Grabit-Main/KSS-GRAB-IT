@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Heart,
   Clock,
-  ChevronRight,
   Plus,
   Minus,
   Edit2,
   Trash2,
+  Star,
 } from 'lucide-react';
+import { resolveMediaUrl, DEFAULT_PRODUCT_FALLBACK } from '../../utils/mediaResolver';
 
 export const QuickCommerceProductCard = ({
   product,
@@ -16,9 +16,9 @@ export const QuickCommerceProductCard = ({
   onQuickStockAdjust,
   onQuickStockToggle,
 }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
   const stock = parseInt(product.stock_quantity, 10) || 0;
   const isOutOfStock = stock <= 0;
+  const discount = product.discount || (product.mrp && product.price && product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0);
 
   return (
     <div
@@ -26,181 +26,197 @@ export const QuickCommerceProductCard = ({
       style={{
         backgroundColor: '#FFFFFF',
         borderRadius: '16px',
-        border: isOutOfStock ? '1px solid rgba(255, 59, 48, 0.3)' : '1px solid #EBEBED',
+        border: isOutOfStock ? '1.5px dashed #CBD5E1' : '1px solid #E2E8F0',
         padding: '10px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        boxShadow: isOutOfStock ? 'none' : '0 1px 4px rgba(0,0,0,0.03)',
+        opacity: isOutOfStock ? 0.85 : 1,
+        transition: 'all 0.15s ease',
         overflow: 'hidden',
       }}
     >
-      {/* 1. Media Image Container (Full bleed rounded container matching reference) */}
+      {/* 1. Media Image Container */}
       <div
         style={{
           position: 'relative',
-          backgroundColor: '#F7F6F3',
+          backgroundColor: '#F8FAFC',
           borderRadius: '12px',
-          height: '145px',
+          height: '135px',
           width: '100%',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          padding: '6px',
         }}
       >
         <img
-          src={product.image && !product.image.includes('\\') && !product.image.startsWith('C:') ? product.image : 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=400&auto=format&fit=crop&q=80'}
+          src={resolveMediaUrl(product.image || product.image_url, DEFAULT_PRODUCT_FALLBACK)}
           alt={product.name}
           onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=400&auto=format&fit=crop&q=80';
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = DEFAULT_PRODUCT_FALLBACK;
           }}
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
-            filter: isOutOfStock ? 'grayscale(40%)' : 'none',
+            objectFit: 'contain',
+            filter: isOutOfStock ? 'grayscale(60%)' : 'none',
           }}
         />
 
-        {/* Heart Wishlist Button (Top-Right) */}
-        <button
-          type="button"
-          onClick={() => setIsFavorite(!isFavorite)}
+        {/* Stock Status Badge (Top-Left) */}
+        <span
           style={{
             position: 'absolute',
             top: 8,
-            right: 8,
-            width: 26,
-            height: 26,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(4px)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          }}
-          title="Wishlist"
-        >
-          <Heart
-            size={13}
-            color={isFavorite ? 'var(--color-red)' : '#8E8E93'}
-            fill={isFavorite ? 'var(--color-red)' : 'none'}
-          />
-        </button>
-
-        {/* Stock Alert Badge (Top-Left) */}
-        {stock === 1 ? (
-          <span
-            style={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              backgroundColor: '#FF3B30',
-              color: '#FFFFFF',
-              fontSize: '10px',
-              fontWeight: 800,
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-            }}
-          >
-            ⚡ 1 Left!
-          </span>
-        ) : stock === 2 ? (
-          <span
-            style={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              backgroundColor: '#D97706',
-              color: '#FFFFFF',
-              fontSize: '10px',
-              fontWeight: 800,
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-            }}
-          >
-            ⚡ 2 Left!
-          </span>
-        ) : isOutOfStock ? (
-          <span
-            style={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              backgroundColor: '#FF3B30',
-              color: '#FFFFFF',
-              fontSize: '10px',
-              fontWeight: 800,
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-            }}
-          >
-            Sold Out
-          </span>
-        ) : null}
-
-        {/* Image Pagination Dots (Bottom-Left) */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 6,
             left: 8,
-            display: 'flex',
+            backgroundColor: isOutOfStock ? '#EF4444' : stock <= 5 ? '#F59E0B' : '#10B981',
+            color: '#FFFFFF',
+            fontSize: '9.5px',
+            fontWeight: 800,
+            padding: '2.5px 7px',
+            borderRadius: '10px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: 3,
+            zIndex: 2,
           }}
         >
-          <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.9)' }} />
-          <span style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.5)' }} />
-          <span style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.5)' }} />
-        </div>
-      </div>
-
-      {/* 2. Unit Label & ADD / Stepper Button */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 8,
-          marginBottom: 4,
-        }}
-      >
-        {/* Unit */}
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-graphite)' }}>
-          {product.unit || '1 unit'}
+          {isOutOfStock ? '🔴 Out of Stock' : stock <= 5 ? `⚡ Low (${stock})` : `🟢 In Stock (${stock})`}
         </span>
 
-        {/* ADD Button / Stepper */}
-        {isOutOfStock ? (
-          <button
-            type="button"
-            onClick={() => onQuickStockToggle(product)}
+        {/* Discount Badge (Top-Right) */}
+        {discount > 0 && !isOutOfStock && (
+          <span
             style={{
-              border: '1.5px solid var(--color-green)',
-              backgroundColor: '#E8F9EE',
-              color: 'var(--color-green)',
-              borderRadius: '6px',
-              padding: '3px 8px',
-              fontSize: '11px',
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: '#FF3B30',
+              color: '#FFFFFF',
+              fontSize: '9.5px',
               fontWeight: 800,
-              cursor: 'pointer',
+              padding: '2.5px 6px',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+              zIndex: 2,
             }}
           >
-            RESTOCK
-          </button>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            {discount}% OFF
+          </span>
+        )}
+      </div>
+
+      {/* 2. Content Body */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingTop: 10 }}>
+        {/* Product Title */}
+        <h3
+          style={{
+            fontSize: '12.5px',
+            fontWeight: 800,
+            color: '#0F172A',
+            lineHeight: '1.3',
+            margin: '0 0 4px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '33px',
+          }}
+        >
+          {product.name}
+        </h3>
+
+        {/* Unit, Brand & Category Subtitle */}
+        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {product.unit || '1 unit'} • {product.brand || product.category_name || 'Grocery'}
+        </div>
+
+        {/* Price, SLA, & Customer Rating Row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <span style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
+              ₹{(parseFloat(product?.price) || 0).toFixed(0)}
+            </span>
+            {product?.mrp && parseFloat(product.mrp) > parseFloat(product.price) && (
+              <span style={{ fontSize: '11px', color: '#94A3B8', textDecoration: 'line-through' }}>
+                ₹{(parseFloat(product.mrp) || 0).toFixed(0)}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Customer Rating */}
             <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                border: '1.5px solid #279A48',
+                gap: 2,
+                backgroundColor: '#FFF8E1',
+                border: '1px solid #FFE082',
+                borderRadius: '4px',
+                padding: '1px 4px',
+                fontSize: '10px',
+                fontWeight: 800,
+                color: '#854D0E',
+              }}
+            >
+              <Star size={10} fill="#EAB308" color="#EAB308" />
+              <span>{product.rating || '4.8'}</span>
+            </div>
+
+            {/* Delivery Time */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>
+              <Clock size={11} color="#0071E3" />
+              <span>{product.delivery_time || '10m'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stock Management Row */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '6px 8px',
+            backgroundColor: '#F8FAFC',
+            borderRadius: '8px',
+            border: '1px solid #F1F5F9',
+            marginBottom: 8,
+          }}
+        >
+          <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#475569' }}>
+            Stock Qty:
+          </span>
+
+          {isOutOfStock ? (
+            <button
+              type="button"
+              onClick={() => onQuickStockToggle(product)}
+              style={{
+                border: '1px solid #A7F3D0',
+                backgroundColor: '#ECFDF5',
+                color: '#059669',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              + Add Stock
+            </button>
+          ) : (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                border: '1px solid #CBD5E1',
                 borderRadius: '6px',
                 backgroundColor: '#FFFFFF',
                 padding: '2px 4px',
@@ -213,18 +229,18 @@ export const QuickCommerceProductCard = ({
                 style={{
                   border: 'none',
                   background: 'none',
-                  color: '#0C831F',
+                  color: '#0F172A',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '1px 3px',
+                  padding: '1px 2px',
                 }}
                 title="Decrease Stock"
               >
                 <Minus size={11} strokeWidth={3} />
               </button>
 
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#0C831F', minWidth: 16, textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#0F172A', minWidth: 18, textAlign: 'center' }}>
                 {stock}
               </span>
 
@@ -234,127 +250,68 @@ export const QuickCommerceProductCard = ({
                 style={{
                   border: 'none',
                   background: 'none',
-                  color: '#0C831F',
+                  color: '#0F172A',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '1px 3px',
+                  padding: '1px 2px',
                 }}
                 title="Increase Stock"
               >
                 <Plus size={11} strokeWidth={3} />
               </button>
             </div>
-            {product.options_text && (
-              <span style={{ fontSize: '9px', color: '#64748B', marginTop: 1 }}>
-                {product.options_text}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 3. Pricing Row */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, margin: '2px 0 3px' }}>
-        <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-graphite)' }}>
-          ₹{(parseFloat(product?.discount_price || product?.price) || 0).toFixed(0)}
-        </span>
-        {product?.discount_price && (
-          <span style={{ fontSize: '11px', color: 'var(--color-soft-gray)', textDecoration: 'line-through' }}>
-            ₹{(parseFloat(product?.price) || 0).toFixed(0)}
-          </span>
-        )}
-      </div>
-
-      {/* 4. Product Name */}
-      <h3
-        style={{
-          fontSize: '13px',
-          fontWeight: 600,
-          color: 'var(--color-graphite)',
-          lineHeight: '1.25',
-          margin: '0 0 5px',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          minHeight: '32px',
-        }}
-      >
-        {product.name}
-      </h3>
-
-      {/* 5. Delivery Time SLA */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: 5 }}>
-        <Clock size={11} color="#64748B" />
-        <span>{product.delivery_time || '8 mins'}</span>
-      </div>
-
-      {/* 6. Recipe Pill (from reference image) */}
-      {product.recipes_count && (
-        <div style={{ marginBottom: 8 }}>
-          <span
-            style={{
-              backgroundColor: '#EDF9F1',
-              color: '#0C831F',
-              fontSize: '10px',
-              fontWeight: 700,
-              padding: '2px 6px',
-              borderRadius: '4px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <span>{product.recipes_count} recipes</span>
-            <ChevronRight size={10} />
-          </span>
+          )}
         </div>
-      )}
 
-      {/* 7. Seller Action Buttons */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 4,
-          marginTop: 'auto',
-          paddingTop: 8,
-          borderTop: '1px solid #F0F0F2',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => onEdit(product)}
-          className="btn btn-secondary btn-sm"
-          style={{ padding: '4px 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}
-          title="Edit"
-        >
-          <Edit2 size={11} />
-          <span>Edit</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onDelete(product)}
-          className="btn btn-secondary btn-sm"
+        {/* Actions: Edit & Delete */}
+        <div
           style={{
-            padding: '4px 6px',
-            fontSize: '11px',
-            color: 'var(--color-red)',
-            borderColor: 'rgba(255, 59, 48, 0.25)',
-            backgroundColor: '#FFF9F9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 3,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 6,
+            marginTop: 'auto',
+            paddingTop: 6,
+            borderTop: '1px solid #F1F5F9',
           }}
-          title="Delete"
         >
-          <Trash2 size={11} />
-          <span>Delete</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onEdit(product)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '5px 8px', fontSize: '11.5px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: '8px' }}
+            title="Edit Product"
+          >
+            <Edit2 size={12} />
+            <span>Edit</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(product)}
+            className="btn btn-secondary btn-sm"
+            style={{
+              padding: '5px 8px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              color: '#EF4444',
+              borderColor: '#FECACA',
+              backgroundColor: '#FEF2F2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              borderRadius: '8px',
+            }}
+            title="Delete Product"
+          >
+            <Trash2 size={12} />
+            <span>Delete</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+
+export default QuickCommerceProductCard;

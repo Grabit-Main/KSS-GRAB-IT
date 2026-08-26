@@ -17,39 +17,46 @@ export default function CartPage() {
   const isTablet = w <= 1024;
 
   // ── LOCATION & ADDRESS STATE ──
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState({
-    title: 'Home',
-    address: 'Banaswadi, Bengaluru 560043',
-    tag: 'Within 5 km radius',
-    time: '30-45 min delivery'
-  });
-
-  const [customAddressInput, setCustomAddressInput] = useState('');
-
-  const savedAddresses = [
-    {
-      title: 'Home',
-      address: 'Banaswadi, Bengaluru 560043',
-      tag: 'Within 5 km radius',
-      time: '30-45 min delivery',
-      isDefault: true
-    },
-    {
-      title: 'Work Office',
-      address: '100ft Rd, Indiranagar, Bengaluru 560038',
-      tag: 'Within 3.8 km radius',
-      time: '15-25 min delivery',
-      isDefault: false
-    },
-    {
-      title: 'Parents House',
-      address: '2nd Block, HRBR Layout, Bengaluru 560043',
-      tag: 'Within 1.5 km radius',
-      time: '10-15 min express delivery',
-      isDefault: false
+  const getStoredUser = () => {
+    try {
+      const u = localStorage.getItem('grabit_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
     }
-  ];
+  };
+  const activeUser = getStoredUser();
+
+  const getAddressesKey = (phone) => `grabit_addresses_${(phone || 'default').replace(/\D/g, '')}`;
+  const loadUserAddresses = () => {
+    try {
+      const data = localStorage.getItem(getAddressesKey(activeUser?.phone));
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [savedAddresses, setSavedAddresses] = useState(loadUserAddresses);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    const list = loadUserAddresses();
+    if (list.length > 0) {
+      const def = list.find(a => a.isDefault) || list[0];
+      return {
+        title: def.title || 'Home',
+        address: def.address + (def.city ? `, ${def.city}` : ''),
+        tag: 'Saved Location',
+        time: '15-25 min delivery'
+      };
+    }
+    return {
+      title: 'Current Location',
+      address: 'Select delivery address',
+      tag: 'Direct Delivery',
+      time: '15-25 min delivery'
+    };
+  });
 
   const handleSelectAddress = (addr) => {
     setSelectedAddress(addr);

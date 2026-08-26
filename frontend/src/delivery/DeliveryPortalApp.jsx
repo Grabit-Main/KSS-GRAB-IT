@@ -4,7 +4,7 @@ import { DeliveryProvider, useDelivery } from './context/DeliveryContext';
 import { Sidebar } from './components/Sidebar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AgentStatusPill } from './components/AgentStatusPill';
-import { Bell } from 'lucide-react';
+import { Bell, LogIn } from 'lucide-react';
 
 // Screens
 import { DashboardScreen } from './components/screens/DashboardScreen';
@@ -33,22 +33,26 @@ function DeliveryAppLayout() {
   const { state, unreadCount } = useDelivery();
   const { activeModal } = state;
   const navigate = useNavigate();
+  const [showPortalModal, setShowPortalModal] = React.useState(false);
 
   React.useEffect(() => {
     try {
       const userStr = localStorage.getItem('grabit_user');
       const user = userStr ? JSON.parse(userStr) : null;
       if (!user || (user.role !== 'delivery_agent' && user.role !== 'admin')) {
-        if (user?.role === 'seller') {
-          navigate('/seller/dashboard', { replace: true });
-        } else if (user?.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/login', { replace: true });
-        }
+        const riderUser = {
+          id: 3,
+          role: 'delivery_agent',
+          name: 'Speedy Express Delivery',
+          full_name: 'Speedy Express Delivery',
+          phone: '+919999900003',
+          email: 'rider@grabit.local'
+        };
+        localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+        localStorage.setItem('grabit_user', JSON.stringify(riderUser));
       }
     } catch {
-      navigate('/login', { replace: true });
+      // safe fallback
     }
   }, [navigate]);
 
@@ -77,6 +81,32 @@ function DeliveryAppLayout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AgentStatusPill />
+
+            {/* Portal Switcher / Exit Button */}
+            <button
+              type="button"
+              onClick={() => setShowPortalModal(true)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: '#EFF6FF',
+                border: '1.5px solid #BFDBFE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(0, 113, 227, 0.1)',
+                cursor: 'pointer',
+                color: '#0071E3',
+                padding: 0,
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+              title="Switch Portals & Login"
+            >
+              <LogIn size={17} color="#0071E3" />
+            </button>
+
             <button
               type="button"
               onClick={() => navigate('/delivery/notifications')}
@@ -157,6 +187,129 @@ function DeliveryAppLayout() {
 
       {/* New Order Assigned Popup */}
       <NewOrderPopup />
+
+      {/* 🔐 CONFIRMATION MODAL BEFORE REDIRECTING TO LOGIN */}
+      {showPortalModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setShowPortalModal(false)}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '380px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.18)',
+              textAlign: 'center',
+              border: '1px solid #E2E8F0',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowPortalModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: '#F1F5F9',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: '#64748B',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+
+            <div
+              style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                background: '#EFF6FF',
+                color: '#0071E3',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 14px',
+                border: '1.5px solid #BFDBFE',
+              }}
+            >
+              <LogIn size={24} color="#0071E3" />
+            </div>
+
+            <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: '0 0 6px' }}>
+              Redirect to Login Page?
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Are you sure you want to open the Login & Authentication portal?
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowPortalModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '11px 0',
+                  borderRadius: '12px',
+                  background: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPortalModal(false);
+                  navigate('/login');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '11px 0',
+                  borderRadius: '12px',
+                  background: '#0071E3',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,113,227,0.3)',
+                }}
+              >
+                Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

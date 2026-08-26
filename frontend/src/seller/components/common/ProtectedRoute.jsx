@@ -6,17 +6,16 @@ export const ProtectedRoute = () => {
   const userStr = localStorage.getItem('grabit_user');
 
   if (!session || !userStr) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/seller/login" replace />;
   }
 
   try {
     const user = JSON.parse(userStr);
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
-      if (user?.role === 'delivery_agent') return <Navigate to="/delivery/dashboard" replace />;
-      return <Navigate to="/" replace />;
+      return <Navigate to="/seller/login" replace />;
     }
   } catch {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/seller/login" replace />;
   }
 
   return <Outlet />;

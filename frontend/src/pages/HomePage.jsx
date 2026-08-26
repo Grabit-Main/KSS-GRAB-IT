@@ -26,18 +26,40 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
+  const [allProducts, setAllProducts] = useState(() => [...products]);
+  const [allCategories, setAllCategories] = useState(() => [...categories]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setAllProducts([...products]);
+      setAllCategories([...categories]);
+    };
+    handleSync();
+    window.addEventListener('grabit_products_synced', handleSync);
+    window.addEventListener('grabit_categories_synced', handleSync);
+    window.addEventListener('grabit_products_updated', handleSync);
+    window.addEventListener('grabit_categories_updated', handleSync);
+    return () => {
+      window.removeEventListener('grabit_products_synced', handleSync);
+      window.removeEventListener('grabit_categories_synced', handleSync);
+      window.removeEventListener('grabit_products_updated', handleSync);
+      window.removeEventListener('grabit_categories_updated', handleSync);
+    };
+  }, []);
+
   const popularProducts = useMemo(() => {
-    return products.filter(p => ['snacks','dairy','beverages','staples','household'].includes(p.category)).slice(0, isMobile ? 6 : 12);
-  }, [isMobile]);
+    return allProducts.filter(p => ['snacks','dairy','beverages','staples','household', '1', '2', '3', '4', '7'].includes(String(p.category || p.category_slug))).slice(0, isMobile ? 6 : 12);
+  }, [allProducts, isMobile]);
 
   const snackProducts = useMemo(() => {
-    return products.filter(p => p.category === 'snacks').slice(0, isMobile ? 6 : 12);
-  }, [isMobile]);
+    return allProducts.filter(p => p.category === 'snacks' || p.category_slug === 'snacks-munchies' || String(p.category) === '1').slice(0, isMobile ? 6 : 12);
+  }, [allProducts, isMobile]);
 
   const dealProducts = useMemo(() => {
-    return products.filter(p => p.discount >= 18).slice(0, isMobile ? 6 : 12);
-  }, [isMobile]);
-  const wishlistProducts = products.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category)).slice(0, isMobile ? 6 : 12);
+    return allProducts.filter(p => (p.discount || 0) >= 15 || p.mrp > p.price).slice(0, isMobile ? 6 : 12);
+  }, [allProducts, isMobile]);
+
+  const wishlistProducts = allProducts.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category || p.category_slug)).slice(0, isMobile ? 6 : 12);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
@@ -558,27 +580,33 @@ export default function HomePage() {
 
           {/* 🔴 PAGINATION DOTS STRIP */}
           <div style={{
-            position: 'absolute', bottom: isMobile ? '8px' : '16px', left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px', zIndex: 20,
-            padding: '6px 14px', borderRadius: '30px',
-            background: 'rgba(255, 255, 255, 0.65)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.8)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
+            position: 'absolute', bottom: isMobile ? '8px' : '14px', left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: '6px', zIndex: 20,
+            padding: '4px 10px', borderRadius: '20px',
+            background: 'rgba(255, 255, 255, 0.72)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.85)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            boxSizing: 'border-box'
           }}>
             {slides.map((s, dotIdx) => (
               <button
                 key={dotIdx}
+                type="button"
                 aria-label={`Go to slide ${dotIdx + 1}`}
                 onClick={() => setActiveSlide(dotIdx)}
                 style={{
-                  border: 'none', padding: 0, cursor: 'pointer',
-                  width: activeSlide === dotIdx ? (isMobile ? '20px' : '28px') : (isMobile ? '7px' : '9px'),
-                  height: isMobile ? '7px' : '9px',
-                  borderRadius: '10px',
-                  background: activeSlide === dotIdx ? (s.discountColor || '#0066FF') : 'rgba(15, 23, 42, 0.25)',
-                  boxShadow: activeSlide === dotIdx ? `0 2px 8px ${s.discountColor}66` : 'none',
-                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+                  border: 'none', padding: 0, margin: 0, cursor: 'pointer',
+                  width: activeSlide === dotIdx ? '20px' : '6px',
+                  height: '6px',
+                  minHeight: '6px',
+                  maxHeight: '6px',
+                  borderRadius: '6px',
+                  background: activeSlide === dotIdx ? (s.discountColor || '#0071E3') : 'rgba(15, 23, 42, 0.22)',
+                  boxShadow: activeSlide === dotIdx ? `0 1px 4px ${s.discountColor}55` : 'none',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  display: 'block',
+                  flexShrink: 0
                 }}
               />
             ))}
@@ -600,30 +628,33 @@ export default function HomePage() {
             </Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: catCols, gap: isMobile ? '8px' : '14px' }}>
-            {categories.slice(0, isMobile ? 8 : 12).map((cat, idx) => (
-              <Link
-                key={idx}
-                to={`/category/${cat.slug}`}
-                style={{
-                  textDecoration: 'none', background: '#F5F5F7',
-                  border: '1px solid #D2D2D7', borderRadius: isMobile ? '10px' : '12px',
-                  padding: isMobile ? '12px 6px 10px' : '16px 12px 14px',
-                  textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; }}
-              >
-                <div style={{ height: isMobile ? '48px' : '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: isMobile ? '5px' : '8px' }}>
-                  <ProductSvg name={cat.icon} size={isMobile ? 42 : 65} />
-                </div>
-                <span style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.2 }}>
-                  {cat.name}
-                </span>
-              </Link>
-            ))}
+            {(allCategories.length > 0 ? allCategories : categories).slice(0, isMobile ? 8 : 12).map((cat, idx) => {
+              const catSlug = cat.slug || (cat.name ? cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : cat.id);
+              return (
+                <Link
+                  key={cat.id || cat.slug || idx}
+                  to={`/category/${catSlug}`}
+                  style={{
+                    textDecoration: 'none', background: '#F5F5F7',
+                    border: '1px solid #D2D2D7', borderRadius: isMobile ? '10px' : '12px',
+                    padding: isMobile ? '12px 6px 10px' : '16px 12px 14px',
+                    textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; }}
+                >
+                  <div style={{ height: isMobile ? '48px' : '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: isMobile ? '5px' : '8px' }}>
+                    <ProductSvg name={cat.image_url || cat.image || cat.icon || cat.slug} size={isMobile ? 42 : 65} />
+                  </div>
+                  <span style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.2 }}>
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

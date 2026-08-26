@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, AlertCircle, Folder, Layers, Trash2 } from 'lucide-react';
+import { Upload, X, AlertCircle, Folder, Layers, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Input } from '../common/Input';
 import { Textarea } from '../common/Textarea';
@@ -287,6 +287,72 @@ export const CategoryModal = ({
           onChange={(e) => setName(e.target.value)}
           error={errors.name}
         />
+
+        {/* 🌟 Category Visibility Status (Active / Inactive) */}
+        <div className="form-group" style={{ marginBottom: 16 }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '13px', color: '#0F172A', marginBottom: 6 }}>
+            <span>Category Status &amp; Visibility</span>
+            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>(Controls customer storefront visibility)</span>
+          </label>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 10,
+              padding: 4,
+              backgroundColor: '#F1F5F9',
+              borderRadius: '12px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsActive(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: isActive ? '1px solid #A7F3D0' : 'none',
+                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                color: isActive ? '#059669' : '#64748B',
+                fontWeight: 800,
+                fontSize: '13px',
+                boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <CheckCircle2 size={15} color={isActive ? '#059669' : '#94A3B8'} />
+              <span>🟢 Active (Visible)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsActive(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: !isActive ? '1px solid #CBD5E1' : 'none',
+                backgroundColor: !isActive ? '#FFFFFF' : 'transparent',
+                color: !isActive ? '#475569' : '#64748B',
+                fontWeight: 800,
+                fontSize: '13px',
+                boxShadow: !isActive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <XCircle size={15} color={!isActive ? '#64748B' : '#94A3B8'} />
+              <span>⚪ Inactive (Hidden)</span>
+            </button>
+          </div>
+        </div>
 
         {/* 2. Parent Category (Optional) */}
         <Select
