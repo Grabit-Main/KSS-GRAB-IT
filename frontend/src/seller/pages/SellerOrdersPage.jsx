@@ -27,19 +27,34 @@ import { playNewOrderChime } from '../utils/orderAudioAlert';
 
 export const SellerOrdersPage = () => {
   const { seller } = useSellerAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // ✅ FIX: Seed from localStorage immediately so orders appear with zero delay.
+  // The network fetch will merge in and update with fresh data when it arrives.
+  const [orders, setOrders] = useState(() => {
+    try {
+      const local = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      return Array.isArray(local) ? local : [];
+    } catch { return []; }
+  });
+  const hasLocalOrders = orders.length > 0;
+  const [loading, setLoading] = useState(!hasLocalOrders); // skip spinner if we already have data
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSlipOrder, setSelectedSlipOrder] = useState(null);
   const prevCountRef = useRef(0);
   const isInitialFetchRef = useRef(true);
+  const isFetchingRef = useRef(false); // ✅ FIX: prevent overlapping poll requests
 
   const { showToast } = useToast();
   const storeName = seller?.store_name || seller?.full_name || seller?.name || 'Dark Store Supermarket';
 
   const fetchOrders = useCallback(async (isInitial = false) => {
-    if (isInitial) setLoading(true);
+    // ✅ FIX: Skip this poll cycle if the previous request is still in-flight.
+    // Prevents request stacking when the backend is slow (> 2.5s response time).
+    if (isFetchingRef.current && !isInitial) return;
+    isFetchingRef.current = true;
+    // Only show spinner if we have no data yet to display
+    if (isInitial && orders.length === 0) setLoading(true);
     try {
       let apiOrders = [];
       try {
@@ -54,15 +69,24 @@ export const SellerOrdersPage = () => {
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
-      // Deduplicate by ID
-      const seen = new Set();
+      // Deduplicate strictly by ID and order details fingerprint
+      const seenKeys = new Set();
+      const seenFingerprints = new Set();
       const unique = [];
+
       for (const o of allRaw) {
         const key = o.rawId || o.id;
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          unique.push(o);
-        }
+        const totalAmt = Number(o.total_amount || o.total || 0);
+        const custName = (o.customer_name || 'Customer').toLowerCase().trim();
+        const itemLen = Array.isArray(o.items) ? o.items.length : 0;
+        const fingerprint = `${custName}_${totalAmt}_${itemLen}`;
+
+        if (key && seenKeys.has(key)) continue;
+        if (fingerprint && seenFingerprints.has(fingerprint)) continue;
+
+        if (key) seenKeys.add(key);
+        if (fingerprint) seenFingerprints.add(fingerprint);
+        unique.push(o);
       }
 
       const formatted = unique.map((o) => {
@@ -86,7 +110,8 @@ export const SellerOrdersPage = () => {
           delivery_address: o.delivery_address || o.address || 'Delivery Address',
           items: itemsList,
           total_amount: totalAmt,
-          status: o.status === 'placed' ? 'preparing' : (o.status || 'preparing'),
+          status: o.status || 'placed',
+          delivery_agent_id: o.delivery_agent_id || null,
           created_at: o.created_at || new Date().toISOString(),
           date: o.date || new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           time: o.time || new Date(o.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -110,6 +135,7 @@ export const SellerOrdersPage = () => {
     } catch (err) {
       console.warn('Orders real-time sync fallback:', err);
     } finally {
+      isFetchingRef.current = false;
       if (isInitial) setLoading(false);
     }
   }, [showToast]);
@@ -120,13 +146,31 @@ export const SellerOrdersPage = () => {
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
-  const handleStatusChange = async (orderId, rawId, nextStatus) => {
-    // 1. Update shared localStorage so Customer and Delivery see it immediately
+  const handleStatusChange = async (orderId, rawId, nextStatus, deliveryAgentId = null) => {
+    // Optimistically update local React state immediately so button changes at once
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.rawId === rawId || o.id === rawId || o.id === orderId 
+          ? { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) } 
+          : o
+      )
+    );
+
+    // 1. Update shared localStorage so Customer and Delivery portal see the change too.
+    //    NOTE: orderId is the short 8-char display ID; rawId is always the full UUID.
+    //    Orders in localStorage store the full UUID in both o.id and o.rawId, so we must
+    //    match by rawId (full UUID) to reliably find the correct entry.
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
       const updated = stored.map((o) => {
-        if (o.rawId === rawId || o.id === orderId || o.orderNumber === orderId) {
-          return { ...o, status: nextStatus };
+        if (
+          o.rawId === rawId ||
+          o.id === rawId ||           // full-UUID match (covers orders without rawId field)
+          o.id === orderId ||         // 8-char fallback (rarely hits but harmless)
+          o.orderNumber === rawId ||
+          o.orderNumber === orderId
+        ) {
+          return { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) };
         }
         return o;
       });
@@ -135,23 +179,31 @@ export const SellerOrdersPage = () => {
       window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
     } catch {}
 
-    // 2. Dispatch to backend API
+    // 2. Persist to backend API (best-effort — failure doesn't revert UI)
     try {
-      await patch(`/orders/${rawId}/status`, { status: nextStatus });
-    } catch (err) {}
+      const payload = { status: nextStatus };
+      if (deliveryAgentId) {
+        payload.delivery_agent_id = deliveryAgentId;
+      }
+      await patch(`/orders/${rawId}/status`, payload);
+    } catch (err) {
+      console.warn('Backend status update failed (will retry on next sync):', err);
+    }
 
-    setOrders((prev) => prev.map((o) => (o.rawId === rawId || o.id === orderId ? { ...o, status: nextStatus } : o)));
     showToast({ type: 'success', message: `Order #${orderId} marked as ${nextStatus.replace(/_/g, ' ')}!` });
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, deliveryAgentId = null) => {
     switch (status) {
       case 'placed':
+        return <Badge variant="info">Placed</Badge>;
       case 'preparing':
         return <Badge variant="info">Preparing Order</Badge>;
       case 'ready':
       case 'ready_for_pickup':
-        return <Badge variant="active">Ready for Pickup</Badge>;
+        return deliveryAgentId 
+          ? <Badge variant="active">Dispatched to Rider</Badge>
+          : <Badge variant="active">Ready for Pickup</Badge>;
       case 'out_for_delivery':
         return <Badge variant="active">Out for Delivery (10 min)</Badge>;
       case 'delivered':
@@ -357,10 +409,16 @@ export const SellerOrdersPage = () => {
                     <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                       Order #{order.id}
                     </span>
-                    {getStatusBadge(order.status)}
+                    {getStatusBadge(order.status, order.delivery_agent_id)}
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748B', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={13} /> {order.time || new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • 10-Min Fast Dispatch
+                    <Clock size={13} /> {order.time || new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {(() => {
+                      const created = new Date(order.created_at);
+                      const diffMin = Math.floor((Date.now() - created.getTime()) / 60000);
+                      if (diffMin < 1) return 'Just now';
+                      if (diffMin === 1) return '1 min ago';
+                      return `${diffMin} mins ago`;
+                    })()}
                   </div>
                 </div>
 
@@ -433,20 +491,26 @@ export const SellerOrdersPage = () => {
 
                 {/* Status Transition Action Buttons */}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {(order.status === 'placed' || order.status === 'preparing') && (
+                  {order.status === 'placed' && (
+                    <Button variant="primary" size="sm" onClick={() => handleStatusChange(order.id, order.rawId, 'preparing')}>
+                      <CheckCircle2 size={15} style={{ marginRight: 6 }} /> Accept Order
+                    </Button>
+                  )}
+                  {order.status === 'preparing' && (
                     <Button variant="primary" size="sm" onClick={() => handleStatusChange(order.id, order.rawId, 'ready_for_pickup')}>
-                      <CheckCircle2 size={15} style={{ marginRight: 6 }} /> Mark Ready for Pickup
+                      <Package size={15} style={{ marginRight: 6 }} /> Mark Ready for Pickup
                     </Button>
                   )}
                   {(order.status === 'ready' || order.status === 'ready_for_pickup') && (
-                    <Button variant="outline" size="sm" onClick={() => handleStatusChange(order.id, order.rawId, 'out_for_delivery')}>
-                      <Truck size={15} style={{ marginRight: 6 }} /> Dispatch to Rider
-                    </Button>
-                  )}
-                  {order.status === 'out_for_delivery' && (
-                    <Button variant="outline" size="sm" onClick={() => handleStatusChange(order.id, order.rawId, 'delivered')}>
-                      <CheckCircle2 size={15} style={{ marginRight: 6 }} /> Confirm Delivered
-                    </Button>
+                    order.delivery_agent_id ? (
+                      <Button variant="outline" size="sm" disabled style={{ opacity: 0.7 }}>
+                        <Clock size={15} style={{ marginRight: 6 }} /> Awaiting Rider Accept
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => handleStatusChange(order.id, order.rawId, 'ready_for_pickup', '3')}>
+                        <Truck size={15} style={{ marginRight: 6 }} /> Dispatch to Rider
+                      </Button>
+                    )
                   )}
                 </div>
               </div>

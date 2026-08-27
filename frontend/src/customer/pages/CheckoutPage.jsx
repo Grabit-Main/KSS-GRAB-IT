@@ -137,7 +137,7 @@ export default function CheckoutPage() {
       subtotal: itemTotal,
       delivery_fee: deliveryFee,
       discount: discount || 0,
-      status: 'preparing',
+      status: 'placed',
       item_count: totalItems,
       items: orderItems,
       delivery_address: selectedAddress.address,
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
         payment_method: newOrderObj.payment_method,
         latitude: 12.9716,
         longitude: 77.5946,
-        status: 'preparing',
+        status: 'placed',
       });
     } catch (e) {
       console.warn('Live order save fallback:', e);

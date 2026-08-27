@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -55,6 +55,7 @@ export function AdminPortalApp() {
   const [products, setProducts] = useState([]);
   const [notice, setNotice] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const isFetchingRef = useRef(false); // ✅ FIX: prevent overlapping poll requests
 
   // New Partner Form
   const [partnerName, setPartnerName] = useState('');
@@ -123,13 +124,20 @@ export function AdminPortalApp() {
   }, []);
 
   useEffect(() => {
-    fetchPartners();
-    fetchProducts();
-    fetchAnalytics();
-    const interval = setInterval(() => {
-      fetchPartners();
-      fetchProducts();
-      fetchAnalytics();
+    // Initial load — run all three fetches in parallel
+    Promise.all([fetchPartners(), fetchProducts(), fetchAnalytics()]);
+
+    const interval = setInterval(async () => {
+      // ✅ FIX: Skip tick if a previous poll cycle is still in-flight.
+      // Prevents request stacking when the backend is slow (>4 s).
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
+      try {
+        // ✅ FIX: Run all three fetches concurrently instead of sequentially.
+        await Promise.all([fetchPartners(), fetchProducts(), fetchAnalytics()]);
+      } finally {
+        isFetchingRef.current = false;
+      }
     }, 4000);
     return () => clearInterval(interval);
   }, [fetchPartners, fetchProducts, fetchAnalytics]);

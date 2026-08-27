@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { useLayoutEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { DeliveryProvider, useDelivery } from './context/DeliveryContext';
 import { Sidebar } from './components/Sidebar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -33,7 +33,17 @@ function DeliveryAppLayout() {
   const { state, unreadCount } = useDelivery();
   const { activeModal } = state;
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPortalModal, setShowPortalModal] = React.useState(false);
+
+  // Scroll to top on every delivery sub-route change
+  useLayoutEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
 
   React.useEffect(() => {
     try {

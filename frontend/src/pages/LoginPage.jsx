@@ -20,6 +20,19 @@ function ThreeDotsLoading() {
 export function LoginPage() {
   const navigate = useNavigate();
 
+  // After login, restore the page the user was trying to reach (set by ProtectedRoute)
+  const getRedirectPath = (role) => {
+    const intended = sessionStorage.getItem('grabit_intended_path');
+    if (intended && intended !== '/login') {
+      sessionStorage.removeItem('grabit_intended_path');
+      return intended;
+    }
+    if (role === 'admin') return '/admin';
+    if (role === 'seller') return '/seller/dashboard';
+    if (role === 'delivery_agent') return '/delivery/dashboard';
+    return '/';
+  };
+
   const [phoneDigits, setPhoneDigits] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'register' | 'otp'
   const [otp, setOtp] = useState('');
@@ -57,7 +70,7 @@ export function LoginPage() {
     // Instant recognition for known demo credentials entered or selected
     const knownDemoMap = {
       '+919999900001': { name: 'Admin Supervisor', role: 'admin' },
-      '+919999900002': { name: 'Fresh Mart Supermarket', role: 'seller' },
+      '+919999900002': { name: 'GrabIt Supermarket', role: 'seller' },
       '+919999900003': { name: 'Speedy Express Delivery', role: 'delivery_agent' },
       '+919999900004': { name: 'Rahul Sharma', role: 'customer' },
     };
@@ -87,9 +100,9 @@ export function LoginPage() {
         localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
       }
 
-      if (demoUser.role === 'admin') navigate('/admin', { replace: true });
-      else if (demoUser.role === 'seller') navigate('/seller/dashboard', { replace: true });
-      else if (demoUser.role === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
+      if (demoUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
+      else if (demoUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
+      else if (demoUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
       else navigate('/', { replace: true });
       setBusy(false);
       return;
@@ -174,9 +187,9 @@ export function LoginPage() {
         window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
       }
 
-      if (userRole === 'admin') navigate('/admin', { replace: true });
-      else if (userRole === 'seller') navigate('/seller/dashboard', { replace: true });
-      else if (userRole === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
+      if (userRole === 'admin') navigate(getRedirectPath('admin'), { replace: true });
+      else if (userRole === 'seller') navigate(getRedirectPath('seller'), { replace: true });
+      else if (userRole === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
       else navigate('/', { replace: true });
     } catch (e) {
       const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
@@ -189,9 +202,9 @@ export function LoginPage() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
       }
-      if (fallbackUser.role === 'admin') navigate('/admin', { replace: true });
-      else if (fallbackUser.role === 'seller') navigate('/seller/dashboard', { replace: true });
-      else if (fallbackUser.role === 'delivery_agent') navigate('/delivery/dashboard', { replace: true });
+      if (fallbackUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
+      else if (fallbackUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
+      else if (fallbackUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
       else navigate('/', { replace: true });
     } finally {
       setBusy(false);
@@ -651,7 +664,7 @@ export function LoginPage() {
         <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.38)', paddingTop: 14, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
           {[
             { label: 'Customer', phone: '+919999900004', name: 'Rahul Sharma', role: 'customer' },
-            { label: 'Seller', phone: '+919999900002', name: 'Fresh Mart Supermarket', role: 'seller' },
+            { label: 'Seller', phone: '+919999900002', name: 'GrabIt Supermarket', role: 'seller' },
             { label: 'Rider', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
             { label: 'Admin', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
           ].map((item) => {

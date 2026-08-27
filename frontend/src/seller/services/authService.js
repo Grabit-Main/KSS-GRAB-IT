@@ -16,10 +16,9 @@ export const authService = {
       created_at: new Date().toISOString(),
     };
     mockDb.saveSeller(newSeller);
-    localStorage.setItem('grabit_seller_access', 'mock_jwt_access_token_' + Date.now());
-    localStorage.setItem('grabit_seller_refresh', 'mock_jwt_refresh_token_' + Date.now());
-    localStorage.setItem('grabit_session', 'mock_jwt_access_token_' + Date.now());
-    return { seller: newSeller, access: 'mock_jwt_access_token' };
+    localStorage.setItem('grabit_seller_access', 'seller-token');
+    localStorage.setItem('grabit_session', 'seller-token');
+    return { seller: newSeller, access: 'seller-token' };
   },
 
   async login(credentials) {
@@ -29,10 +28,9 @@ export const authService = {
       existing.email = credentials.email;
     }
     mockDb.saveSeller(existing);
-    localStorage.setItem('grabit_seller_access', 'mock_jwt_access_token_' + Date.now());
-    localStorage.setItem('grabit_seller_refresh', 'mock_jwt_refresh_token_' + Date.now());
-    localStorage.setItem('grabit_session', 'mock_jwt_access_token_' + Date.now());
-    return { seller: existing, access: 'mock_jwt_access_token' };
+    localStorage.setItem('grabit_seller_access', 'seller-token');
+    localStorage.setItem('grabit_session', 'seller-token');
+    return { seller: existing, access: 'seller-token' };
   },
 
   async getProfile() {

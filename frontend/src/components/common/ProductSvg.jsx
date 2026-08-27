@@ -1,173 +1,151 @@
 // Comprehensive Supermarket Product Graphics Renderer (Supports 80+ Product Items & Public Folder Images)
+
+// Fallback shown when any image 404s or fails to load
+const FALLBACK_IMG = '/fresh-groceries-basket-only.png';
+
+// Filename aliases: maps old/wrong filenames → correct public filenames
+const IMAGE_ALIASES = {
+  'fresh-red-apples.jpg': 'fresh-red-apples-real.jpg',
+  'apples-real.jpg': 'apples-real.jpg',
+  'butter-real.jpg': 'amul-butter-real.jpg',
+  'dettol-real.jpg': 'dettol-handwash-real.jpg',
+  'oil-real.jpg': 'fortune-oil-real.jpg',
+  'oreo-real.jpg': 'oreo-biscuits-real.jpg',
+  'silk-real.jpg': 'cadbury-silk-real.jpg',
+  'surf-real.jpg': 'surf-excel-real.jpg',
+  'atta-real.jpg': 'aashirvaad-atta-real.jpg',
+  'default-product.png': null, // will use FALLBACK_IMG
+};
+
+// Category slug → public image
+const CATEGORY_IMAGE_LOOKUP = {
+  'atta-rice-dal': '/aashirvaad-atta-real.jpg',
+  'staples': '/aashirvaad-atta-real.jpg',
+  'atta,-rice-&-dal': '/aashirvaad-atta-real.jpg',
+  'biscuits-cookies': '/oreo-biscuits-real.jpg',
+  'biscuits': '/oreo-biscuits-real.jpg',
+  'biscuits-&-cookies': '/oreo-biscuits-real.jpg',
+  'chocolates-sweets': '/cadbury-silk-real.jpg',
+  'chocolates': '/cadbury-silk-real.jpg',
+  'chocolates-&-sweets': '/cadbury-silk-real.jpg',
+  'cold-drinks-juices': '/coca-cola-real.jpg',
+  'beverages': '/coca-cola-real.jpg',
+  'cold-drinks-&-juices': '/coca-cola-real.jpg',
+  'dairy-bakery': '/amul-butter-real.jpg',
+  'dairy': '/amul-butter-real.jpg',
+  'dairy-&-bakery': '/amul-butter-real.jpg',
+  'edible-oils-ghee': '/fortune-oil-real.jpg',
+  'oil': '/fortune-oil-real.jpg',
+  'edible-oils-&-ghee': '/fortune-oil-real.jpg',
+  'electronics-gadgets': '/electronics-hero-banner.jpg',
+  'electronics': '/electronics-hero-banner.jpg',
+  'electronics-&-gadgets': '/electronics-hero-banner.jpg',
+  'fashion-accessories': '/sneakers.jpg',
+  'fashion': '/sneakers.jpg',
+  'fashion-&-accessories': '/sneakers.jpg',
+  'fresh-fruits-veggies': '/fresh-produce-splash.jpg',
+  'produce': '/fresh-produce-splash.jpg',
+  'fresh-fruits-&-veggies': '/fresh-produce-splash.jpg',
+  'household-essentials': '/surf-excel-real.jpg',
+  'household': '/surf-excel-real.jpg',
+  'instant-frozen-food': '/instant-noodles-hero-transparent.png',
+  'instant-food': '/instant-noodles-hero-transparent.png',
+  'instant-&-frozen-food': '/instant-noodles-hero-transparent.png',
+  'personal-care': '/dettol-handwash-real.jpg',
+  'personal': '/dettol-handwash-real.jpg',
+  'snacks-munchies': '/category-snacks-banner.png',
+  'snacks': '/category-snacks-banner.png',
+  'snacks-&-munchies': '/category-snacks-banner.png',
+  'tea-coffee-drinks': '/tea-coffee-hero-transparent.png',
+  'tea-coffee': '/tea-coffee-hero-transparent.png',
+  'tea,-coffee-&-drinks': '/tea-coffee-hero-transparent.png',
+};
+
+function Img({ src, alt, size: s }) {
+  return (
+    <img
+      src={src}
+      alt={alt || 'Product'}
+      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMG; }}
+      style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px', maxWidth: s + 'px' }}
+    />
+  );
+}
+
 export default function ProductSvg({ name, size = 100 }) {
   const s = size;
 
   if (!name) {
-    return (
-      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
-        <rect width="100" height="100" rx="12" fill="#F1F5F9"/>
-        <circle cx="50" cy="50" r="25" fill="#CBD5E1"/>
-      </svg>
-    );
+    return <Img src={FALLBACK_IMG} alt="Product" size={s} />;
   }
 
-  // 1. Direct Image Handling for URLs (http/https), file extensions (.png, .jpg) or public folder images (p1.jpg..p35.jpg)
-  if (typeof name === 'string' && (name.startsWith('http://') || name.startsWith('https://') || name.endsWith('.jpg') || name.endsWith('.png') || name.startsWith('/'))) {
-    const src = (name.startsWith('http://') || name.startsWith('https://') || name.startsWith('/')) ? name : `/${name}`;
-    return (
-      <img
-        src={src}
-        alt="Product"
-        style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px' }}
-      />
-    );
+  const nameStr = String(name);
+
+  // 1. Full URL (Cloudinary, http, https) — render directly with fallback
+  if (nameStr.startsWith('http://') || nameStr.startsWith('https://')) {
+    return <Img src={nameStr} alt="Product" size={s} />;
   }
 
-  // 1.1 Category Slugs & Names Lookup
-  const CATEGORY_IMAGE_LOOKUP = {
-    'atta-rice-dal': '/aashirvaad-atta-real.jpg',
-    'staples': '/aashirvaad-atta-real.jpg',
-    'atta,-rice-&-dal': '/aashirvaad-atta-real.jpg',
-    'biscuits-cookies': '/oreo-biscuits-real.jpg',
-    'biscuits': '/oreo-biscuits-real.jpg',
-    'biscuits-&-cookies': '/oreo-biscuits-real.jpg',
-    'chocolates-sweets': '/cadbury-silk-real.jpg',
-    'chocolates': '/cadbury-silk-real.jpg',
-    'chocolates-&-sweets': '/cadbury-silk-real.jpg',
-    'cold-drinks-juices': '/coca-cola-real.jpg',
-    'beverages': '/coca-cola-real.jpg',
-    'cold-drinks-&-juices': '/coca-cola-real.jpg',
-    'dairy-bakery': '/amul-butter-real.jpg',
-    'dairy': '/amul-butter-real.jpg',
-    'dairy-&-bakery': '/amul-butter-real.jpg',
-    'edible-oils-ghee': '/fortune-oil-real.jpg',
-    'oil': '/fortune-oil-real.jpg',
-    'edible-oils-&-ghee': '/fortune-oil-real.jpg',
-    'electronics-gadgets': '/electronics-hero-banner.jpg',
-    'electronics': '/electronics-hero-banner.jpg',
-    'electronics-&-gadgets': '/electronics-hero-banner.jpg',
-    'fashion-accessories': '/sneakers.jpg',
-    'fashion': '/sneakers.jpg',
-    'fashion-&-accessories': '/sneakers.jpg',
-    'fresh-fruits-veggies': '/fresh-produce-splash.jpg',
-    'produce': '/fresh-produce-splash.jpg',
-    'fresh-fruits-&-veggies': '/fresh-produce-splash.jpg',
-    'household-essentials': '/surf-excel-real.jpg',
-    'household': '/surf-excel-real.jpg',
-    'instant-frozen-food': '/instant-noodles-hero-transparent.png',
-    'instant-food': '/instant-noodles-hero-transparent.png',
-    'instant-&-frozen-food': '/instant-noodles-hero-transparent.png',
-    'personal-care': '/dettol-handwash-real.jpg',
-    'personal': '/dettol-handwash-real.jpg',
-    'snacks-munchies': '/category-snacks-banner.png',
-    'snacks': '/category-snacks-banner.png',
-    'snacks-&-munchies': '/category-snacks-banner.png',
-    'tea-coffee-drinks': '/tea-coffee-hero-transparent.png',
-    'tea-coffee': '/tea-coffee-hero-transparent.png',
-    'tea,-coffee-&-drinks': '/tea-coffee-hero-transparent.png',
+  // 2. Absolute public path (starts with /)
+  if (nameStr.startsWith('/')) {
+    return <Img src={nameStr} alt="Product" size={s} />;
+  }
+
+  // 3. File extension — resolve aliases then serve from public
+  if (nameStr.endsWith('.jpg') || nameStr.endsWith('.jpeg') || nameStr.endsWith('.png') || nameStr.endsWith('.webp')) {
+    // Check alias map first (fixes mismatched filenames like fresh-red-apples.jpg)
+    const alias = IMAGE_ALIASES[nameStr];
+    if (alias === null) return <Img src={FALLBACK_IMG} alt="Product" size={s} />; // explicitly unmapped
+    const resolved = alias ? `/${alias}` : `/${nameStr}`;
+    return <Img src={resolved} alt="Product" size={s} />;
+  }
+
+  // 4. Category slug lookup
+  const normKey = nameStr.toLowerCase().trim().replace(/\s+/g, '-');
+  const catSrc = CATEGORY_IMAGE_LOOKUP[nameStr] || CATEGORY_IMAGE_LOOKUP[normKey];
+  if (catSrc) {
+    return <Img src={catSrc} alt={nameStr} size={s} />;
+  }
+
+  // 5. p1..p35 numeric public images
+  if (nameStr.startsWith('p') && !isNaN(nameStr.slice(1))) {
+    return <Img src={`/${nameStr}.jpg`} alt="Product" size={s} />;
+  }
+
+  // 6. Named product keys — map to public images
+  const NAMED_IMAGES = {
+    'doritos-nacho': '/doritos-nacho.png', 'doritos': '/doritos-nacho.png',
+    'lays-magic-masala': '/lays-magic-masala.png', 'lays-blue': '/lays-magic-masala.png',
+    'lays-classic-salted': '/lays-classic-salted.png',
+    'doritos-cool-ranch': '/doritos-cool-ranch.png',
+    'bingo-mad-angles': '/bingo-mad-angles.png', 'bingo': '/bingo-mad-angles.png',
+    'lays-cream-onion': '/lays-cream-onion.png', 'lays-green': '/lays-cream-onion.png',
+    'lays-yellow': '/lays-yellow.png', 'lays-classic': '/lays-yellow.png',
+    'lays-sizzlin-hot': '/lays-sizzlin-hot.png', 'lays-darkred': '/lays-sizzlin-hot.png',
+    'lays-chile-limon': '/lays-chile-limon.png', 'lays-lightgreen': '/lays-chile-limon.png',
+    'rakhi-designer-gold': '/rakhi-gold-kundan.jpg', 'rakhi-1': '/rakhi-gold-kundan.jpg',
+    'rakhi-peacock-stone': '/rakhi-peacock-blue.jpg', 'rakhi-2': '/rakhi-peacock-blue.jpg',
+    'rakhi-silver-rudraksha': '/rakhi-silver-rudraksha.jpg', 'rakhi-3': '/rakhi-silver-rudraksha.jpg',
+    'rakhi-kids-cartoon': '/rakhi-kids-star.jpg', 'rakhi-4': '/rakhi-kids-star.jpg',
+    'amul-butter': '/amul-butter-real.jpg',
+    'coca-cola': '/coca-cola-real.jpg',
+    'aashirvaad-atta': '/aashirvaad-atta-real.jpg',
+    'dairy-milk-silk': '/cadbury-silk-real.jpg',
+    'dettol-handwash': '/dettol-handwash-real.jpg',
+    'surf-excel-powder': '/surf-excel-real.jpg',
+    'fresh-red-apples': '/fresh-red-apples-real.jpg',
+    'nescafe-coffee': '/nescafe-coffee-real.jpg',
+    'oreo-biscuits': '/oreo-biscuits-real.jpg',
+    'maggi-noodles': '/maggi-noodles-real.jpg',
+    'fortune-oil': '/fortune-oil-real.jpg',
   };
-
-  const normKey = typeof name === 'string' ? name.toLowerCase().trim().replace(/\s+/g, '-') : '';
-  if (CATEGORY_IMAGE_LOOKUP[name] || CATEGORY_IMAGE_LOOKUP[normKey]) {
-    const src = CATEGORY_IMAGE_LOOKUP[name] || CATEGORY_IMAGE_LOOKUP[normKey];
-    return (
-      <img
-        src={src}
-        alt={name}
-        style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px' }}
-      />
-    );
+  if (NAMED_IMAGES[nameStr]) {
+    return <Img src={NAMED_IMAGES[nameStr]} alt={nameStr} size={s} />;
   }
 
-  if (name.startsWith('p') && !isNaN(name.slice(1))) {
-    return (
-      <img
-        src={`/${name}.jpg`}
-        alt="Product"
-        style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px' }}
-      />
-    );
-  }
 
-  // 2. Direct Image Handling for User-Uploaded & Generated Photorealistic Assets
-  if (name === 'doritos-nacho' || name === 'doritos') {
-    return <img src="/doritos-nacho.png" alt="Doritos Nacho Cheese" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-magic-masala' || name === 'lays-blue') {
-    return <img src="/lays-magic-masala.png" alt="Lay's India's Magic Masala" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-classic-salted') {
-    return <img src="/lays-classic-salted.png" alt="Lay's Classic Salted" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'doritos-cool-ranch') {
-    return <img src="/doritos-cool-ranch.png" alt="Doritos Cool Ranch" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'bingo-mad-angles' || name === 'bingo') {
-    return <img src="/bingo-mad-angles.png" alt="Bingo! Mad Angles Achaari Masti" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-cream-onion' || name === 'lays-green') {
-    return <img src="/lays-cream-onion.png" alt="Lay's American Style Cream & Onion" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-yellow' || name === 'lays-classic') {
-    return <img src="/lays-yellow.png" alt="Lay's Classic" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-sizzlin-hot' || name === 'lays-darkred') {
-    return <img src="/lays-sizzlin-hot.png" alt="Lay's Sizzlin' Hot" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'lays-chile-limon' || name === 'lays-lightgreen') {
-    return <img src="/lays-chile-limon.png" alt="Lay's Chile Limón" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
+  // 7. SVG artwork for specific named products — falls through to svgs[name] below
 
-  // 🪢 Generated Photorealistic Rakhi Commercial Photos
-  if (name === 'rakhi-designer-gold' || name === 'rakhi-1') {
-    return <img src="/rakhi-gold-kundan.jpg" alt="Golden Kundan Rakhi" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'rakhi-peacock-stone' || name === 'rakhi-2') {
-    return <img src="/rakhi-peacock-blue.jpg" alt="Royal Blue Peacock Rakhi" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'rakhi-silver-rudraksha' || name === 'rakhi-3') {
-    return <img src="/rakhi-silver-rudraksha.jpg" alt="Sterling Silver Om Rudraksha Rakhi" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'rakhi-kids-cartoon' || name === 'rakhi-4') {
-    return <img src="/rakhi-kids-star.jpg" alt="Kids Cartoon Star Rakhi" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-
-  // Real Generated Commercial Supermarket Product Photos
-  if (name === 'amul-butter') {
-    return <img src="/amul-butter-real.jpg" alt="Amul Butter" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'coca-cola') {
-    return <img src="/coca-cola-real.jpg" alt="Coca-Cola" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'aashirvaad-atta') {
-    return <img src="/aashirvaad-atta-real.jpg" alt="Aashirvaad Atta" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'dairy-milk-silk') {
-    return <img src="/cadbury-silk-real.jpg" alt="Cadbury Dairy Milk Silk" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'dettol-handwash') {
-    return <img src="/dettol-handwash-real.jpg" alt="Dettol Handwash" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'surf-excel-powder') {
-    return <img src="/surf-excel-real.jpg" alt="Surf Excel" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'fresh-red-apples') {
-    return <img src="/fresh-red-apples-real.jpg" alt="Fresh Red Apples" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'nescafe-coffee') {
-    return <img src="/nescafe-coffee-real.jpg" alt="Nescafé Coffee" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'oreo-biscuits') {
-    return <img src="/oreo-biscuits-real.jpg" alt="Oreo Biscuits" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'maggi-noodles') {
-    return <img src="/maggi-noodles-real.jpg" alt="Maggi Noodles" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-  if (name === 'fortune-oil') {
-    return <img src="/fortune-oil-real.jpg" alt="Fortune Sunflower Oil" style={{ height: s + 'px', width: 'auto', objectFit: 'contain' }} />;
-  }
-
-  // 2. High Quality Realistic Vector Renderings for Supermarket Products
   const svgs = {
     'amul-milk': (
       <svg width={s} height={s} viewBox="0 0 100 120" fill="none">
@@ -391,10 +369,5 @@ export default function ProductSvg({ name, size = 100 }) {
     ),
   };
 
-  return svgs[name] || (
-    <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
-      <rect width="100" height="100" rx="12" fill="#F1F5F9"/>
-      <circle cx="50" cy="50" r="25" fill="#CBD5E1"/>
-    </svg>
-  );
+  return svgs[nameStr] || <Img src={FALLBACK_IMG} alt="Product" size={s} />;
 }

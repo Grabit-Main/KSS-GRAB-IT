@@ -319,48 +319,8 @@ const INITIAL_PRODUCTS = [
   },
 ];
 
-const INITIAL_ORDERS = [
-  {
-    id: 'GB-8921',
-    customer_name: 'Aarav Sharma',
-    customer_phone: '+91 98451 23456',
-    address: 'Flat 402, Oakwood Heights, 12th Main Road',
-    items: [
-      { name: 'Amul Taaza Homogenised Toned Milk 1L', quantity: 2, price: 68.00 },
-      { name: 'Raw Cold Pressed Valencia Orange Juice 250ml', quantity: 1, price: 80.00 },
-    ],
-    total_amount: 216.00,
-    status: 'preparing', // 'preparing' | 'ready' | 'out_for_delivery' | 'delivered'
-    delivery_partner: 'Ramesh Kumar (+91 97410 88221)',
-    created_at: new Date(Date.now() - 1000 * 60 * 4).toISOString(), // 4 mins ago
-  },
-  {
-    id: 'GB-8918',
-    customer_name: 'Pooja Iyer',
-    customer_phone: '+91 99887 11223',
-    address: 'Villa 18, Palm Meadows, Whitefield',
-    items: [
-      { name: 'Organic Hass Avocados (2 Pcs)', quantity: 2, price: 179.00 },
-    ],
-    total_amount: 358.00,
-    status: 'ready',
-    delivery_partner: 'Suresh Gowda (+91 98860 12345)',
-    created_at: new Date(Date.now() - 1000 * 60 * 8).toISOString(), // 8 mins ago
-  },
-  {
-    id: 'GB-8910',
-    customer_name: 'Vikram Singh',
-    customer_phone: '+91 97112 33445',
-    address: 'House 89, 4th Cross, Koramangala 5th Block',
-    items: [
-      { name: 'Amul Taaza Homogenised Toned Milk 1L', quantity: 1, price: 68.00 },
-    ],
-    total_amount: 68.00,
-    status: 'delivered',
-    delivery_partner: 'Manjunath N (+91 94480 55667)',
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-  }
-];
+// No initial seed orders — only real customer orders are shown
+const INITIAL_ORDERS = [];
 
 // Helper database manager for localStorage
 export const mockDb = {
@@ -371,9 +331,7 @@ export const mockDb = {
     if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
       localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
     }
-    if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
-    }
+    // Do NOT auto-seed orders — they must come from real customer purchases
     if (!localStorage.getItem(STORAGE_KEYS.SELLER)) {
       localStorage.setItem(STORAGE_KEYS.SELLER, JSON.stringify(INITIAL_SELLER));
     }

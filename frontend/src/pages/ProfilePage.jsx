@@ -317,39 +317,7 @@ export default function ProfilePage() {
         </div>
 
         {/* ── 5. UPDATE AVAILABLE BANNER ── */}
-        <div
-          onClick={() => showToast('Grabit App is fully updated to v26.8.4!')}
-          style={{
-            background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
-            padding: '14px 16px', marginBottom: '24px', display: 'flex',
-            alignItems: 'center', justifyContent: 'space-between',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)', cursor: 'pointer'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              background: '#F1F5F9', borderRadius: '12px', padding: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Settings size={20} color="#334155" />
-            </div>
-            <div>
-              <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A' }}>Update Available</div>
-              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px', fontWeight: 500 }}>
-                Enjoy a more seamless shopping experience
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{
-              background: '#10B981', color: '#FFFFFF', fontSize: '10px',
-              fontWeight: 900, padding: '3px 8px', borderRadius: '6px'
-            }}>
-              New
-            </span>
-            <ChevronRight size={16} color="#0071E3" />
-          </div>
-        </div>
+
 
         {/* ── 6. YOUR INFORMATION SECTION ── */}
         <div style={{ marginBottom: '10px' }}>

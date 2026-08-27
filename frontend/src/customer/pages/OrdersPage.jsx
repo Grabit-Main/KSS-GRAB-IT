@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X } from 'lucide-react';
 import { trackerSteps } from '../data/orders';
@@ -6,6 +6,7 @@ import ProductSvg from '../components/common/ProductSvg';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
+import { get } from '../../api';
 
 const STATUS_TABS = ['All Orders', 'Ongoing', 'Delivered', 'Cancelled'];
 
@@ -16,19 +17,24 @@ export default function OrdersPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const isFetchingRef = useRef(false);
+
   const w = useWindowWidth();
   const isMobile = w <= 768;
 
   const loadAllOrders = useCallback(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      return stored.map(o => {
+      const reversed = [...stored].reverse();
+      return reversed.map(o => {
+        // Map all real-world statuses to normalized display values
         let normStatus = 'confirmed';
         let step = 1;
         if (o.status === 'delivered') { normStatus = 'delivered'; step = 3; }
         else if (o.status === 'out_for_delivery' || o.status === 'out-for-delivery') { normStatus = 'out-for-delivery'; step = 2; }
         else if (o.status === 'cancelled') { normStatus = 'cancelled'; step = 0; }
-        else if (o.status === 'preparing') { normStatus = 'confirmed'; step = 1; }
+        else if (o.status === 'ready_for_pickup' || o.status === 'ready') { normStatus = 'ready'; step = 1; }
+        else if (o.status === 'preparing' || o.status === 'placed') { normStatus = 'confirmed'; step = 1; }
 
         return {
           id: o.id || `GB${o.rawId?.slice(-6) || '9921'}`,
@@ -58,20 +64,62 @@ export default function OrdersPage() {
 
   const [ordersList, setOrdersList] = useState(loadAllOrders);
 
+  const fetchBackendUpdates = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      const localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      if (localOrders.length === 0) return;
+      
+      const apiOrders = await get('/orders/');
+      if (!Array.isArray(apiOrders)) return;
+
+      let changed = false;
+      const updatedOrders = localOrders.map(local => {
+        const backendMatch = apiOrders.find(api => api.id === local.rawId || api.id === local.id);
+        if (backendMatch && (backendMatch.status !== local.status || backendMatch.delivery_agent_id !== local.delivery_agent_id)) {
+          changed = true;
+          return { ...local, status: backendMatch.status, delivery_agent_id: backendMatch.delivery_agent_id };
+        }
+        return local;
+      });
+
+      if (changed) {
+        localStorage.setItem('grabit_orders', JSON.stringify(updatedOrders));
+        window.dispatchEvent(new Event('grabit_orders_updated'));
+      }
+    } catch (error) {
+      console.warn("Failed to fetch order updates", error);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const sync = () => setOrdersList(loadAllOrders());
     window.addEventListener('storage', sync);
-    const interval = setInterval(sync, 2000);
+    window.addEventListener('grabit_orders_updated', sync);
+    
+    fetchBackendUpdates();
+    const interval = setInterval(() => {
+      sync();
+      fetchBackendUpdates();
+    }, 2500);
     return () => {
       window.removeEventListener('storage', sync);
+      window.removeEventListener('grabit_orders_updated', sync);
       clearInterval(interval);
     };
-  }, [loadAllOrders]);
+  }, [loadAllOrders, fetchBackendUpdates]);
 
   const dynamicStats = useMemo(() => {
     const total = ordersList.length;
     const delivered = ordersList.filter(o => o.status === 'delivered').length;
-    const ongoing = ordersList.filter(o => o.status === 'out-for-delivery' || o.status === 'confirmed').length;
+    const ongoing = ordersList.filter(o => o.status === 'out-for-delivery' || o.status === 'confirmed' || o.status === 'ready').length;
     const cancelled = ordersList.filter(o => o.status === 'cancelled').length;
     const totalSpent = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
     return { total, delivered, ongoing, cancelled, totalSpent };
@@ -79,7 +127,7 @@ export default function OrdersPage() {
 
   const filtered = ordersList.filter(o => {
     if (activeTab === 'All Orders') return true;
-    if (activeTab === 'Ongoing') return o.status === 'out-for-delivery' || o.status === 'confirmed';
+    if (activeTab === 'Ongoing') return o.status === 'out-for-delivery' || o.status === 'confirmed' || o.status === 'ready';
     if (activeTab === 'Delivered') return o.status === 'delivered';
     if (activeTab === 'Cancelled') return o.status === 'cancelled';
     return true;
@@ -218,18 +266,39 @@ export default function OrdersPage() {
                     <span style={{
                       padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 900,
                       display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      background: order.status === 'out-for-delivery' ? '#EFF6FF' : order.status === 'delivered' ? '#ECFDF5' : '#FEF2F2',
-                      color: order.status === 'out-for-delivery' ? '#0071E3' : order.status === 'delivered' ? '#10B981' : '#EF4444',
-                      border: order.status === 'out-for-delivery' ? '1px solid #BFDBFE' : order.status === 'delivered' ? '1px solid #A7F3D0' : '1px solid #FECACA'
+                      background: 
+                        (order.status === 'out-for-delivery' || order.status === 'out_for_delivery') ? '#EFF6FF' : 
+                        order.status === 'delivered' ? '#ECFDF5' : 
+                        (order.status === 'ready' || order.status === 'ready_for_pickup') ? '#F0FDF4' :
+                        (order.status === 'confirmed' || order.status === 'preparing') ? '#FFFBEB' : 
+                        order.status === 'placed' ? '#EEF2F6' :
+                        '#FEF2F2',
+                      color: 
+                        (order.status === 'out-for-delivery' || order.status === 'out_for_delivery') ? '#0071E3' : 
+                        order.status === 'delivered' ? '#10B981' : 
+                        (order.status === 'ready' || order.status === 'ready_for_pickup') ? '#15803D' :
+                        (order.status === 'confirmed' || order.status === 'preparing') ? '#D97706' : 
+                        order.status === 'placed' ? '#475569' :
+                        '#EF4444',
+                      border: 
+                        (order.status === 'out-for-delivery' || order.status === 'out_for_delivery') ? '1px solid #BFDBFE' : 
+                        order.status === 'delivered' ? '1px solid #A7F3D0' : 
+                        (order.status === 'ready' || order.status === 'ready_for_pickup') ? '1px solid #86EFAC' :
+                        (order.status === 'confirmed' || order.status === 'preparing') ? '1px solid #FDE68A' : 
+                        order.status === 'placed' ? '1px solid #CBD5E1' :
+                        '1px solid #FECACA'
                     }}>
                       {order.status === 'delivered' && <>✓ Delivered</>}
-                      {order.status === 'out-for-delivery' && <>🛵 Out for Delivery</>}
+                      {(order.status === 'out-for-delivery' || order.status === 'out_for_delivery') && <>🛵 Out for Delivery</>}
+                      {(order.status === 'ready' || order.status === 'ready_for_pickup') && <>📦 Ready for Pickup</>}
+                      {(order.status === 'confirmed' || order.status === 'preparing') && <>⏱️ Preparing Order</>}
+                      {order.status === 'placed' && <>⏱️ Order Placed</>}
                       {order.status === 'cancelled' && <>✕ Cancelled</>}
                     </span>
                   </div>
 
                   {/* Active Express Order Live Tracker Banner */}
-                  {order.status === 'out-for-delivery' && (
+                  {(order.status === 'out-for-delivery' || order.status === 'out_for_delivery') && (
                     <div style={{
                       background: 'linear-gradient(135deg, #EFF6FF 0%, #F0F7FF 100%)',
                       borderRadius: '14px', padding: '14px 16px', marginBottom: '16px',

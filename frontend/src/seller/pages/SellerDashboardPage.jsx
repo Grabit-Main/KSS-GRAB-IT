@@ -57,14 +57,27 @@ export const SellerDashboardPage = () => {
 
   const [recentCategories, setRecentCategories] = useState([]);
   const [criticalStockProducts, setCriticalStockProducts] = useState([]);
-  const [liveOrders, setLiveOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // ✅ FIX: Seed from localStorage immediately so live orders appear with zero delay.
+  const [liveOrders, setLiveOrders] = useState(() => {
+    try {
+      const local = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      return Array.isArray(local) ? local.slice(0, 3) : [];
+    } catch { return []; }
+  });
+  const hasLocalOrders = liveOrders.length > 0;
+  const [loading, setLoading] = useState(!hasLocalOrders);
   const [selectedSlipOrder, setSelectedSlipOrder] = useState(null);
   const prevLiveCountRef = useRef(0);
   const isInitialFetchRef = useRef(true);
+  const isFetchingRef = useRef(false); // ✅ FIX: prevent overlapping poll requests
 
   const loadDashboardData = useCallback(async (isInitial = false) => {
-    if (isInitial) setLoading(true);
+    // ✅ FIX: Skip this poll cycle if the previous request is still in-flight.
+    if (isFetchingRef.current && !isInitial) return;
+    isFetchingRef.current = true;
+    // Only show spinner if we have no data yet to display
+    if (isInitial && liveOrders.length === 0) setLoading(true);
     try {
       let apiOrders = [];
       try {
@@ -78,14 +91,23 @@ export const SellerDashboardPage = () => {
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
-      const seen = new Set();
+      const seenKeys = new Set();
+      const seenFingerprints = new Set();
       const unique = [];
+
       for (const o of allRaw) {
         const key = o.rawId || o.id;
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          unique.push(o);
-        }
+        const totalAmt = Number(o.total_amount || o.total || 0);
+        const custName = (o.customer_name || 'Customer').toLowerCase().trim();
+        const itemLen = Array.isArray(o.items) ? o.items.length : 0;
+        const fingerprint = `${custName}_${totalAmt}_${itemLen}`;
+
+        if (key && seenKeys.has(key)) continue;
+        if (fingerprint && seenFingerprints.has(fingerprint)) continue;
+
+        if (key) seenKeys.add(key);
+        if (fingerprint) seenFingerprints.add(fingerprint);
+        unique.push(o);
       }
 
       let orders = unique.map((o) => {
@@ -160,6 +182,7 @@ export const SellerDashboardPage = () => {
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
+      isFetchingRef.current = false;
       if (isInitial) setLoading(false);
     }
   }, [showToast]);
@@ -200,16 +223,37 @@ export const SellerDashboardPage = () => {
     });
   };
 
-  const handleOrderStatusChange = (orderId, nextStatus) => {
-    const updated = liveOrders.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o));
-    setLiveOrders(updated);
+  const handleOrderStatusChange = async (orderId, nextStatus) => {
+    // orderId here is the short 8-char display ID; rawId stored on the order object is the full UUID
+    const targetOrder = liveOrders.find((o) => o.id === orderId);
+    const rawId = targetOrder?.rawId || orderId;
+
+    // Optimistic UI update immediately
+    setLiveOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+    );
+
+    // Update shared localStorage (match by full UUID via rawId)
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      const up = stored.map(o => o.id === orderId || o.rawId === orderId ? { ...o, status: nextStatus } : o);
+      const up = stored.map((o) =>
+        o.rawId === rawId || o.id === rawId || o.id === orderId || o.rawId === orderId
+          ? { ...o, status: nextStatus }
+          : o
+      );
       localStorage.setItem('grabit_orders', JSON.stringify(up));
       window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
     } catch {}
-    showToast({ type: 'success', message: `Order #${orderId} marked as ${nextStatus.replace('_', ' ')}!` });
+
+    // Persist to backend API (best-effort)
+    try {
+      await patch(`/orders/${rawId}/status`, { status: nextStatus });
+    } catch (err) {
+      console.warn('Backend status update failed (will retry on next sync):', err);
+    }
+
+    showToast({ type: 'success', message: `Order #${orderId} marked as ${nextStatus.replace(/_/g, ' ')}!` });
   };
 
   const statCards = [
@@ -438,7 +482,16 @@ export const SellerDashboardPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: '1px solid #F1F5F9', gap: 8, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Clock size={12} color="#0071E3" /> 10-Min SLA: <strong style={{ color: '#0F172A' }}>{isDelivered ? 'Fulfilled' : '07:30 left'}</strong>
+                          <Clock size={12} color="#0071E3" /> Placed: <strong style={{ color: '#0F172A' }}>
+                              {isDelivered ? 'Delivered ✓' : (() => {
+                                const created = new Date(order.created_at);
+                                const diffMs = Date.now() - created.getTime();
+                                const diffMin = Math.floor(diffMs / 60000);
+                                if (diffMin < 1) return 'Just now';
+                                if (diffMin === 1) return '1 min ago';
+                                return `${diffMin} mins ago`;
+                              })()}
+                            </strong>
                         </div>
                         <button
                           type="button"

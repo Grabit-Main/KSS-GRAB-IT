@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const DashboardAvailable: React.FC = () => {
-  const { state, forceDispatchNow, toggleAvailability } = useDelivery();
+  const { state, forceDispatchNow, toggleAvailability, acceptOrder, dispatch } = useDelivery();
   const { stats, history, agentStatus, orderPool, currentOrder } = state;
   const navigate = useNavigate();
 
@@ -193,10 +193,9 @@ export const DashboardAvailable: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '12px 16px',
-              backgroundColor: 'rgba(255, 255, 255, 0.65)',
-              borderRadius: '12px',
-              border: '1px solid var(--glass-border-subtle)',
+              padding: '10px 14px',
+              backgroundColor: 'rgba(0, 113, 227, 0.06)',
+              borderRadius: '10px',
               fontSize: '13px',
               flexWrap: 'wrap',
               gap: '8px'
@@ -208,7 +207,6 @@ export const DashboardAvailable: React.FC = () => {
                 Status: <span style={{ color: 'var(--color-blue)' }}>On Delivery</span>
               </span>
             </div>
-
             <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)', fontWeight: '600' }}>
               {currentOrder.items.length} items • ₹{currentOrder.totalAmount.toFixed(2)} ({currentOrder.paymentMethod})
             </span>
@@ -219,7 +217,7 @@ export const DashboardAvailable: React.FC = () => {
           className="glass-card"
           style={{
             textAlign: 'center',
-            padding: '44px 24px',
+            padding: '36px 24px',
             position: 'relative',
             overflow: 'hidden'
           }}
@@ -228,9 +226,9 @@ export const DashboardAvailable: React.FC = () => {
           <div
             style={{
               position: 'relative',
-              width: '140px',
-              height: '140px',
-              margin: '0 auto 20px',
+              width: '120px',
+              height: '120px',
+              margin: '0 auto 16px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -242,8 +240,8 @@ export const DashboardAvailable: React.FC = () => {
                   className="animate-pulse-ring"
                   style={{
                     position: 'absolute',
-                    width: '120px',
-                    height: '120px',
+                    width: '100px',
+                    height: '100px',
                     borderRadius: '50%',
                     backgroundColor: 'rgba(52, 199, 89, 0.16)',
                     border: '1.5px solid rgba(52, 199, 89, 0.4)'
@@ -253,8 +251,8 @@ export const DashboardAvailable: React.FC = () => {
                   className="animate-pulse-ring"
                   style={{
                     position: 'absolute',
-                    width: '140px',
-                    height: '140px',
+                    width: '120px',
+                    height: '120px',
                     borderRadius: '50%',
                     backgroundColor: 'rgba(0, 113, 227, 0.10)',
                     border: '1.5px solid rgba(0, 113, 227, 0.35)',
@@ -269,8 +267,8 @@ export const DashboardAvailable: React.FC = () => {
               style={{
                 position: 'relative',
                 zIndex: 2,
-                width: '68px',
-                height: '68px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
                 backgroundColor: isUnavailable ? 'rgba(134, 134, 139, 0.15)' : 'var(--color-graphite)',
                 color: '#FFFFFF',
@@ -282,9 +280,9 @@ export const DashboardAvailable: React.FC = () => {
               }}
             >
               {isUnavailable ? (
-                <Radio size={28} color="var(--color-soft-gray)" />
+                <Radio size={26} color="var(--color-soft-gray)" />
               ) : (
-                <Radio size={32} color="var(--color-green)" />
+                <Radio size={28} color="var(--color-green)" />
               )}
             </div>
           </div>
@@ -298,7 +296,7 @@ export const DashboardAvailable: React.FC = () => {
                   Currently Unavailable (Offline)
                 </span>
               </div>
-              <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
                 Dispatch Radar Paused
               </h2>
               <p style={{ fontSize: '14px', color: 'var(--color-soft-gray)', maxWidth: '440px', margin: '0 auto 22px', lineHeight: '1.45' }}>
@@ -325,40 +323,95 @@ export const DashboardAvailable: React.FC = () => {
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                 <span className="badge badge-green">
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
-                  Online & Dispatch Ready
+                  Online &amp; Dispatch Ready
                 </span>
               </div>
-              <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
-                Waiting for direct assignment
-              </h2>
-              <p style={{ fontSize: '14px', color: 'var(--color-soft-gray)', maxWidth: '480px', margin: '0 auto 20px', lineHeight: '1.45' }}>
-                Orders from GrabIt Supermarket are assigned directly to you without any manual accept step.
-              </p>
 
-              {/* Pulsing Dots */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '22px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-blue)', opacity: 0.8 }} />
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-blue)', opacity: 0.5 }} />
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-blue)', opacity: 0.3 }} />
-              </div>
+              {orderPool.length === 0 ? (
+                <div>
+                  <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+                    Waiting for orders from Seller
+                  </h2>
+                  <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', maxWidth: '480px', margin: '0 auto 16px', lineHeight: '1.45' }}>
+                    No active orders from the seller at the moment. Orders placed by customers or dispatched by the seller will appear here live.
+                  </p>
 
-              {/* Manual push trigger */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                <button
-                  onClick={forceDispatchNow}
-                  disabled={orderPool.length === 0}
-                  className="btn-secondary"
-                  style={{
-                    fontSize: '13px',
-                    padding: '10px 18px',
-                    border: '1px solid rgba(0, 113, 227, 0.35)',
-                    color: 'var(--color-blue)',
-                    fontWeight: '700'
-                  }}
-                >
-                  <Zap size={15} color="var(--color-blue)" /> Simulate Immediate Order Assignment ({orderPool.length} in pool)
-                </button>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--color-green)' }}>
+                      Radar Active • Listening for Seller Orders...
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: '12px', textAlign: 'left' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Store size={18} color="var(--color-blue)" /> Real Seller Orders Ready for Delivery ({orderPool.length})
+                  </h3>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {orderPool.map((ord) => (
+                      <div
+                        key={ord.id}
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1.5px solid #E2E8F0',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>{ord.orderNumber}</span>
+                            <span style={{ fontSize: '11px', background: '#EFF6FF', color: '#0071E3', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', marginLeft: '8px' }}>
+                              {ord.paymentMethod}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '15px', fontWeight: '900', color: '#0071E3' }}>₹{ord.totalAmount}</span>
+                        </div>
+
+                        <div style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0F172A', fontWeight: '800', marginBottom: '2px' }}>
+                            <MapPin size={14} color="#0071E3" /> {ord.customer.name} ({ord.customer.phone || 'Customer'})
+                          </div>
+                          <div style={{ paddingLeft: '20px', fontSize: '12px', color: '#64748B' }}>
+                            {ord.customer.address}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '700' }}>
+                            {ord.items.length} items from Store
+                          </span>
+                          <button
+                            onClick={() => acceptOrder(ord)}
+                            style={{
+                              background: '#0071E3',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '10px',
+                              padding: '8px 16px',
+                              fontSize: '12.5px',
+                              fontWeight: '900',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 3px 10px rgba(0,113,227,0.25)'
+                            }}
+                          >
+                            Accept &amp; Start Delivery <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

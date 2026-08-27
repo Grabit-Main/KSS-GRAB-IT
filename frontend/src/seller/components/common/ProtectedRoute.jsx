@@ -6,16 +6,20 @@ export const ProtectedRoute = () => {
   const userStr = localStorage.getItem('grabit_user');
 
   if (!session || !userStr) {
-    return <Navigate to="/seller/login" replace />;
+    // Remember where the user was trying to go so we can redirect back after login
+    sessionStorage.setItem('grabit_intended_path', window.location.pathname);
+    return <Navigate to="/login" replace />;
   }
 
   try {
     const user = JSON.parse(userStr);
     if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
-      return <Navigate to="/seller/login" replace />;
+      sessionStorage.setItem('grabit_intended_path', window.location.pathname);
+      return <Navigate to="/login" replace />;
     }
   } catch {
-    return <Navigate to="/seller/login" replace />;
+    sessionStorage.setItem('grabit_intended_path', window.location.pathname);
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;

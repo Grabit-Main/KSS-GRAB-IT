@@ -23,17 +23,29 @@ import {
   grabitSupermarket
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
-import { get, patch } from '../../api';
+import { get, patch, post } from '../../api';
 
 function getLiveOrdersPool(): Order[] {
   try {
     const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+    let currentRiderId = '';
+    try {
+      const userStr = localStorage.getItem('grabit_user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      currentRiderId = user ? String(user.id || user.sub || '') : '';
+    } catch {}
+
+    // ✅ REAL-WORLD RULE: Rider only sees orders the seller has marked "Ready for Pickup".
+    // Orders still being prepared are NOT shown to the rider yet.
     const liveOrders: Order[] = stored
-      .filter((o: any) => o.status !== 'delivered' && o.status !== 'cancelled')
+      .filter((o: any) => 
+        (o.status === 'ready_for_pickup' || o.status === 'ready') &&
+        (!o.delivery_agent_id || String(o.delivery_agent_id) === currentRiderId)
+      )
       .map((o: any, idx: number) => ({
-        id: o.rawId || `live-ord-${idx}`,
+        id: o.rawId || o.id || `live-ord-${idx}`,
         orderNumber: o.id || o.orderNumber || `ORD-${8900 + idx}`,
-        status: (o.status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' : 'ASSIGNED') as OrderStatus,
+        status: 'ASSIGNED' as OrderStatus,
         supermarketId: 'STORE-001' as const,
         merchant: grabitSupermarket,
         customer: {
@@ -53,7 +65,7 @@ function getLiveOrdersPool(): Order[] {
           category: 'Snacks' as const
         })),
         paymentMethod: (o.payment_method === 'COD' ? 'COD' : 'PREPAID') as any,
-        totalAmount: o.total_amount || 199,
+        totalAmount: Number(o.total_amount || o.total || 0) || 199,
         distanceKm: 2.2,
         estimatedMinutes: 12
       }));
@@ -88,6 +100,7 @@ type DeliveryAction =
   | { type: 'OPEN_MODAL'; payload: 'CALL' | 'CHAT' | 'MERCHANT_CALL' | 'SOS' | 'REPORT_ISSUE' | 'POD' | 'DELIVERY_SUCCESS' | 'INCENTIVE_DETAILS' }
   | { type: 'CLOSE_MODAL' }
   | { type: 'FORCE_DISPATCH_NOW' }
+  | { type: 'ASSIGN_SPECIFIC_ORDER'; payload: Order }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'CREATE_SUPPORT_TICKET'; payload: { category: SupportTicket['category']; subject: string; description: string } }
@@ -138,8 +151,42 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       };
     }
 
+    case 'ASSIGN_SPECIFIC_ORDER': {
+      if (state.agentStatus !== 'AVAILABLE' || state.currentOrder !== null) {
+        return state;
+      }
+      const targetOrder = action.payload;
+      const remainingPool = state.orderPool.filter(o => o.id !== targetOrder.id && o.orderNumber !== targetOrder.orderNumber);
+      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const assignedOrder: Order = {
+        ...targetOrder,
+        status: 'ASSIGNED',
+        assignedAt: nowTime
+      };
+
+      const newNotif: AppNotification = {
+        id: `n-${Date.now()}`,
+        type: 'DISPATCH',
+        title: `Order ${assignedOrder.orderNumber} Assigned`,
+        description: `Directly assigned from GrabIt Supermarket. Proceed to Bay 3 for pickup.`,
+        timestamp: 'Just now',
+        isRead: false
+      };
+
+      return {
+        ...state,
+        agentStatus: 'ON_DELIVERY',
+        currentOrder: assignedOrder,
+        incomingOrder: null,
+        incomingCountdown: 0,
+        orderPool: remainingPool,
+        notifications: [newNotif, ...state.notifications]
+      };
+    }
+
     case 'FORCE_DISPATCH_NOW': {
-      // Direct Automatic Assignment (No accept/decline action)
+      // Direct Assignment of first available order
       if (state.agentStatus !== 'AVAILABLE' || state.currentOrder !== null) {
         return state;
       }
@@ -410,6 +457,7 @@ interface DeliveryContextValue {
   openModal: (modal: 'CALL' | 'CHAT' | 'MERCHANT_CALL' | 'SOS' | 'REPORT_ISSUE' | 'POD' | 'DELIVERY_SUCCESS' | 'INCENTIVE_DETAILS') => void;
   closeModal: () => void;
   forceDispatchNow: () => void;
+  acceptOrder: (order: Order) => Promise<void>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   createSupportTicket: (ticket: { category: SupportTicket['category']; subject: string; description: string }) => void;
@@ -520,6 +568,53 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'FORCE_DISPATCH_NOW' });
   }, [state.settings.deliveryAlertSound]);
 
+  // ✅ REAL-WORLD FLOW: When rider accepts an order, immediately write 'out_for_delivery'
+  // to localStorage and backend so seller + customer see the status change right away.
+  const acceptOrder = useCallback(async (order: Order) => {
+    const rawId = order.id;         // order.id is always the full UUID (rawId)
+    const orderNum = order.orderNumber;
+
+    let currentRiderId = '';
+    try {
+      const userStr = localStorage.getItem('grabit_user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      currentRiderId = user ? String(user.id || user.sub || '') : '3';
+    } catch {}
+
+    // 1. Optimistically update localStorage → seller sees order leave their queue,
+    //    customer sees "Out for Delivery" immediately
+    try {
+      const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const updated = stored.map((o: any) => {
+        if (
+          o.rawId === rawId ||
+          o.id === rawId ||
+          o.id === orderNum ||
+          o.orderNumber === orderNum
+        ) {
+          return { ...o, status: 'out_for_delivery', delivery_agent_id: currentRiderId };
+        }
+        return o;
+      });
+      localStorage.setItem('grabit_orders', JSON.stringify(updated));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+    } catch {}
+
+    // 2. Persist to backend (best-effort)
+    try {
+      await post(`/delivery/${encodeURIComponent(rawId)}/accept`);
+    } catch (err) {
+      console.warn('Backend status update failed on rider accept:', err);
+    }
+
+    // 3. Update internal rider state
+    if (state.settings.deliveryAlertSound) {
+      soundEngine.playIncomingOrderAlert();
+    }
+    dispatch({ type: 'ASSIGN_SPECIFIC_ORDER', payload: order });
+  }, [state.settings.deliveryAlertSound]);
+
   const markNotificationRead = useCallback((id: string) => {
     dispatch({ type: 'MARK_NOTIFICATION_READ', payload: id });
   }, []);
@@ -543,6 +638,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Real-time synchronization with Cloud Database and localStorage customer orders
   useEffect(() => {
     const handleSyncOrders = async () => {
+      let currentRiderId = '';
+      try {
+        const userStr = localStorage.getItem('grabit_user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        currentRiderId = user ? String(user.id || user.sub || '') : '';
+      } catch {}
+
       let apiOrders: any[] = [];
       try {
         const res = await get('/orders/');
@@ -555,22 +657,39 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
-      const seen = new Set();
+      const seenKeys = new Set();
+      const seenFingerprints = new Set();
       const unique: any[] = [];
+
       for (const o of allRaw) {
         const key = o.rawId || o.id;
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          unique.push(o);
-        }
+        const totalAmt = Number(o.total_amount || o.total || 0);
+        const custName = (o.customer_name || 'Customer').toLowerCase().trim();
+        const itemLen = Array.isArray(o.items) ? o.items.length : 0;
+        const fingerprint = `${custName}_${totalAmt}_${itemLen}`;
+
+        if (key && seenKeys.has(key)) continue;
+        if (fingerprint && seenFingerprints.has(fingerprint)) continue;
+
+        if (key) seenKeys.add(key);
+        if (fingerprint) seenFingerprints.add(fingerprint);
+        unique.push(o);
       }
 
+      // ✅ REAL-WORLD RULE: Only orders with status 'ready_for_pickup' go into the rider's
+      // order pool. 'preparing'/'placed' orders are invisible to the rider.
+      // 'out_for_delivery' orders are handled as currentOrder, NOT in the pool.
       const liveOrders: Order[] = unique
-        .filter((o: any) => o.status !== 'delivered' && o.status !== 'cancelled' && Array.isArray(o.items) && o.items.length > 0 && Number(o.total_amount || o.total || 0) > 0)
+        .filter((o: any) =>
+          (o.status === 'ready_for_pickup' || o.status === 'ready') &&
+          (!o.delivery_agent_id || String(o.delivery_agent_id) === currentRiderId) &&
+          Array.isArray(o.items) && o.items.length > 0 &&
+          Number(o.total_amount || o.total || 0) > 0
+        )
         .map((o: any, idx: number) => ({
           id: o.rawId || o.id || `live-ord-${idx}`,
           orderNumber: o.id || o.orderNumber || `ORD-${8900 + idx}`,
-          status: (o.status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' : 'ASSIGNED') as OrderStatus,
+          status: 'ASSIGNED' as OrderStatus,
           supermarketId: 'STORE-001' as const,
           merchant: grabitSupermarket,
           customer: {
@@ -610,34 +729,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, []);
 
-  // Automated simulated direct order assignment when AVAILABLE and IDLE
-  useEffect(() => {
-    if (
-      state.agentStatus === 'AVAILABLE' &&
-      state.currentOrder === null &&
-      state.orderPool.length > 0 &&
-      state.activeModal !== 'DELIVERY_SUCCESS'
-    ) {
-      // Direct Assignment after 4 seconds
-      simulationTimerRef.current = setTimeout(() => {
-        if (state.settings.deliveryAlertSound) {
-          soundEngine.playIncomingOrderAlert();
-        }
-        dispatch({ type: 'FORCE_DISPATCH_NOW' });
-      }, 4000);
-    } else {
-      if (simulationTimerRef.current) {
-        clearTimeout(simulationTimerRef.current);
-        simulationTimerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (simulationTimerRef.current) {
-        clearTimeout(simulationTimerRef.current);
-      }
-    };
-  }, [state.agentStatus, state.currentOrder, state.orderPool, state.activeModal, state.settings.deliveryAlertSound]);
+  // No automated order simulation timer; orders must be real seller/customer orders
 
   return (
     <DeliveryContext.Provider
@@ -652,6 +744,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         openModal,
         closeModal,
         forceDispatchNow,
+        acceptOrder,
         markNotificationRead,
         markAllNotificationsRead,
         createSupportTicket,

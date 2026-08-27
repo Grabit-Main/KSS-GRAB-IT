@@ -222,8 +222,8 @@ export default function Header() {
       const userObj = {
         id: 2,
         role: 'seller',
-        name: 'Fresh Mart Supermarket',
-        full_name: 'Fresh Mart Supermarket',
+        name: 'GrabIt Supermarket',
+        full_name: 'GrabIt Supermarket',
         phone: '+919999900002',
         email: 'seller@grabit.local'
       };

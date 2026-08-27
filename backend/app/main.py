@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from hashlib import sha1, sha256
+import asyncio
 import json
 import secrets
 import uuid
 import httpx
 from time import time
 from urllib.parse import urlparse
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from .config import settings
@@ -508,24 +509,53 @@ async def clear_cart(user=Depends(require_roles("customer"))):
 # ==============================================================================
 @router.get("/orders/")
 @router.get("/orders")
-async def orders(user=Depends(current_user)):
-    cached_orders = await cache_get("cloud:orders_list")
-    if cached_orders is None:
-        cached_orders = []
+async def orders(authorization: str | None = Header(default=None)):
+    # Optional auth: resolve user if token provided, else return empty list
+    user = None
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from .security import current_user as resolve_user
+            user = resolve_user(authorization)
+        except Exception:
+            pass
 
-    db_orders = []
-    try:
-        if user.get("role") == "customer":
-            db_orders = await store.get("orders", {"customer_id": f"eq.{user.get('sub')}", "order": "created_at.desc"})
-        else:
-            db_orders = await store.get("orders", {"order": "created_at.desc"})
-    except Exception:
-        pass
+    if user is None:
+        return []
+
+    # ✅ FIX 1: Run Redis cache fetch and Supabase DB fetch CONCURRENTLY instead of
+    # sequentially — cuts round-trip latency roughly in half on every poll.
+    # ✅ FIX 2: Add limit=100 to the Supabase query so it never fetches the entire
+    # orders table as it grows — fetches only the 100 most recent orders.
+    async def _fetch_cache():
+        try:
+            result = await cache_get("cloud:orders_list")
+            return result if isinstance(result, list) else []
+        except Exception:
+            return []
+
+    async def _fetch_db():
+        try:
+            if user.get("role") == "customer":
+                return await store.get("orders", {
+                    "customer_id": f"eq.{user.get('sub')}",
+                    "order": "created_at.desc",
+                    "limit": 100
+                })
+            else:
+                return await store.get("orders", {
+                    "order": "created_at.desc",
+                    "limit": 100
+                })
+        except Exception:
+            return []
+
+    cached_orders, db_orders_raw = await asyncio.gather(_fetch_cache(), _fetch_db())
+    db_orders = db_orders_raw if isinstance(db_orders_raw, list) else []
 
     # Merge and deduplicate by ID
     combined = []
     seen = set()
-    for o in (cached_orders + (db_orders if isinstance(db_orders, list) else [])):
+    for o in (cached_orders + db_orders):
         oid = o.get("id") or o.get("rawId")
         if oid and oid not in seen:
             seen.add(oid)
@@ -586,24 +616,39 @@ async def create_order(body: OrderRequest, user=Depends(current_user)):
 
 @router.patch("/orders/{order_id}/status")
 async def order_status(order_id: str, body: StatusRequest, user=Depends(require_roles("seller", "delivery_agent", "admin"))):
-    # 1. Update in Redis Cloud Cache
-    try:
-        cached_orders = await cache_get("cloud:orders_list") or []
-        for o in cached_orders:
-            if o.get("id") == order_id or o.get("rawId") == order_id:
-                o["status"] = body.status
-        await cache_set("cloud:orders_list", cached_orders, ttl_seconds=86400 * 30)
+    # ✅ FIX: Run the two independent Redis cache updates concurrently.
+    async def _update_list_cache():
+        try:
+            cached_orders = await cache_get("cloud:orders_list") or []
+            for o in cached_orders:
+                if o.get("id") == order_id or o.get("rawId") == order_id:
+                    o["status"] = body.status
+                    if body.delivery_agent_id:
+                        o["delivery_agent_id"] = body.delivery_agent_id
+            await cache_set("cloud:orders_list", cached_orders, ttl_seconds=86400 * 30)
+        except Exception:
+            pass
 
-        single = await cache_get(f"cloud:order:{order_id}")
-        if single and isinstance(single, dict):
-            single["status"] = body.status
-            await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+    async def _update_single_cache():
+        try:
+            single = await cache_get(f"cloud:order:{order_id}")
+            if single and isinstance(single, dict):
+                single["status"] = body.status
+                if body.delivery_agent_id:
+                    single["delivery_agent_id"] = body.delivery_agent_id
+                await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
+        except Exception:
+            pass
+
+    # 1. Update both Redis cache keys concurrently
+    await asyncio.gather(_update_list_cache(), _update_single_cache())
 
     # 2. Update in Supabase
     try:
-        await store.patch("orders", {"status": body.status}, {"id": f"eq.{order_id}"})
+        patch_data = {"status": body.status}
+        if body.delivery_agent_id:
+            patch_data["delivery_agent_id"] = body.delivery_agent_id
+        await store.patch("orders", patch_data, {"id": f"eq.{order_id}"})
     except Exception:
         pass
 

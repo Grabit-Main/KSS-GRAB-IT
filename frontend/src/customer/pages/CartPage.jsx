@@ -39,6 +39,7 @@ export default function CartPage() {
 
   const [savedAddresses, setSavedAddresses] = useState(loadUserAddresses);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [customAddressInput, setCustomAddressInput] = useState('');
   const [selectedAddress, setSelectedAddress] = useState(() => {
     const list = loadUserAddresses();
     if (list.length > 0) {

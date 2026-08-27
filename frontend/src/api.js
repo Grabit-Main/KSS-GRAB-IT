@@ -1,19 +1,51 @@
 const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api');
 
+// Resolve the best available auth token from all known storage keys
+function getAuthToken() {
+  return (
+    localStorage.getItem('grabit_session') ||
+    localStorage.getItem('grabit_seller_access') ||
+    localStorage.getItem('grabit_jwt') ||
+    localStorage.getItem('grabit_auth_token') ||
+    null
+  );
+}
+
 export async function api(path, options = {}) {
-  const token = localStorage.getItem('grabit_session');
-  const response = await fetch(`${API}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  if (response.status === 204) return null;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || 'Something went wrong. Please try again.');
-  return data;
+  const token = getAuthToken();
+  const isGet = !options.method || options.method === 'GET';
+
+  // Skip GET requests entirely when no token is available.
+  // The caller always has localStorage as a fallback — no need to hit the API.
+  if (isGet && !token) return null;
+
+  // ✅ FIX: Abort hung requests after 8 seconds so a slow backend response can't
+  // block subsequent poll cycles from starting.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${API}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+    clearTimeout(timeoutId);
+    if (response.status === 204) return null;
+    // Treat 401/403 on GET as empty response — fall back to localStorage silently
+    if ((response.status === 401 || response.status === 403) && isGet) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Something went wrong. Please try again.');
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') return null; // Timed out — treat as no data, caller uses localStorage
+    throw err;
+  }
 }
 
 export const get = (path) => api(path);
@@ -22,7 +54,7 @@ export const patch = (path, body) => api(path, { method: 'PATCH', body: JSON.str
 export const del = (path) => api(path, { method: 'DELETE' });
 
 export async function uploadImage(file, folder = 'grabit_media') {
-  const token = localStorage.getItem('grabit_session');
+  const token = getAuthToken();
   const formData = new FormData();
   formData.append('file', file);
   formData.append('folder', folder);
