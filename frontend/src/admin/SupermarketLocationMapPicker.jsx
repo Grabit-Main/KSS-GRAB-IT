@@ -72,7 +72,7 @@ export default function SupermarketLocationMapPicker({
       html: `
         <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
           <div style="position: absolute; width: 48px; height: 48px; border-radius: 50%; background: rgba(0, 113, 227, 0.25); animation: pulseRing 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);"></div>
-          <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0071E3 0%, #005BB5 100%); border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(0,113,227,0.45); display: flex; align-items: center; justify-content: center; transform: scale(1); transition: transform 0.2s;">
+          <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0071E3 0%, #005BB5 100%); border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(0,113,227,0.45); display: flex; align-items: center; justify-content: center;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
               <circle cx="12" cy="10" r="3"></circle>
@@ -92,10 +92,9 @@ export default function SupermarketLocationMapPicker({
         attributionControl: false
       });
 
-      // Ultra-clean CartoDB Voyager tiles (High resolution studio style)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
+      // Standard OpenStreetMap tiles (Reliable & fast)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
       }).addTo(map);
 
       // Draggable Marker Pin
@@ -109,7 +108,7 @@ export default function SupermarketLocationMapPicker({
         radius: geofenceRadius,
         color: '#0071E3',
         fillColor: '#0071E3',
-        fillOpacity: 0.14,
+        fillOpacity: 0.16,
         weight: 2.5,
         dashArray: '6, 6'
       }).addTo(map);
@@ -117,6 +116,13 @@ export default function SupermarketLocationMapPicker({
       markerRef.current = marker;
       circleRef.current = circle;
       mapInstanceRef.current = map;
+
+      // Ensure Leaflet resizes correctly inside tab/container
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 150);
 
       // Handle Marker Drag
       marker.on('dragend', (e) => {
@@ -214,6 +220,22 @@ export default function SupermarketLocationMapPicker({
           0% { transform: scale(0.85); opacity: 0.8; }
           50% { transform: scale(1.4); opacity: 0.2; }
           100% { transform: scale(1.6); opacity: 0; }
+        }
+        .leaflet-container {
+          width: 100% !important;
+          height: 380px !important;
+          border-radius: 16px;
+          z-index: 1 !important;
+        }
+        .leaflet-top.leaflet-left {
+          top: 10px !important;
+          left: 10px !important;
+        }
+        .leaflet-control-zoom {
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 8px !important;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
         }
       `}</style>
 
