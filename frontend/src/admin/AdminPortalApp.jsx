@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -458,6 +458,46 @@ export function AdminPortalApp() {
   // ── Chart SVG Calculations ──
   const currentChart = CHART_PERIODS_DATA[timeFilter] || CHART_PERIODS_DATA.MONTHLY;
   const maxChartVal = Math.max(...currentChart.online, ...currentChart.store, 70);
+
+  // ── Period-filtered orders for real-time dashboard stats ──
+  const periodOrders = (() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // midnight today
+    if (timeFilter === 'DAILY') {
+      // Only orders placed today
+      return orders.filter(o => {
+        const d = new Date(o.created_at || o.createdAt || 0);
+        return d >= todayStart;
+      });
+    }
+    if (timeFilter === 'WEEKLY') {
+      // Last 7 days including today AND yesterday
+      const weekAgo = new Date(todayStart);
+      weekAgo.setDate(weekAgo.getDate() - 6); // 6 days back = 7 day window
+      return orders.filter(o => {
+        const d = new Date(o.created_at || o.createdAt || 0);
+        return d >= weekAgo;
+      });
+    }
+    if (timeFilter === 'MONTHLY') {
+      // Current calendar month
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      return orders.filter(o => {
+        const d = new Date(o.created_at || o.createdAt || 0);
+        return d >= monthStart;
+      });
+    }
+    if (timeFilter === 'YEARLY') {
+      // Current calendar year
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      return orders.filter(o => {
+        const d = new Date(o.created_at || o.createdAt || 0);
+        return d >= yearStart;
+      });
+    }
+    return orders; // fallback
+  })();
+
 
   const getSvgCoordinates = (dataArr, width = 600, height = 160) => {
     const stepX = width / (dataArr.length - 1);
@@ -982,13 +1022,13 @@ export function AdminPortalApp() {
                       <div style={{ display: 'flex', gap: '20px', alignItems: 'baseline' }}>
                         <div>
                           <div style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.5px' }}>
-                            {(() => { const r = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
+                            {(() => { const r = periodOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
                           </div>
                           <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Earnings</div>
                         </div>
                         <div>
                           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0071E3', letterSpacing: '-0.5px' }}>
-                            {orders.length}
+                            {periodOrders.length}
                           </div>
                           <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Orders</div>
                         </div>
@@ -1056,16 +1096,16 @@ export function AdminPortalApp() {
                       borderTop: '1px solid #F1F5F9'
                     }}>
                       {(() => {
-                        const totalOrders = orders.length;
-                        const deliveredToday = orders.filter(o => o.status === 'delivered').length;
-                        const pendingOrders = orders.filter(o => ['placed','confirmed','preparing'].includes(o.status)).length;
-                        const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (parseFloat(o.total_amount || o.totalAmount || o.total || 0)), 0);
+                        const totalOrders = periodOrders.length;
+                        const deliveredToday = periodOrders.filter(o => o.status === 'delivered').length;
+                        const pendingOrders = periodOrders.filter(o => ['placed','confirmed','preparing'].includes(o.status)).length;
+                        const totalRevenue = periodOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (parseFloat(o.total_amount || o.totalAmount || o.total || 0)), 0);
                         const avgOrderValue = totalOrders > 0 ? (totalRevenue / Math.max(deliveredToday, 1)) : 0;
                         return [
-                          { icon: ShoppingBag, color: '#EC4899', label: 'Total Orders', value: totalOrders.toLocaleString('en-IN') },
-                          { icon: TrendingUp, color: '#8B5CF6', label: 'Delivered Today', value: deliveredToday.toLocaleString('en-IN') },
-                          { icon: Package, color: '#0071E3', label: 'Pending Orders', value: pendingOrders.toLocaleString('en-IN') },
-                          { icon: DollarSign, color: '#10B981', label: 'Total Revenue', value: totalRevenue > 0 ? `₹${totalRevenue.toLocaleString('en-IN')}` : '₹0' },
+                          { icon: ShoppingBag, color: '#EC4899', label: `Orders (${currentChart.summaryLabel})`, value: totalOrders.toLocaleString('en-IN') },
+                          { icon: TrendingUp, color: '#8B5CF6', label: 'Delivered', value: deliveredToday.toLocaleString('en-IN') },
+                          { icon: Package, color: '#0071E3', label: 'Pending', value: pendingOrders.toLocaleString('en-IN') },
+                          { icon: DollarSign, color: '#10B981', label: 'Revenue', value: totalRevenue > 0 ? `₹${totalRevenue.toLocaleString('en-IN')}` : '₹0' },
                         ];
                       })().map((stat, i) => {
                         const Icon = stat.icon;
@@ -1174,10 +1214,10 @@ export function AdminPortalApp() {
                         Total Revenue
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {(() => { const r = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
+                        {(() => { const r = periodOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {orders.filter(o => o.status === 'delivered').length} delivered orders
+                        {periodOrders.filter(o => o.status === 'delivered').length} delivered ({currentChart.summaryLabel})
                       </div>
                     </div>
                     {/* Wavy Ribbon Graphic */}
@@ -1202,10 +1242,10 @@ export function AdminPortalApp() {
                         Live / Active Orders
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {orders.filter(o => ['placed','confirmed','preparing','out_for_delivery'].includes(o.status)).length} Active
+                        {periodOrders.filter(o => ['placed','confirmed','preparing','out_for_delivery'].includes(o.status)).length} Active
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {orders.length} total orders in system
+                        {periodOrders.length} orders ({currentChart.summaryLabel})
                       </div>
                     </div>
                     {/* Dotted Sparkline Graphic */}
@@ -1299,15 +1339,15 @@ export function AdminPortalApp() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {(orders.length > 0
-                        ? orders.slice(0, 4).map((o, i) => ({
+                      {(periodOrders.length > 0
+                        ? periodOrders.slice(0, 4).map((o, i) => ({
                             time: o.created_at ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Recent',
                             color: o.status === 'delivered' ? '#10B981' : o.status === 'out_for_delivery' ? '#0071E3' : o.status === 'preparing' ? '#F59E0B' : '#EC4899',
                             title: `Order #${(o.id || o.order_id || String(i+1)).toString().slice(-6)} — ${(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}`,
                             desc: `${o.customer_name || o.user?.name || 'Customer'} · ₹${parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}`
                           }))
                         : [
-                            { time: 'No data', color: '#94A3B8', title: 'No orders yet', desc: 'Orders will appear here in real-time' }
+                            { time: 'No data', color: '#94A3B8', title: `No orders this ${currentChart.summaryLabel.toLowerCase()}`, desc: 'Orders will appear here in real-time' }
                           ]
                       ).map((act, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
