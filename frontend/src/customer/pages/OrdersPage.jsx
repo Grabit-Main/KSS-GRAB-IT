@@ -316,7 +316,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     forceScrollToTop();
-  }, [activeFilter, selectedOrder]);
+  }, [activeTab, selectedOrderModal]);
 
   useEffect(() => {
     fetchCloudOrders();
