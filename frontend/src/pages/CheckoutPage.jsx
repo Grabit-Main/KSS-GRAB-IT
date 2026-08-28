@@ -257,9 +257,15 @@ export default function CheckoutPage() {
       const digits = (finalOrder.customer_phone || currentPhone || '').replace(/\D/g, '');
       const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
       const storageKey = custPhone ? `grabit_orders_${custPhone}` : 'grabit_orders_guest';
-      const existing = JSON.parse(localStorage.getItem(storageKey) || localStorage.getItem('grabit_orders') || '[]');
-      const filtered = existing.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
-      localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filtered]));
+
+      const existingUserOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const filteredUser = existingUserOrders.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
+      localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filteredUser]));
+
+      const globalExisting = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const filteredGlobal = globalExisting.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
+      localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filteredGlobal]));
+
       window.dispatchEvent(new Event('grabit_orders_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {

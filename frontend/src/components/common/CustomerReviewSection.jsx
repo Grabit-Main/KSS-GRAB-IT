@@ -3,7 +3,7 @@ import { Star, CheckCircle2, MessageSquareHeart, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 export default function CustomerReviewSection({ storeName = 'GrabIt Supermarket' }) {
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -15,10 +15,15 @@ export default function CustomerReviewSection({ storeName = 'GrabIt Supermarket'
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (rating === 0) {
+      if (toast?.showToast) toast.showToast('Please select a star rating (1 to 5 stars)!');
+      return;
+    }
     if (!reviewText.trim()) {
       if (toast?.showToast) toast.showToast('Please write a brief review before submitting!');
       return;
     }
+
 
     try {
       const newReview = {
@@ -127,8 +132,8 @@ export default function CustomerReviewSection({ storeName = 'GrabIt Supermarket'
                   </button>
                 );
               })}
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#F59E0B', marginLeft: '6px' }}>
-                {(hoverRating || rating)}.0 / 5.0
+              <span style={{ fontSize: '13px', fontWeight: 800, color: (hoverRating || rating) > 0 ? '#F59E0B' : '#94A3B8', marginLeft: '6px' }}>
+                {(hoverRating || rating) > 0 ? `${(hoverRating || rating)}.0 / 5.0` : 'Tap to rate'}
               </span>
             </div>
           </div>

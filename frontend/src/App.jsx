@@ -51,12 +51,10 @@ function InitialLoginCheck() {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        if (user && user.role === 'delivery_agent') {
-          // If logged in as rider but not currently in rider portal (/delivery/*), redirect strictly to rider portal
-          if (!path.startsWith('/delivery')) {
-            navigate('/delivery/dashboard', { replace: true });
-            return;
-          }
+        // Only redirect rider on root '/' initial load if not intentionally navigating elsewhere
+        if (user && user.role === 'delivery_agent' && path === '/' && !sessionStorage.getItem('grabit_skipped_login')) {
+          navigate('/delivery/dashboard', { replace: true });
+          return;
         }
       } catch {
         // safe JSON parse check
