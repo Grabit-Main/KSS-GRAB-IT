@@ -25,7 +25,12 @@ import {
   Sparkles,
   Loader2,
   MapPin,
-  LogIn
+  LogIn,
+  CheckCircle2,
+  PackageCheck,
+  Clock,
+  Flame,
+  XCircle
 } from 'lucide-react';
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
@@ -1122,69 +1127,76 @@ export function AdminPortalApp() {
                     </div>
                   </div>
 
-                  {/* RIGHT: Traffic & Channel Donut Card */}
+                  {/* RIGHT: Executive Order Status Pipeline */}
                   <div className="hover-card" style={{
-                    background: '#FFFFFF',
-                    borderRadius: '18px',
-                    border: '1px solid #E2E8F0',
-                    padding: isMobile ? '16px' : '22px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
+                    background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
+                    padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px'
                   }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                          Traffic &amp; Channel Share
-                        </h3>
-                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', padding: '2px 7px', borderRadius: '5px' }}>
-                          Live
-                        </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px' }}>Order Pipeline Breakdown</h3>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>Live status distribution for {currentChart.summaryLabel}</div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>Real-time acquisition distribution</div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                        Live
+                      </span>
                     </div>
 
-                    {/* Donut Graphic */}
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '14px 0' }}>
-                      <svg width="150" height="150" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="90" cy="90" r="65" stroke="#F1F5F9" strokeWidth="18" fill="none" />
-                        {/* 55% Mobile App */}
-                        <circle cx="90" cy="90" r="65" stroke="#E11D48" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="183.8" strokeLinecap="round" />
-                        {/* 33% Web */}
-                        <circle cx="90" cy="90" r="65" stroke="#8B5CF6" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="273.6" style={{ transform: 'rotate(198deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
-                        {/* 12% Search */}
-                        <circle cx="90" cy="90" r="65" stroke="#06B6D4" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="359.4" style={{ transform: 'rotate(317deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
-                      </svg>
-                      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{
-                          width: '36px', height: '36px', borderRadius: '50%',
-                          background: '#F59E0B', color: '#FFFFFF',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          <ShoppingBag size={18} />
+                    {/* Status rows */}
+                    {(() => {
+                      const statuses = [
+                        { key: 'placed',           label: 'New Orders',       icon: ShoppingBag,  color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' },
+                        { key: 'confirmed',         label: 'Confirmed',        icon: CheckCircle2, color: '#0071E3', bg: '#EFF6FF', border: '#BFDBFE' },
+                        { key: 'preparing',         label: 'Preparing',        icon: Flame,        color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
+                        { key: 'out_for_delivery',  label: 'Out for Delivery', icon: Truck,        color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
+                        { key: 'delivered',         label: 'Delivered',        icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+                        { key: 'cancelled',         label: 'Cancelled',        icon: XCircle,      color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+                      ];
+                      const total = Math.max(periodOrders.length, 1);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {statuses.map(s => {
+                            const IconComponent = s.icon;
+                            const count = periodOrders.filter(o => o.status === s.key).length;
+                            const pct = Math.round((count / total) * 100);
+                            return (
+                              <div key={s.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                      width: '24px', height: '24px', borderRadius: '6px',
+                                      background: s.bg, border: `1px solid ${s.border}`,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                    }}>
+                                      <IconComponent size={13} color={s.color} />
+                                    </div>
+                                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>{s.label}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '12.5px', fontWeight: 900, color: s.color }}>{count}</span>
+                                    <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700, background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', minWidth: '32px', textAlign: 'center' }}>
+                                      {pct}%
+                                    </span>
+                                  </div>
+                                </div>
+                                <div style={{ height: '5px', borderRadius: '5px', background: '#F1F5F9', overflow: 'hidden', width: '100%' }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${s.color}, ${s.color}DD)`, borderRadius: '5px', transition: 'width 0.4s ease' }} />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div style={{ fontSize: '12px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>100%</div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
-                    {/* Donut Legend */}
-                    <div style={{
-                      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px',
-                      paddingTop: '12px', borderTop: '1px solid #F1F5F9', textAlign: 'center'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#8B5CF6' }}>33%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Web</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#E11D48' }}>55%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Mobile</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#06B6D4' }}>12%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Search</div>
-                      </div>
+                    {/* Summary total */}
+                    <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>Total ({currentChart.summaryLabel})</span>
+                      <span style={{ fontSize: '12.5px', fontWeight: 900, color: '#0F172A', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '8px' }}>
+                        {periodOrders.length} orders
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1324,39 +1336,71 @@ export function AdminPortalApp() {
                     padding: isMobile ? '16px' : '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                        Recent Activities
-                      </h3>
-                      <button type="button" onClick={fetchAllAdminData} style={{ border: 0, background: 'none', color: '#0071E3', cursor: 'pointer' }}>
-                        <RefreshCw size={14} />
+                      <div>
+                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                          Recent Activities
+                        </h3>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px' }}>Real-time order stream</div>
+                      </div>
+                      <button type="button" onClick={fetchAllAdminData} title="Refresh Stream" style={{ border: '1px solid #E2E8F0', background: '#F8FAFC', borderRadius: '8px', padding: '6px', color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <RefreshCw size={13} />
                       </button>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {[
-                        { time: 'Just now', color: '#EC4899', title: 'Order Dispatched', desc: 'Rider on the way to Koramangala' },
-                        { time: '40 Mins Ago', color: '#8B5CF6', title: 'Store Restocked', desc: 'Fresh Dairy & Bakery inventory added' },
-                        { time: '1 hr ago', color: '#06B6D4', title: 'Order Delivered', desc: 'Order confirmed with digital signature' },
-                        { time: '3 hrs ago', color: '#F59E0B', title: 'Catalog Updated', desc: 'Updated flash deals & prices' }
-                      ].map((act, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <div style={{ width: '65px', fontSize: '10.5px', color: '#94A3B8', fontWeight: 700, paddingTop: '2px', flexShrink: 0 }}>
-                            {act.time}
-                          </div>
-                          <div style={{
-                            width: '24px', height: '24px', borderRadius: '50%',
-                            background: `${act.color}15`, color: act.color,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0, border: `1.5px solid ${act.color}`
-                          }}>
-                            <Check size={12} strokeWidth={3} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>{act.title}</div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>{act.desc}</div>
-                          </div>
-                        </div>
-                      ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {(periodOrders.length > 0
+                        ? periodOrders.slice(0, 5).map((o, i) => {
+                            const st = (o.status || 'placed').toLowerCase();
+                            const isDelivered = st === 'delivered';
+                            const isOut = st === 'out_for_delivery';
+                            const isPrep = st === 'preparing';
+                            const isCanc = st === 'cancelled';
+
+                            const iconConfig = isDelivered
+                              ? { icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' }
+                              : isOut
+                              ? { icon: Truck, color: '#0071E3', bg: '#EFF6FF', border: '#BFDBFE' }
+                              : isPrep
+                              ? { icon: Flame, color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' }
+                              : isCanc
+                              ? { icon: XCircle, color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' }
+                              : { icon: ShoppingBag, color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' };
+
+                            const IconComp = iconConfig.icon;
+                            const timeStr = o.created_at
+                              ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                              : 'Recent';
+
+                            return (
+                              <div key={i} onClick={() => setSelectedOrderModal(o)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #F1F5F9', cursor: 'pointer', transition: 'background 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.background = '#F1F5F9'} onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}>
+                                <div style={{
+                                  width: '30px', height: '30px', borderRadius: '8px',
+                                  background: iconConfig.bg, border: `1px solid ${iconConfig.border}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  <IconComp size={14} color={iconConfig.color} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    Order #{formatOrderId(o.id || o.rawId)} — {(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
+                                  </div>
+                                  <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {o.customer_name || o.user?.name || 'Customer'} · <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}</span>
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
+                                  {timeStr}
+                                </div>
+                              </div>
+                            );
+                          })
+                        : [
+                            <div key="empty" style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                              No activity recorded for this period
+                            </div>
+                          ]
+                      )}
                     </div>
                   </div>
 
