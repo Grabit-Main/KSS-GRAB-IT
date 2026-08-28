@@ -221,26 +221,31 @@ export const categoryService = {
       console.warn('Backend category creation fallback:', e);
     }
 
+    const catId = created?.id ? String(created.id) : `cat-${payload.name.toLowerCase().replace(/\s+/g, '-')}`;
+
     const newCat = {
-      id: String(created?.id || `cat-${Date.now()}`),
+      id: catId,
       name: payload.name,
       slug: payload.name.toLowerCase().replace(/\s+/g, '-'),
-      image: payload.image_url,
-      image_url: payload.image_url,
+      image: created?.image_url || payload.image_url,
+      image_url: created?.image_url || payload.image_url,
       is_active: isActive,
       subcategory_count: 0,
       product_count: 0,
       description: `${payload.name} category items`,
-      created_at: new Date().toISOString(),
+      created_at: created?.created_at || new Date().toISOString(),
     };
 
     saveStatusOverride(newCat.id, isActive);
 
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_seller_custom_categories') || '[]');
-      const existingIdx = stored.findIndex((c) => String(c.id) === String(newCat.id));
+      const existingIdx = stored.findIndex((c) => 
+        String(c.id) === String(newCat.id) || 
+        (c.name && c.name.toLowerCase().trim() === payload.name.toLowerCase().trim())
+      );
       if (existingIdx >= 0) {
-        stored[existingIdx] = newCat;
+        stored[existingIdx] = { ...stored[existingIdx], ...newCat };
       } else {
         stored.unshift(newCat);
       }

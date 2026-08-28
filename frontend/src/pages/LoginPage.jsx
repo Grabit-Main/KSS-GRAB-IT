@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, UserCheck } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { post } from '../api';
 
-const DOODLE_BG = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787653733/grabit_media/eu9h4icihrmbgxevh0z9.jpg';
 const FAVICON_3D = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787646563/grabit_media/ckpo0cpaoydv5zt8yyj0.png';
 const LOGO_PNG = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png';
 
@@ -19,6 +18,15 @@ function ThreeDotsLoading() {
 
 export function LoginPage() {
   const navigate = useNavigate();
+
+  const handleSkip = () => {
+    sessionStorage.setItem('grabit_skipped_login', 'true');
+    const intended = sessionStorage.getItem('grabit_intended_path');
+    if (intended) {
+      sessionStorage.removeItem('grabit_intended_path');
+    }
+    navigate('/', { replace: true });
+  };
 
   // After login, restore the page the user was trying to reach (set by ProtectedRoute)
   const getRedirectPath = (role) => {
@@ -95,15 +103,20 @@ export function LoginPage() {
 
       localStorage.setItem('grabit_session', token);
       localStorage.setItem('grabit_user', JSON.stringify(userObj));
+      sessionStorage.setItem('grabit_skipped_login', 'true');
       if (demoUser.role === 'seller' || demoUser.role === 'admin') {
         localStorage.setItem('grabit_seller_access', token);
         localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
       }
+      try {
+        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
 
       if (demoUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
       else if (demoUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
       else if (demoUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate('/', { replace: true });
+      else navigate(getRedirectPath('customer'), { replace: true });
       setBusy(false);
       return;
     }
@@ -115,7 +128,6 @@ export function LoginPage() {
       setDetectedRole(res?.role || 'customer');
 
       if (isReg) {
-        // Existing user in database -> go straight to OTP
         if (res.user?.full_name || res.user?.name) {
           setName(res.user.full_name || res.user.name);
         }
@@ -125,13 +137,11 @@ export function LoginPage() {
         await requestOtpFor(fullPhone);
         setStep('otp');
       } else {
-        // User not in database -> ask user to create account
         setName('');
         setEmail('');
         setStep('register');
       }
     } catch (e) {
-      // If error communicating with API or user not found, prompt to create account
       setRegistered(false);
       setName('');
       setEmail('');
@@ -176,6 +186,7 @@ export function LoginPage() {
       const resolvedUser = x.user || { role: detectedRole, name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
       localStorage.setItem('grabit_session', x.access_token || 'session-token');
       localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
+      sessionStorage.setItem('grabit_skipped_login', 'true');
 
       const userRole = resolvedUser.role || detectedRole;
       if (userRole === 'seller' || userRole === 'admin') {
@@ -190,11 +201,12 @@ export function LoginPage() {
       if (userRole === 'admin') navigate(getRedirectPath('admin'), { replace: true });
       else if (userRole === 'seller') navigate(getRedirectPath('seller'), { replace: true });
       else if (userRole === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate('/', { replace: true });
+      else navigate(getRedirectPath('customer'), { replace: true });
     } catch (e) {
       const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
       localStorage.setItem('grabit_session', 'demo-token');
       localStorage.setItem('grabit_user', JSON.stringify(fallbackUser));
+      sessionStorage.setItem('grabit_skipped_login', 'true');
       if (fallbackUser.role === 'seller' || fallbackUser.role === 'admin') {
         localStorage.setItem('grabit_seller_access', 'demo-token');
         localStorage.setItem('grabit_seller_profile', JSON.stringify(fallbackUser));
@@ -205,7 +217,7 @@ export function LoginPage() {
       if (fallbackUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
       else if (fallbackUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
       else if (fallbackUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate('/', { replace: true });
+      else navigate(getRedirectPath('customer'), { replace: true });
     } finally {
       setBusy(false);
     }
@@ -219,35 +231,53 @@ export function LoginPage() {
     setError('');
   };
 
+  const isPhoneValid = phoneDigits.length === 10;
+
   return (
     <div
       style={{
+        position: 'relative',
         width: '100%',
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '30px 20px',
-        backgroundColor: '#EBF3FC',
-        backgroundImage: `url(${DOODLE_BG})`,
-        backgroundSize: '580px 580px',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'repeat',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
+        padding: '24px 16px',
+        background: 'radial-gradient(ellipse at 50% -10%, #3B1578 0%, #170938 50%, #0A031B 100%)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
         boxSizing: 'border-box',
         WebkitFontSmoothing: 'antialiased',
+        overflow: 'hidden',
       }}
     >
+      {/* Ambient Glowing Background Orbs */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%',
+        left: '15%',
+        width: '380px',
+        height: '380px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(147, 51, 234, 0.4) 0%, rgba(0,0,0,0) 70%)',
+        filter: 'blur(55px)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-5%',
+        right: '15%',
+        width: '420px',
+        height: '420px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, rgba(0,0,0,0) 70%)',
+        filter: 'blur(65px)',
+        pointerEvents: 'none',
+      }} />
+
       <style>{`
         @keyframes appleDotPulse {
-          0%, 80%, 100% {
-            opacity: 0.25;
-            transform: scale(0.65);
-          }
-          40% {
-            opacity: 1;
-            transform: scale(1.15);
-          }
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.65); }
+          40% { opacity: 1; transform: scale(1.15); }
         }
         .dot-pulse {
           width: 7px;
@@ -259,434 +289,460 @@ export function LoginPage() {
         }
 
         .glass-role-btn {
-          background: rgba(255, 255, 255, 0.18);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.50);
-          border-radius: 12px;
-          padding: 8px 16px;
-          font-size: 12.5px;
+          background: rgba(243, 244, 246, 0.8);
+          border: 1px solid #E5E7EB;
+          border-radius: 10px;
+          padding: 6px 14px;
+          font-size: 12px;
           font-weight: 700;
-          color: #0F172A;
+          color: #374151;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.2s ease;
+        }
+        .glass-role-btn:hover {
+          background: #EEF2FF;
+          color: #4F46E5;
+          border-color: #C7D2FE;
         }
 
-        .glass-role-btn:hover {
-          background: rgba(255, 255, 255, 0.55);
-          color: #0071E3;
-          border-color: rgba(0, 113, 227, 0.5);
-          transform: translateY(-1px);
+        .phone-input-group:focus-within {
+          border-color: #8B5CF6 !important;
+          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
         }
       `}</style>
 
-      {/* Transparent Lightly Blurred Laptop/Desktop Enlarged Login Section */}
+      {/* Main Container */}
       <div
         style={{
+          position: 'relative',
+          zIndex: 2,
           width: '100%',
-          maxWidth: '470px',
-          background: 'transparent',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          maxWidth: '430px',
+          backgroundColor: '#FFFFFF',
           borderRadius: '32px',
-          padding: '36px 32px',
-          border: '1.5px solid rgba(255, 255, 255, 0.48)',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.03)',
-          color: '#0F172A',
+          overflow: 'hidden',
+          boxShadow: '0 30px 70px rgba(0, 0, 0, 0.45), 0 0 50px rgba(147, 51, 234, 0.25)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
           boxSizing: 'border-box',
         }}
       >
-        {/* Header Branding (Seamless 3D Favicon + Logo with zero enclosing background) */}
-        <div style={{ textAlign: 'center' }}>
-          <div
+        {/* Top Professional 3D Hero Banner Section */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '225px',
+            backgroundImage: `url('/images/quick_commerce_banner.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-end',
+            padding: '16px 18px',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* Skip Button in Top-Right Corner */}
+          <button
+            type="button"
+            onClick={handleSkip}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#EC4899',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '6px 18px',
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.18)',
+              zIndex: 10,
+              transition: 'transform 0.15s ease',
             }}
           >
-            <img
-              src={FAVICON_3D}
-              alt="GrabIt Favicon"
-              style={{
-                width: '66px',
-                height: '66px',
-                objectFit: 'contain',
-                display: 'block',
-                filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))',
-              }}
-            />
-            <img
-              src={LOGO_PNG}
-              alt="GrabIt"
-              style={{
-                height: '54px',
-                width: 'auto',
-                maxWidth: '210px',
-                objectFit: 'contain',
-                marginLeft: '-3px',
-                display: 'block',
-                filter: 'drop-shadow(0 2px 10px rgba(0, 0, 0, 0.06))',
-              }}
-            />
-          </div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: -0.5 }}>
-            {step === 'phone'
-              ? 'Log In'
-              : step === 'register'
-              ? 'Create New Account'
-              : 'Security Verification'}
-          </h2>
-          {step !== 'phone' && (
-            <p style={{ color: '#334155', fontSize: 13, margin: '6px 0 0', fontWeight: 600 }}>
-              {step === 'register'
-                ? 'Enter your name to complete your profile'
-                : `We sent a 6-digit code to ${fullPhone}`}
-            </p>
-          )}
+            Skip
+          </button>
         </div>
 
-        {error && (
-          <div style={{ background: 'rgba(255, 230, 230, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 100, 100, 0.4)', color: '#D32F2F', padding: '10px 14px', borderRadius: 14, fontSize: 12.5, fontWeight: 700 }}>
-            {error}
+        {/* Form & Content Body */}
+        <div style={{ padding: '24px 24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Main Headline */}
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(139, 92, 246, 0.1)', color: '#7C3AED', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.4px', marginBottom: '8px' }}>
+              ⚡ 10-MIN EXPRESS DISPATCH
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.3px', lineHeight: '1.25' }}>
+              Groceries delivered in <span style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 900 }}>minutes</span>
+            </h2>
+            {step !== 'phone' && (
+              <p style={{ color: '#4B5563', fontSize: '13px', margin: '8px 0 0', fontWeight: 600 }}>
+                {step === 'register'
+                  ? 'Enter your full name to set up your account'
+                  : `We sent a 6-digit verification code to ${fullPhone}`}
+              </p>
+            )}
           </div>
-        )}
 
-        {/* STEP 1: PHONE NUMBER */}
-        {step === 'phone' && (
-          <form onSubmit={handlePhoneSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
-                Mobile Number
-              </label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  border: '1.5px solid rgba(255, 255, 255, 0.60)',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  background: 'rgba(255, 255, 255, 0.20)',
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                }}
-              >
-                <span
+          {error && (
+            <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
+              {error}
+            </div>
+          )}
+
+          {/* STEP 1: PHONE NUMBER INPUT */}
+          {step === 'phone' && (
+            <form onSubmit={handlePhoneSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div
+                  className="phone-input-group"
                   style={{
-                    padding: '14px 16px',
-                    background: 'rgba(255, 255, 255, 0.28)',
-                    borderRight: '1.5px solid rgba(255, 255, 255, 0.60)',
-                    fontWeight: 800,
-                    fontSize: 15,
-                    color: '#0F172A',
-                    userSelect: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '16px',
+                    padding: '4px 6px',
+                    background: '#FFFFFF',
+                    position: 'relative',
+                    transition: 'all 0.2s ease',
                   }}
                 >
-                  +91
-                </span>
+                  <label
+                    style={{
+                      position: 'absolute',
+                      top: '-9px',
+                      left: '14px',
+                      backgroundColor: '#FFFFFF',
+                      padding: '0 6px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      color: '#64748B',
+                      zIndex: 2,
+                    }}
+                  >
+                    Enter Phone Number
+                  </label>
+
+                  {/* Flag & Country Code */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '10px 12px',
+                      fontWeight: 800,
+                      fontSize: '15px',
+                      color: '#0F172A',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>🇮🇳</span>
+                    <span>+91</span>
+                    <ChevronDown size={14} color="#64748B" />
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0', margin: '0 4px' }} />
+
+                  {/* Input Field */}
+                  <input
+                    type="tel"
+                    required
+                    value={phoneDigits}
+                    onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(-10))}
+                    placeholder="Enter Phone Number"
+                    maxLength={10}
+                    style={{
+                      border: 0,
+                      padding: '10px 10px',
+                      width: '100%',
+                      outline: 'none',
+                      fontSize: '16px',
+                      fontWeight: 800,
+                      color: '#0F172A',
+                      background: 'transparent',
+                    }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Continue Button */}
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  width: '100%',
+                  background: isPhoneValid ? 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' : '#F1F5F9',
+                  color: isPhoneValid ? '#FFFFFF' : '#94A3B8',
+                  border: 0,
+                  borderRadius: '16px',
+                  padding: '14px',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: isPhoneValid ? 'pointer' : 'default',
+                  boxShadow: isPhoneValid ? '0 8px 24px rgba(124, 58, 237, 0.35)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  minHeight: '50px',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {busy ? <ThreeDotsLoading /> : (
+                  <>
+                    <span>Continue</span>
+                    <ArrowRight size={18} style={{ marginLeft: 2 }} />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: NEW CUSTOMER REGISTRATION */}
+          {step === 'register' && (
+            <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                  Mobile Number
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #E5E7EB', borderRadius: '14px', background: '#F9FAFB', overflow: 'hidden' }}>
+                  <span style={{ padding: '10px 14px', background: '#F3F4F6', fontWeight: 800, fontSize: '14px', color: '#374151' }}>
+                    🇮🇳 +91
+                  </span>
+                  <input
+                    disabled
+                    value={phoneDigits}
+                    style={{ border: 0, padding: '10px 14px', width: '100%', background: 'transparent', color: '#374151', fontWeight: 700, fontSize: '15px' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                  Full Name <span style={{ color: '#EF4444' }}>*</span>
+                </label>
                 <input
-                  type="tel"
                   required
-                  value={phoneDigits}
-                  onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(-10))}
-                  placeholder="Enter 10-digit number"
-                  maxLength={10}
+                  name="user_fullname"
+                  autoComplete="off"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your full name"
                   style={{
-                    border: 0,
-                    padding: '14px 16px',
                     width: '100%',
+                    border: '1.5px solid #D1D5DB',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                    fontSize: '15px',
                     outline: 'none',
-                    fontSize: 16,
+                    boxSizing: 'border-box',
+                    color: '#111827',
                     fontWeight: 700,
-                    color: '#0F172A',
-                    background: 'transparent',
                   }}
                   autoFocus
                 />
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={busy}
-              style={{
-                background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.95) 0%, rgba(0, 91, 181, 0.95) 100%)',
-                color: '#FFFFFF',
-                border: 0,
-                borderRadius: 16,
-                padding: '15px',
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                minHeight: '52px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {busy ? (
-                <ThreeDotsLoading />
-              ) : (
-                <>
-                  <span>Continue</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-        )}
-
-        {/* STEP 2: NEW CUSTOMER REGISTRATION */}
-        {step === 'register' && (
-          <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>
-                Mobile Number (Verified)
-              </label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  border: '1.5px solid rgba(255, 255, 255, 0.60)',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  background: 'rgba(255, 255, 255, 0.20)',
-                  backdropFilter: 'blur(6px)',
-                }}
-              >
-                <span style={{ padding: '12px 16px', background: 'rgba(255, 255, 255, 0.28)', fontWeight: 800, fontSize: 14, color: '#0F172A' }}>
-                  +91
-                </span>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
+                  Email Address <small style={{ color: '#6B7280' }}>(Optional)</small>
+                </label>
                 <input
-                  disabled
-                  value={phoneDigits}
-                  style={{ border: 0, padding: '12px 16px', width: '100%', background: 'transparent', color: '#0F172A', fontWeight: 700, fontSize: 15 }}
+                  type="email"
+                  name="user_email"
+                  autoComplete="off"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  style={{
+                    width: '100%',
+                    border: '1.5px solid #D1D5DB',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                    fontSize: '15px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    color: '#111827',
+                    fontWeight: 700,
+                  }}
                 />
               </div>
-            </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>
-                Full Name <span style={{ color: '#FF3B30' }}>*</span>
-              </label>
-              <input
-                required
-                name="user_fullname"
-                autoComplete="off"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
+              <button
+                type="submit"
+                disabled={busy}
                 style={{
-                  width: '100%',
-                  border: '1.5px solid rgba(255, 255, 255, 0.60)',
-                  borderRadius: 16,
-                  padding: '13px 16px',
-                  fontSize: 15,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  fontWeight: 700,
-                  background: 'rgba(255, 255, 255, 0.20)',
-                  backdropFilter: 'blur(6px)',
-                }}
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>
-                Email Address <small style={{ color: '#475569' }}>(Optional)</small>
-              </label>
-              <input
-                type="email"
-                name="user_email"
-                autoComplete="off"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                style={{
-                  width: '100%',
-                  border: '1.5px solid rgba(255, 255, 255, 0.60)',
-                  borderRadius: 16,
-                  padding: '13px 16px',
-                  fontSize: 15,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  fontWeight: 700,
-                  background: 'rgba(255, 255, 255, 0.20)',
-                  backdropFilter: 'blur(6px)',
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={busy}
-              style={{
-                background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.95) 0%, rgba(0, 91, 181, 0.95) 100%)',
-                color: '#FFFFFF',
-                border: 0,
-                borderRadius: 16,
-                padding: '15px',
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
-                marginTop: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                minHeight: '52px',
-              }}
-            >
-              {busy ? (
-                <ThreeDotsLoading />
-              ) : (
-                <>
-                  <span>Create Account & Continue</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStep('phone')}
-              style={{ background: 'none', border: 0, color: '#334155', fontSize: 13, cursor: 'pointer', fontWeight: 700, textAlign: 'center' }}
-            >
-              ← Back to Phone Number
-            </button>
-          </form>
-        )}
-
-        {/* STEP 3: OTP VERIFICATION */}
-        {step === 'otp' && (
-          <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <label style={{ fontSize: 12, fontWeight: 800, color: '#0F172A' }}>
-                  Enter 6-Digit OTP
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setOtp('123456')}
-                  style={{
-                    background: 'rgba(0, 113, 227, 0.12)',
-                    border: '1px solid rgba(0, 113, 227, 0.35)',
-                    color: '#0071E3',
-                    padding: '3px 9px',
-                    borderRadius: 8,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  ⚡ Auto-fill OTP
-                </button>
-              </div>
-              <input
-                required
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                maxLength={6}
-                style={{
-                  width: '100%',
-                  border: '1.5px solid rgba(255, 255, 255, 0.60)',
-                  borderRadius: 16,
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                  color: '#FFFFFF',
+                  border: 0,
+                  borderRadius: '16px',
                   padding: '14px',
-                  fontSize: 24,
-                  fontWeight: 900,
-                  letterSpacing: 8,
-                  textAlign: 'center',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  background: 'rgba(255, 255, 255, 0.24)',
-                  backdropFilter: 'blur(6px)',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  minHeight: '50px',
+                  marginTop: '6px',
                 }}
-                autoFocus
-              />
-            </div>
+              >
+                {busy ? <ThreeDotsLoading /> : 'Complete Registration'}
+              </button>
 
-            <button
-              type="submit"
-              disabled={busy}
-              style={{
-                background: 'linear-gradient(135deg, rgba(0, 113, 227, 0.95) 0%, rgba(0, 91, 181, 0.95) 100%)',
-                color: '#FFFFFF',
-                border: 0,
-                borderRadius: 16,
-                padding: '15px',
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '52px',
-              }}
-            >
-              {busy ? <ThreeDotsLoading /> : 'Verify & Enter Portal'}
-            </button>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
+                style={{ background: 'none', border: 0, color: '#6B7280', fontSize: '13px', cursor: 'pointer', fontWeight: 700, textAlign: 'center' }}
               >
-                Change number
+                ← Back to Phone Number
               </button>
-              <button
-                type="button"
-                onClick={() => requestOtpFor(fullPhone)}
-                style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
-              >
-                Resend code
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
 
-        {/* Transparent Role Selection Pills */}
-        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.38)', paddingTop: 14, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {[
-            { label: 'Customer', phone: '+919999900004', name: 'Rahul Sharma', role: 'customer' },
-            { label: 'Seller', phone: '+919999900002', name: 'GrabIt Supermarket', role: 'seller' },
-            { label: 'Rider', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
-            { label: 'Admin', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
-          ].map((item) => {
-            const isSelected = phoneDigits === item.phone.replace('+91', '');
-            return (
+          {/* STEP 3: OTP VERIFICATION */}
+          {step === 'otp' && (
+            <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>
+                    Enter 6-Digit OTP
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOtp('123456')}
+                    style={{
+                      background: '#EEF2FF',
+                      border: '1px solid #C7D2FE',
+                      color: '#4F46E5',
+                      padding: '3px 9px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ⚡ Auto-fill OTP
+                  </button>
+                </div>
+                <input
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  style={{
+                    width: '100%',
+                    border: '1.5px solid #D1D5DB',
+                    borderRadius: '14px',
+                    padding: '12px',
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    letterSpacing: '8px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    color: '#111827',
+                    backgroundColor: '#F9FAFB',
+                  }}
+                  autoFocus
+                />
+              </div>
+
               <button
-                key={item.label}
-                type="button"
-                className="glass-role-btn"
-                onClick={() => selectDemoRole(item.phone, item.name, item.role)}
-                style={isSelected ? {
-                  background: 'linear-gradient(135deg, #0071E3 0%, #005bb5 100%)',
+                type="submit"
+                disabled={busy}
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
                   color: '#FFFFFF',
-                  borderColor: '#0071E3',
+                  border: 0,
+                  borderRadius: '16px',
+                  padding: '14px',
+                  fontSize: '15px',
                   fontWeight: 800,
-                  boxShadow: '0 4px 12px rgba(0, 113, 227, 0.35)'
-                } : {}}
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '50px',
+                }}
               >
-                {item.label}
+                {busy ? <ThreeDotsLoading /> : 'Verify & Continue'}
               </button>
-            );
-          })}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <button
+                  type="button"
+                  onClick={() => setStep('phone')}
+                  style={{ background: 'none', border: 0, color: '#8B5CF6', cursor: 'pointer', fontWeight: 800 }}
+                >
+                  Change number
+                </button>
+                <button
+                  type="button"
+                  onClick={() => requestOtpFor(fullPhone)}
+                  style={{ background: 'none', border: 0, color: '#8B5CF6', cursor: 'pointer', fontWeight: 800 }}
+                >
+                  Resend code
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Quick Demo Access Role Cards Grid */}
+          <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', marginTop: '4px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.6px', textAlign: 'center', marginBottom: '10px' }}>
+              ⚡ Instant Demo Portal Access
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              {[
+                { label: 'Customer', icon: '🛒', phone: '+919999900004', name: 'Rahul Sharma', role: 'customer' },
+                { label: 'Seller', icon: '🏪', phone: '+919999900002', name: 'GrabIt Supermarket', role: 'seller' },
+                { label: 'Rider', icon: '🛵', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
+                { label: 'Admin', icon: '🛡️', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
+              ].map((item) => {
+                const isSelected = phoneDigits === item.phone.replace('+91', '');
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => selectDemoRole(item.phone, item.name, item.role)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      padding: '10px 4px',
+                      borderRadius: '14px',
+                      border: isSelected ? '2px solid #8B5CF6' : '1px solid #E2E8F0',
+                      background: isSelected ? 'linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)' : '#F8FAFC',
+                      color: isSelected ? '#7C3AED' : '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 4px 12px rgba(139, 92, 246, 0.2)' : '0 1px 2px rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>{item.icon}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 800 }}>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: '#94A3B8', fontWeight: 700, marginTop: '12px' }}>
+              🔒 100% Safe &amp; Secure OTP Authentication
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

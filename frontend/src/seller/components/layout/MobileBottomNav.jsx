@@ -9,6 +9,33 @@ import {
 } from 'lucide-react';
 import { mockDb } from '../../services/mockData';
 
+const isValidRealOrder = (o) => {
+  if (!o) return false;
+  const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
+  if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
+  const custName = (o.customer_name || '').trim().toLowerCase();
+  if (custName.includes('fresh mart supermarket')) return false;
+  let itemsList = [];
+  if (Array.isArray(o.items)) itemsList = o.items;
+  else if (typeof o.items === 'string') {
+    try { itemsList = JSON.parse(o.items); } catch {}
+  }
+  if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
+  const total = Number(o.total_amount || o.total || 0);
+  if (total <= 0) return false;
+  return true;
+};
+
+const isPackingQueueOrder = (o) => {
+  if (!isValidRealOrder(o)) return false;
+  const st = String(o.status || '').toLowerCase();
+  if (st === 'delivered' || st === 'cancelled' || st === 'out_for_delivery' || st === 'out-for-delivery') {
+    return false;
+  }
+  if (o.delivery_agent_id) return false;
+  return ['placed', 'preparing', 'ready', 'ready_for_pickup'].includes(st);
+};
+
 export const MobileBottomNav = () => {
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
 
@@ -16,9 +43,7 @@ export const MobileBottomNav = () => {
     const calculateCount = () => {
       try {
         const sharedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-        const activeShared = sharedOrders.filter((o) =>
-          ['placed', 'preparing', 'ready', 'ready_for_pickup', 'out_for_delivery'].includes(o.status)
-        );
+        const activeShared = sharedOrders.filter(isPackingQueueOrder);
         setPendingOrdersCount(activeShared.length);
       } catch {
         setPendingOrdersCount(0);

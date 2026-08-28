@@ -95,8 +95,8 @@ export default function HomePage() {
       subtitle: 'From popcorn & crunchy chips to cookies, nachos & treats – we\'ve got it all.',
       btn1: { label: 'Shop Snacks', bg: '#D97706', color: '#FFFFFF', shadow: '0 4px 16px rgba(217,119,6,0.35)', link: '/category/snacks-munchies', icon: <ArrowRight size={16} /> },
       btn2: { label: 'View All', bg: '#FFFFFF', color: '#D97706', border: '1.5px solid #FDBA74', link: '/category/snacks-munchies' },
-      img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645062/grabit_media/category_snacks_feast_hero.png',
-      imgAlt: 'Popcorn, Chips, Cookies & Nachos Snack Feast',
+      img: '/category-snacks-banner.png',
+      imgAlt: 'Lay\'s Classic Salted, Pringles & Bowl of Chips',
       imgFilter: 'drop-shadow(0 14px 28px rgba(217,119,6,0.25))',
       discountVal: '40%',
       discountColor: '#D97706',
@@ -172,10 +172,14 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ background: '#F5F5F7', minHeight: '100vh', paddingBottom: '32px' }}>
+    <div className="professional-design-background" style={{ minHeight: '100vh', paddingBottom: '48px', position: 'relative' }}>
+      {/* 🌟 LUXURY AMBIENT FLOATING DESIGN LIGHTS */}
+      <div className="ambient-bg-orb-top" />
+      <div className="ambient-bg-orb-mid" />
+      <div className="ambient-bg-orb-bottom" />
 
       {/* ── 1. HERO CAROUSEL ─────────────────────── */}
-      <div className="container" style={{ paddingTop: isMobile ? '0px' : '24px', marginBottom: isMobile ? '16px' : '36px' }}>
+      <div className="container" style={{ paddingTop: isMobile ? '0px' : '24px', marginBottom: isMobile ? '16px' : '36px', position: 'relative', zIndex: 2 }}>
         <div style={{
           position: 'relative',
           borderRadius: isMobile ? '16px' : '24px',
@@ -591,17 +595,16 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      <div id="categories-grid" className="container" style={{ paddingTop: isMobile ? '12px' : '16px', marginBottom: isMobile ? '20px' : '32px' }}>
-        <div style={{
-          background: '#FFFFFF', borderRadius: isMobile ? '14px' : '16px',
-          border: '1px solid #D2D2D7', padding: isMobile ? '16px 12px' : '24px',
-          boxShadow: '0 1px 3px rgba(29,29,31,0.03)'
+      <div id="categories-grid" className="container" style={{ paddingTop: isMobile ? '12px' : '16px', marginBottom: isMobile ? '20px' : '32px', position: 'relative', zIndex: 2 }}>
+        <div className="professional-card" style={{
+          borderRadius: isMobile ? '18px' : '22px',
+          padding: isMobile ? '18px 12px' : '26px 24px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? '14px' : '18px' }}>
-            <h2 style={{ fontSize: isMobile ? '17px' : '20px', fontWeight: 900, color: '#1D1D1F', margin: 0 }}>
+            <h2 style={{ fontSize: isMobile ? '17px' : '20px', fontWeight: 900, color: '#1D1D1F', margin: 0, letterSpacing: '-0.02em' }}>
               Categories
             </h2>
-            <Link to="/categories" style={{ fontSize: '13px', color: '#0071E3', fontWeight: 700, textDecoration: 'none' }}>
+            <Link to="/categories" style={{ fontSize: '13px', color: '#0071E3', fontWeight: 800, textDecoration: 'none' }}>
               View all
             </Link>
           </div>
@@ -612,17 +615,15 @@ export default function HomePage() {
                 <Link
                   key={cat.id || cat.slug || idx}
                   to={`/category/${catSlug}`}
+                  className="category-tile-modern"
                   style={{
-                    textDecoration: 'none', background: '#F5F5F7',
-                    border: '1px solid #D2D2D7', borderRadius: isMobile ? '10px' : '12px',
+                    textDecoration: 'none',
+                    borderRadius: isMobile ? '12px' : '14px',
                     padding: isMobile ? '12px 6px 10px' : '16px 12px 14px',
-                    textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    textAlign: 'center',
                     display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center'
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; }}
                 >
                   <div style={{ height: isMobile ? '48px' : '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: isMobile ? '5px' : '8px' }}>
                     <ProductSvg name={cat.image_url || cat.image || cat.icon || cat.slug} size={isMobile ? 42 : 65} />
@@ -733,7 +734,7 @@ export default function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '12px' : '16px' }}>
             {[
-              { img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645062/grabit_media/category_snacks_feast_hero.png', title: 'Snacks Bonanza', tag: 'Up to 35% OFF', link: '/category/snacks-munchies' },
+              { img: '/deal-banner-snacks-vibrant.jpg', title: 'Snacks Bonanza', tag: 'Up to 35% OFF', link: '/category/snacks-munchies' },
               { img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645106/grabit_media/deal_banner_beverages.jpg', title: 'Fresh Beverages', tag: 'Flat 30% OFF', link: '/category/beverages' },
               { img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645065/grabit_media/deal_banner_dryfruits.jpg', title: 'Premium Dry Fruits', tag: 'Starting ₹99', link: '/category/produce' },
               { img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645097/grabit_media/deal_banner_dairy.jpg', title: 'Farm Fresh Dairy', tag: 'Up to 25% OFF', link: '/category/dairy-bakery' },

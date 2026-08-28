@@ -17,6 +17,33 @@ import { useToast } from '../../context/ToastContext';
 import { logoutUser } from '../../../api';
 const grabitLogoImg = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png';
 
+const isValidRealOrder = (o) => {
+  if (!o) return false;
+  const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
+  if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
+  const custName = (o.customer_name || '').trim().toLowerCase();
+  if (custName.includes('fresh mart supermarket')) return false;
+  let itemsList = [];
+  if (Array.isArray(o.items)) itemsList = o.items;
+  else if (typeof o.items === 'string') {
+    try { itemsList = JSON.parse(o.items); } catch {}
+  }
+  if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
+  const total = Number(o.total_amount || o.total || 0);
+  if (total <= 0) return false;
+  return true;
+};
+
+const isPackingQueueOrder = (o) => {
+  if (!isValidRealOrder(o)) return false;
+  const st = String(o.status || '').toLowerCase();
+  if (st === 'delivered' || st === 'cancelled' || st === 'out_for_delivery' || st === 'out-for-delivery') {
+    return false;
+  }
+  if (o.delivery_agent_id) return false;
+  return ['placed', 'preparing', 'ready', 'ready_for_pickup'].includes(st);
+};
+
 export const SellerSidebar = ({ isOpen, onClose }) => {
   const { seller, logout } = useSellerAuth();
   const { showToast } = useToast();
@@ -35,16 +62,8 @@ export const SellerSidebar = ({ isOpen, onClose }) => {
     const calculateCount = () => {
       try {
         const sharedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-        if (sharedOrders.length > 0) {
-          const activeShared = sharedOrders.filter((o) =>
-            ['placed', 'preparing', 'ready', 'ready_for_pickup', 'out_for_delivery'].includes(o.status) &&
-            Array.isArray(o.items) && o.items.length > 0
-          );
-          setPendingCount(activeShared.length);
-          return;
-        }
-
-        setPendingCount(0);
+        const activeShared = sharedOrders.filter(isPackingQueueOrder);
+        setPendingCount(activeShared.length);
       } catch {
         setPendingCount(0);
       }

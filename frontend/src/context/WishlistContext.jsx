@@ -2,19 +2,54 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const WishlistContext = createContext();
 
-export function WishlistProvider({ children }) {
-  const [wishlistItems, setWishlistItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('grabit_wishlist');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+const getUserPhone = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+    const digits = (u.phone || '').replace(/\D/g, '');
+    return digits.length >= 10 ? digits.slice(-10) : digits;
+  } catch {
+    return '';
+  }
+};
+
+const getWishlistKey = (phone) => (phone ? `grabit_wishlist_${phone}` : 'grabit_wishlist_guest');
+
+const loadStoredWishlist = (phone) => {
+  try {
+    const raw = localStorage.getItem(getWishlistKey(phone)) || localStorage.getItem('grabit_wishlist');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
     }
-  });
+  } catch {}
+  return [];
+};
+
+export function WishlistProvider({ children }) {
+  const [wishlistItems, setWishlistItems] = useState(() => loadStoredWishlist(getUserPhone()));
+
+  // Listen for login/logout to switch to the active customer's wishlist
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const currentPhone = getUserPhone();
+      setWishlistItems(loadStoredWishlist(currentPhone));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('grabit_auth_updated', handleAuthChange);
+      window.addEventListener('storage', handleAuthChange);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('grabit_auth_updated', handleAuthChange);
+        window.removeEventListener('storage', handleAuthChange);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem('grabit_wishlist', JSON.stringify(wishlistItems));
+      const currentPhone = getUserPhone();
+      localStorage.setItem(getWishlistKey(currentPhone), JSON.stringify(wishlistItems));
     } catch (err) {
       console.error('Failed to save wishlist to localStorage', err);
     }

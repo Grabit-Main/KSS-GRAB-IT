@@ -44,25 +44,104 @@ export const SellerDashboardPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState({
-    totalCategories: 0,
-    activeCategories: 0,
-    totalProducts: 0,
-    activeProducts: 0,
-    todaySales: 0,
-    todayOrders: 0,
-    avgPackingTime: '5.0 mins',
-    storeOnline: true,
+  const [stats, setStats] = useState(() => {
+    try {
+      const prods = JSON.parse(localStorage.getItem('grabit_mock_products') || '[]');
+      const cats = JSON.parse(localStorage.getItem('grabit_mock_categories') || '[]');
+      const prodCount = Array.isArray(prods) && prods.length > 0 ? prods.length : 88;
+      const catCount = Array.isArray(cats) && cats.length > 0 ? cats.length : 16;
+      return {
+        totalCategories: catCount,
+        activeCategories: catCount,
+        totalProducts: prodCount,
+        activeProducts: prodCount,
+        todaySales: 0,
+        todayOrders: 0,
+        avgPackingTime: '5.0 mins',
+        storeOnline: true,
+      };
+    } catch {
+      return {
+        totalCategories: 16,
+        activeCategories: 16,
+        totalProducts: 88,
+        activeProducts: 88,
+        todaySales: 0,
+        todayOrders: 0,
+        avgPackingTime: '5.0 mins',
+        storeOnline: true,
+      };
+    }
   });
 
   const [recentCategories, setRecentCategories] = useState([]);
   const [criticalStockProducts, setCriticalStockProducts] = useState([]);
 
-  // ✅ FIX: Seed from localStorage immediately so live orders appear with zero delay.
+  const isValidRealOrder = (o) => {
+    if (!o) return false;
+    const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
+    if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
+    const custName = (o.customer_name || '').trim().toLowerCase();
+    if (custName.includes('fresh mart supermarket')) return false;
+    let itemsList = [];
+    if (Array.isArray(o.items)) itemsList = o.items;
+    else if (typeof o.items === 'string') {
+      try { itemsList = JSON.parse(o.items); } catch {}
+    }
+    if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
+    const total = Number(o.total_amount || o.total || 0);
+    if (total <= 0) return false;
+    return true;
+  };
+
+  const isLivePackingQueueOrder = (o) => {
+    if (!isValidRealOrder(o)) return false;
+    const st = String(o.status || '').toLowerCase();
+    if (st === 'delivered' || st === 'cancelled' || st === 'out_for_delivery' || st === 'out-for-delivery') {
+      return false;
+    }
+    if (o.delivery_agent_id) return false;
+    return ['placed', 'preparing', 'ready', 'ready_for_pickup'].includes(st);
+  };
+
+  const formatOrderObj = (o) => {
+    let itemsList = [];
+    if (Array.isArray(o.items) && o.items.length > 0) {
+      itemsList = o.items.map((it) => ({
+        name: it.name || it.product_name || 'Express Grocery Item',
+        qty: Number(it.qty || it.quantity) || 1,
+        price: Number(it.price || it.unit_price) || 0,
+      }));
+    }
+    const totalAmt = Number(o.total_amount || o.total || 0) || 0;
+    const rawIdStr = String(o.id || o.rawId || '');
+    const shortId = rawIdStr.length > 15 && rawIdStr.includes('-')
+      ? rawIdStr.slice(0, 8)
+      : rawIdStr || 'GB-1443';
+
+    return {
+      id: shortId,
+      rawId: o.rawId || o.id,
+      customer_name: o.customer_name || 'Customer',
+      customer_phone: o.customer_phone || '',
+      delivery_address: o.delivery_address || o.address || 'Delivery Address',
+      items: itemsList,
+      total_amount: totalAmt,
+      status: o.status || 'placed',
+      delivery_agent_id: o.delivery_agent_id || null,
+      created_at: o.created_at || new Date().toISOString(),
+      payment_method: o.payment_method || 'UPI (Paid)',
+    };
+  };
+
   const [liveOrders, setLiveOrders] = useState(() => {
     try {
       const local = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      return Array.isArray(local) ? local.slice(0, 3) : [];
+      if (Array.isArray(local)) {
+        const activeOnly = local.filter(isLivePackingQueueOrder).map(formatOrderObj);
+        return activeOnly.slice(0, 3);
+      }
+      return [];
     } catch { return []; }
   });
   const hasLocalOrders = liveOrders.length > 0;
@@ -88,25 +167,24 @@ export const SellerDashboardPage = () => {
       let localOrders = [];
       try {
         localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        if (Array.isArray(localOrders)) {
+          const cleaned = localOrders.filter(isValidRealOrder);
+          if (cleaned.length !== localOrders.length) {
+            localStorage.setItem('grabit_orders', JSON.stringify(cleaned));
+          }
+          localOrders = cleaned;
+        }
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
       const seenKeys = new Set();
-      const seenFingerprints = new Set();
       const unique = [];
 
       for (const o of allRaw) {
-        const key = o.rawId || o.id;
-        const totalAmt = Number(o.total_amount || o.total || 0);
-        const custName = (o.customer_name || 'Customer').toLowerCase().trim();
-        const itemLen = Array.isArray(o.items) ? o.items.length : 0;
-        const fingerprint = `${custName}_${totalAmt}_${itemLen}`;
-
-        if (key && seenKeys.has(key)) continue;
-        if (fingerprint && seenFingerprints.has(fingerprint)) continue;
-
-        if (key) seenKeys.add(key);
-        if (fingerprint) seenFingerprints.add(fingerprint);
+        if (!isValidRealOrder(o)) continue;
+        const key = String(o.rawId || o.id || o.orderNumber || '').trim();
+        if (!key || seenKeys.has(key)) continue;
+        seenKeys.add(key);
         unique.push(o);
       }
 
@@ -130,13 +208,14 @@ export const SellerDashboardPage = () => {
           delivery_address: o.delivery_address || o.address || 'Delivery Address',
           items: itemsList,
           total_amount: totalAmt,
-          status: o.status === 'placed' ? 'preparing' : (o.status || 'preparing'),
+          status: o.status || 'placed',
+          delivery_agent_id: o.delivery_agent_id || null,
           created_at: o.created_at || new Date().toISOString(),
           payment_method: o.payment_method || 'UPI (Paid)',
         };
       });
 
-      const validOrders = orders.filter((o) => o.items && o.items.length > 0 && o.total_amount > 0);
+      const validOrders = orders.filter(isValidRealOrder);
 
       // Acoustic chime on newly placed orders
       const activeCount = validOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
@@ -177,8 +256,8 @@ export const SellerDashboardPage = () => {
         const q = parseInt(p.stock_quantity, 10);
         return isNaN(q) || q <= 5;
       });
-      setCriticalStockProducts(critical);
-      setLiveOrders(validOrders.slice(0, 3));
+      const activeLiveQueue = validOrders.filter(isLivePackingQueueOrder);
+      setLiveOrders(activeLiveQueue.slice(0, 3));
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -189,8 +268,17 @@ export const SellerDashboardPage = () => {
 
   useEffect(() => {
     loadDashboardData(true);
-    const interval = setInterval(() => loadDashboardData(false), 4000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => loadDashboardData(false), 3000);
+    const handleStorageUpdate = () => loadDashboardData(false);
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('grabit_orders_updated', handleStorageUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
+    };
   }, [loadDashboardData]);
 
   const [activeRestockId, setActiveRestockId] = useState(null);
@@ -223,22 +311,32 @@ export const SellerDashboardPage = () => {
     });
   };
 
-  const handleOrderStatusChange = async (orderId, nextStatus) => {
-    // orderId here is the short 8-char display ID; rawId stored on the order object is the full UUID
-    const targetOrder = liveOrders.find((o) => o.id === orderId);
+  const handleOrderStatusChange = async (orderId, nextStatus, deliveryAgentId = null) => {
+    const isMatch = (o) => {
+      if (!o) return false;
+      const target1 = String(orderId || '').toLowerCase().trim();
+      const oId = String(o.id || '').toLowerCase().trim();
+      const oRawId = String(o.rawId || '').toLowerCase().trim();
+      const oNum = String(o.orderNumber || '').toLowerCase().trim();
+
+      if (target1 && (oId === target1 || oRawId === target1 || oNum === target1 || oId.startsWith(target1) || oRawId.startsWith(target1))) return true;
+      return false;
+    };
+
+    const targetOrder = liveOrders.find(isMatch);
     const rawId = targetOrder?.rawId || orderId;
 
     // Optimistic UI update immediately
     setLiveOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+      prev.map((o) => (isMatch(o) ? { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) } : o))
     );
 
-    // Update shared localStorage (match by full UUID via rawId)
+    // Update shared localStorage (match by full UUID via isMatch)
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
       const up = stored.map((o) =>
-        o.rawId === rawId || o.id === rawId || o.id === orderId || o.rawId === orderId
-          ? { ...o, status: nextStatus }
+        isMatch(o)
+          ? { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) }
           : o
       );
       localStorage.setItem('grabit_orders', JSON.stringify(up));
@@ -248,7 +346,9 @@ export const SellerDashboardPage = () => {
 
     // Persist to backend API (best-effort)
     try {
-      await patch(`/orders/${rawId}/status`, { status: nextStatus });
+      const payload = { status: nextStatus };
+      if (deliveryAgentId) payload.delivery_agent_id = deliveryAgentId;
+      await patch(`/orders/${rawId}/status`, payload);
     } catch (err) {
       console.warn('Backend status update failed (will retry on next sync):', err);
     }
@@ -431,7 +531,8 @@ export const SellerDashboardPage = () => {
             ) : (
               liveOrders.map((order) => {
                 const isDelivered = order.status === 'delivered';
-                const isPreparing = order.status === 'preparing' || order.status === 'placed';
+                const isPlaced = order.status === 'placed';
+                const isPreparing = order.status === 'preparing';
                 const isReady = order.status === 'ready' || order.status === 'ready_for_pickup';
 
                 return (
@@ -457,8 +558,8 @@ export const SellerDashboardPage = () => {
                           style={{
                             fontSize: '10.5px',
                             fontWeight: 800,
-                            backgroundColor: isDelivered ? '#F1F5F9' : isPreparing ? '#FEF3C7' : '#DCFCE7',
-                            color: isDelivered ? '#64748B' : isPreparing ? '#D97706' : '#15803D',
+                            backgroundColor: isDelivered ? '#F1F5F9' : isPlaced ? '#EFF6FF' : isPreparing ? '#FEF3C7' : '#DCFCE7',
+                            color: isDelivered ? '#64748B' : isPlaced ? '#0071E3' : isPreparing ? '#D97706' : '#15803D',
                             padding: '2px 7px',
                             borderRadius: '10px',
                             textTransform: 'uppercase',
@@ -482,16 +583,24 @@ export const SellerDashboardPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: '1px solid #F1F5F9', gap: 8, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Clock size={12} color="#0071E3" /> Placed: <strong style={{ color: '#0F172A' }}>
-                              {isDelivered ? 'Delivered ✓' : (() => {
-                                const created = new Date(order.created_at);
-                                const diffMs = Date.now() - created.getTime();
-                                const diffMin = Math.floor(diffMs / 60000);
-                                if (diffMin < 1) return 'Just now';
-                                if (diffMin === 1) return '1 min ago';
-                                return `${diffMin} mins ago`;
-                              })()}
-                            </strong>
+                          {isDelivered ? (
+                            <span style={{ color: '#10B981', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <CheckCircle2 size={12} color="#10B981" /> Delivered ✓
+                            </span>
+                          ) : (
+                            <>
+                              <Clock size={12} color="#0071E3" /> Placed: <strong style={{ color: '#0F172A' }}>
+                                {(() => {
+                                  const created = new Date(order.created_at);
+                                  const diffMs = Date.now() - created.getTime();
+                                  const diffMin = Math.floor(diffMs / 60000);
+                                  if (diffMin < 1) return 'Just now';
+                                  if (diffMin === 1) return '1 min ago';
+                                  return `${diffMin} mins ago`;
+                                })()}
+                              </strong>
+                            </>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -515,10 +624,31 @@ export const SellerDashboardPage = () => {
                         </button>
                       </div>
 
-                      {isPreparing ? (
+                      {isPlaced ? (
                         <button
                           type="button"
-                          onClick={() => handleOrderStatusChange(order.id, 'ready')}
+                          onClick={() => handleOrderStatusChange(order.id, 'preparing')}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#FFFFFF',
+                            backgroundColor: '#0071E3',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <Check size={12} strokeWidth={3} /> Accept Order
+                        </button>
+                      ) : isPreparing ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOrderStatusChange(order.id, 'ready_for_pickup')}
                           style={{
                             padding: '5px 10px',
                             fontSize: '11px',
@@ -539,7 +669,7 @@ export const SellerDashboardPage = () => {
                       ) : isReady ? (
                         <button
                           type="button"
-                          onClick={() => handleOrderStatusChange(order.id, 'out_for_delivery')}
+                          onClick={() => handleOrderStatusChange(order.id, 'out_for_delivery', '3')}
                           style={{
                             padding: '5px 10px',
                             fontSize: '11px',
@@ -554,7 +684,7 @@ export const SellerDashboardPage = () => {
                             gap: 4,
                           }}
                         >
-                          Handover to Rider
+                          Dispatch to Rider
                         </button>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 800 }}>

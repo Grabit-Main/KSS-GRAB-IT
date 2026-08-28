@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Zap, Clock, Check, ChevronRight, Plus, CreditCard, Smartphone, Building2, Wallet, Banknote, Tag, FileText, ArrowLeft, Pencil, X, CheckCircle2, Navigation } from 'lucide-react';
+import DeliveryLocationMapPicker from '../components/common/DeliveryLocationMapPicker';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { post } from '../api';
 import ProductSvg from '../components/common/ProductSvg';
 import useWindowWidth from '../hooks/useWindowWidth';
+import {
+  DEFAULT_CUSTOMER_ADDRESSES,
+  loadCustomerAddresses,
+  saveCustomerAddresses,
+  getCustomerAddressKey
+} from '../utils/addressManager';
 
 const STEPS = ['Delivery', 'Payment', 'Review & Place Order'];
 
@@ -18,12 +25,22 @@ const PAYMENT_METHODS = [
 ];
 
 export default function CheckoutPage() {
-  const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart } = useCart();
+  const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
   const { showToast } = useToast();
   const [step, setStep] = useState(0);
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const navigate = useNavigate();
+
+  // Enforce login for checkout: if user is not logged in, proceed to login page first
+  useEffect(() => {
+    const session = localStorage.getItem('grabit_session');
+    const userStr = localStorage.getItem('grabit_user');
+    if (!session || !userStr) {
+      sessionStorage.setItem('grabit_intended_path', '/checkout');
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
 
   const w = useWindowWidth();
   const isMobile = w <= 768;
@@ -43,57 +60,62 @@ export default function CheckoutPage() {
   const currentPhone = (activeUser?.phone || '+919999900004').replace('+91', '').trim();
   const storeHubName = 'GrabIt Supermarket';
 
-  const getAddressesKey = (phone) => `grabit_addresses_${(phone || 'default').replace(/\D/g, '')}`;
-  const loadUserAddresses = () => {
-    try {
-      const data = localStorage.getItem(getAddressesKey(activeUser?.phone));
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return [
-      { id: 1, title: 'Home', address: 'Flat 301, Sunshine Heights, 80 Feet Rd, Koramangala', city: 'Bengaluru 560034', isDefault: true },
-      { id: 2, title: 'Work', address: 'Building 4, Tech Park, Outer Ring Rd, Marathahalli', city: 'Bengaluru 560103', isDefault: false }
-    ];
-  };
+  const getAddressesKey = (phone) => getCustomerAddressKey(phone || activeUser?.phone);
+  const loadUserAddresses = () => loadCustomerAddresses(activeUser?.phone);
 
   const [savedAddresses, setSavedAddresses] = useState(loadUserAddresses);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState('list'); // 'list' | 'map'
   const [editingAddrIndex, setEditingAddrIndex] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', address: '', city: '' });
   const [customAddressInput, setCustomAddressInput] = useState('');
 
+  // Sync addresses when updated from Header, Profile, or another tab
+  useEffect(() => {
+    const syncAddresses = () => {
+      const list = loadCustomerAddresses(activeUser?.phone);
+      setSavedAddresses(list);
+    };
+    window.addEventListener('grabit_addresses_updated', syncAddresses);
+    window.addEventListener('storage', syncAddresses);
+    return () => {
+      window.removeEventListener('grabit_addresses_updated', syncAddresses);
+      window.removeEventListener('storage', syncAddresses);
+    };
+  }, [activeUser?.phone]);
+
   const [selectedAddress, setSelectedAddress] = useState(() => {
     const list = loadUserAddresses();
-    const def = list.find(a => a.isDefault) || list[0] || { title: 'Delivery Location', address: 'Koramangala 5th Block, Bengaluru' };
+    const def = list.find(a => a.isDefault) || list[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
+    const fullAddress = def.city && !def.address.includes(def.city)
+      ? `${def.address}, ${def.city}`
+      : def.address;
     return {
-      title: def.title || 'Home',
+      title: def.title || def.tag || 'Home',
       name: currentName,
       phone: currentPhone,
-      address: def.address + (def.city ? `, ${def.city}` : ''),
+      address: fullAddress,
       tag: 'DIRECT LOCATION',
-      time: '15-25 min delivery'
+      time: def.time || '15-25 min delivery'
     };
   });
 
   const saveAddressesToStorage = (list) => {
     setSavedAddresses(list);
-    try {
-      localStorage.setItem(getAddressesKey(activeUser?.phone), JSON.stringify(list));
-      window.dispatchEvent(new Event('grabit_auth_updated'));
-    } catch {}
+    saveCustomerAddresses(list, activeUser?.phone);
   };
 
   const handleSelectAddress = (addr) => {
-    const fullAddressText = addr.address + (addr.city ? `, ${addr.city}` : '');
+    const fullAddressText = addr.city && !addr.address.includes(addr.city)
+      ? `${addr.address}, ${addr.city}`
+      : addr.address;
     const formatted = {
-      title: addr.title || 'Delivery Location',
+      title: addr.title || addr.tag || 'Delivery Location',
       name: currentName,
       phone: currentPhone,
       address: fullAddressText,
       tag: 'SELECTED LOCATION',
-      time: '15-25 min delivery'
+      time: addr.time || '15-25 min delivery'
     };
     setSelectedAddress(formatted);
     setIsLocationModalOpen(false);
@@ -103,19 +125,25 @@ export default function CheckoutPage() {
   const handleStartEdit = (e, addr, idx) => {
     e.stopPropagation();
     setEditingAddrIndex(idx);
-    setEditForm({ title: addr.title || 'Home', address: addr.address || '', city: addr.city || '' });
+    setEditForm({ title: addr.title || addr.tag || 'Home', address: addr.address || '', city: addr.city || '' });
   };
 
   const handleSaveEditedAddress = (e) => {
     e.preventDefault();
     if (!editForm.address.trim()) return;
     const updated = [...savedAddresses];
-    const fullAddrStr = editForm.address.trim() + (editForm.city.trim() ? `, ${editForm.city.trim()}` : '');
+    const cityStr = editForm.city.trim();
+    const fullAddrStr = cityStr && !editForm.address.includes(cityStr)
+      ? `${editForm.address.trim()}, ${cityStr}`
+      : editForm.address.trim();
+
     updated[editingAddrIndex] = {
       ...updated[editingAddrIndex],
       title: editForm.title.trim() || 'Home',
+      tag: editForm.title.trim() || 'Home',
       address: editForm.address.trim(),
-      city: editForm.city.trim()
+      city: cityStr || 'Bengaluru',
+      area: editForm.address.split(',')[0] || 'Koramangala'
     };
     saveAddressesToStorage(updated);
 
@@ -219,9 +247,12 @@ export default function CheckoutPage() {
     } catch {}
 
     try {
-      const existing = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const digits = (finalOrder.customer_phone || currentPhone || '').replace(/\D/g, '');
+      const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
+      const storageKey = custPhone ? `grabit_orders_${custPhone}` : 'grabit_orders_guest';
+      const existing = JSON.parse(localStorage.getItem(storageKey) || localStorage.getItem('grabit_orders') || '[]');
       const filtered = existing.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
-      localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filtered]));
+      localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filtered]));
       window.dispatchEvent(new Event('grabit_orders_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {
@@ -235,14 +266,276 @@ export default function CheckoutPage() {
 
   if (orderPlaced) {
     return (
-      <div className="container section" style={{ textAlign: 'center', padding: '80px 20px' }}>
-        <div style={{ fontSize: '72px', marginBottom: '24px' }}>🎉</div>
-        <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0071E3', marginBottom: '8px' }}>Order Placed Successfully!</h2>
-        <p style={{ color: '#64748B', fontSize: '16px' }}>Your order is confirmed. Estimated delivery: <strong>{selectedAddress.time}</strong></p>
-        <p style={{ color: '#94A3B8', marginTop: '8px' }}>Redirecting to My Orders...</p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0F1E 0%, #0D1B3E 40%, #0A1628 70%, #060D1A 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+      }}>
+        {/* Animated background orbs */}
+        <div style={{
+          position: 'absolute', top: '10%', left: '15%',
+          width: '320px', height: '320px',
+          background: 'radial-gradient(circle, rgba(0,113,227,0.18) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'orbFloat1 6s ease-in-out infinite'
+        }} />
+        <div style={{
+          position: 'absolute', bottom: '15%', right: '10%',
+          width: '280px', height: '280px',
+          background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'orbFloat2 8s ease-in-out infinite'
+        }} />
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: '600px', height: '600px',
+          background: 'radial-gradient(circle, rgba(0,113,227,0.06) 0%, transparent 65%)',
+          borderRadius: '50%',
+          animation: 'orbPulse 4s ease-in-out infinite'
+        }} />
+
+        {/* Floating particles */}
+        {[...Array(20)].map((_, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            width: `${3 + (i % 4)}px`,
+            height: `${3 + (i % 4)}px`,
+            borderRadius: '50%',
+            background: i % 3 === 0 ? '#0071E3' : i % 3 === 1 ? '#10B981' : '#F59E0B',
+            opacity: 0.4 + (i % 3) * 0.15,
+            left: `${5 + (i * 4.7) % 92}%`,
+            top: `${8 + (i * 7.3) % 85}%`,
+            animation: `particleDrift ${4 + (i % 4)}s ease-in-out ${i * 0.3}s infinite alternate`
+          }} />
+        ))}
+
+        {/* Grid lines overlay */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `linear-gradient(rgba(0,113,227,0.04) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(0,113,227,0.04) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+          pointerEvents: 'none'
+        }} />
+
+        {/* CSS Animations */}
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+          @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -20px) scale(1.1); }
+          }
+          @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-20px, 30px) scale(1.08); }
+          }
+          @keyframes orbPulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%,-50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+          }
+          @keyframes particleDrift {
+            from { transform: translateY(0px) rotate(0deg); }
+            to { transform: translateY(-18px) rotate(180deg); }
+          }
+          @keyframes successEntry {
+            0% { opacity: 0; transform: translateY(40px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes iconBounce {
+            0% { opacity: 0; transform: scale(0) rotate(-15deg); }
+            60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+            80% { transform: scale(0.92) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 40px rgba(0,113,227,0.3), 0 0 80px rgba(0,113,227,0.1); }
+            50% { box-shadow: 0 0 60px rgba(0,113,227,0.5), 0 0 120px rgba(0,113,227,0.2); }
+          }
+          @keyframes checkmarkDraw {
+            from { stroke-dashoffset: 100; }
+            to { stroke-dashoffset: 0; }
+          }
+          @keyframes fadeSlideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes progressFill {
+            from { width: 0%; }
+            to { width: 100%; }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+          }
+          @keyframes ringExpand {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+          }
+          .success-stat-card:hover { transform: translateY(-2px); }
+        `}</style>
+
+        {/* Main card */}
+        <div style={{
+          position: 'relative', zIndex: 10,
+          animation: 'successEntry 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          maxWidth: '480px', width: '90%', margin: '0 auto'
+        }}>
+          {/* Glass card */}
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: '28px',
+            padding: '48px 40px 40px',
+            textAlign: 'center',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
+
+            {/* Animated success icon */}
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '28px', animation: 'iconBounce 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.2s both' }}>
+              {/* Pulsing rings */}
+              <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: '2px solid rgba(16,185,129,0.4)', animation: 'ringExpand 2s ease-out 0.8s infinite' }} />
+              <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: '2px solid rgba(16,185,129,0.3)', animation: 'ringExpand 2s ease-out 1.2s infinite' }} />
+
+              {/* Icon circle */}
+              <div style={{
+                width: '90px', height: '90px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'glowPulse 2.5s ease-in-out 1s infinite',
+                boxShadow: '0 0 40px rgba(16,185,129,0.4)',
+                position: 'relative'
+              }}>
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                  <path
+                    d="M10 22L18 30L34 14"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="100"
+                    style={{ animation: 'checkmarkDraw 0.5s ease-out 0.6s both' }}
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div style={{ animation: 'fadeSlideUp 0.5s ease-out 0.5s both' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px',
+                textTransform: 'uppercase', color: '#10B981',
+                marginBottom: '10px'
+              }}>
+                ✦ ORDER CONFIRMED ✦
+              </div>
+              <h1 style={{
+                fontSize: '30px', fontWeight: 900, lineHeight: 1.15,
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #93C5FD 50%, #60A5FA 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text', margin: '0 0 10px',
+                letterSpacing: '-0.5px'
+              }}>
+                Order Placed<br />Successfully!
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500, margin: '0 0 28px' }}>
+                Your items are being prepared by the store
+              </p>
+            </div>
+
+            {/* ETA Highlight */}
+            <div style={{
+              animation: 'fadeSlideUp 0.5s ease-out 0.7s both',
+              background: 'linear-gradient(135deg, rgba(0,113,227,0.2) 0%, rgba(16,185,129,0.1) 100%)',
+              border: '1px solid rgba(0,113,227,0.3)',
+              borderRadius: '16px', padding: '18px 20px',
+              marginBottom: '24px',
+              display: 'flex', alignItems: 'center', gap: '14px'
+            }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                background: 'linear-gradient(135deg, #0071E3, #005BB5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '22px', boxShadow: '0 4px 14px rgba(0,113,227,0.4)'
+              }}>⚡</div>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Estimated Delivery</div>
+                <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px' }}>{selectedAddress.time}</div>
+                <div style={{ color: '#10B981', fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Express delivery • {selectedAddress.title}</div>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div style={{
+              animation: 'fadeSlideUp 0.5s ease-out 0.9s both',
+              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+              gap: '10px', marginBottom: '28px'
+            }}>
+              {[
+                { emoji: '🛍️', label: 'Items', value: `${totalItems}` },
+                { emoji: '💳', label: 'Payment', value: (selectedPayment || 'UPI').toUpperCase().slice(0, 4) },
+                { emoji: '💰', label: 'Saved', value: `₹${discount + (appliedCoupon ? Math.round(itemTotal * (appliedCoupon.discount / 100)) : 0)}` },
+              ].map(({ emoji, label, value }) => (
+                <div key={label} className="success-stat-card" style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '14px', padding: '14px 10px',
+                  transition: 'all 0.2s ease',
+                  cursor: 'default'
+                }}>
+                  <div style={{ fontSize: '20px', marginBottom: '5px' }}>{emoji}</div>
+                  <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: 900 }}>{value}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Redirect progress bar */}
+            <div style={{ animation: 'fadeSlideUp 0.5s ease-out 1.1s both' }}>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', fontWeight: 600, marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', background: '#10B981', borderRadius: '50%', display: 'inline-block', animation: 'orbPulse 1s ease-in-out infinite' }} />
+                Redirecting to My Orders...
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '100px', height: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #0071E3, #10B981)',
+                  borderRadius: '100px',
+                  animation: 'progressFill 2s linear 0.5s both',
+                  backgroundSize: '200% auto',
+                }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom badge */}
+          <div style={{
+            textAlign: 'center', marginTop: '18px',
+            animation: 'fadeSlideUp 0.5s ease-out 1.3s both'
+          }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              color: 'rgba(255,255,255,0.3)', fontSize: '12px', fontWeight: 600
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              100% Secure & Encrypted
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
+
 
   const OrderSummaryCard = () => (
     <div className="card card-body" style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: isMobile ? 'static' : 'sticky', top: '80px' }}>
@@ -252,21 +545,29 @@ export default function CheckoutPage() {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', maxHeight: '240px', overflowY: 'auto' }}>
         {items.map(item => (
-          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '40px', height: '40px', background: '#F8FAFC', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', flexShrink: 0 }}>
-              <ProductSvg name={item.image} size={34} />
+          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+              <div style={{ width: '40px', height: '40px', background: '#F8FAFC', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', flexShrink: 0 }}>
+                {item.image ? <img src={item.image} alt={item.name} style={{ maxWidth: '32px', maxHeight: '32px', objectFit: 'contain' }} /> : <ProductSvg name={item.image || item.name} size={30} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>{item.name}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{item.weight || '1 unit'} • Qty: {item.qty}</div>
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{item.name}</div>
-              <div style={{ fontSize: '11px', color: '#64748B' }}>{item.weight} • Qty: {item.qty}</div>
-            </div>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>₹{item.price * item.qty}</span>
+            <span style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', flexShrink: 0, whiteSpace: 'nowrap' }}>₹{item.price * item.qty}</span>
           </div>
         ))}
       </div>
       <div className="divider" style={{ margin: '12px 0', borderColor: '#E2E8F0' }} />
       <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Item Total ({totalItems} items)</span><span style={{ fontWeight: 800, color: '#0F172A' }}>₹{itemTotal}</span></div>
       <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Discount</span><span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span></div>
+      {appliedCoupon && (
+        <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+          <span>Coupon Discount ({appliedCoupon.code})</span>
+          <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{couponDiscount}</span>
+        </div>
+      )}
       <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
         <span>Delivery Fee</span>
         <span>{deliveryFee > 0 ? <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{deliveryFee}</span> : <><span style={{ textDecoration: 'line-through', color: '#94A3B8', marginRight: '4px' }}>₹30</span> <span style={{ color: '#10B981', fontWeight: 900 }}>FREE</span></>}</span>
@@ -275,7 +576,7 @@ export default function CheckoutPage() {
       
       <div className="savings-banner" style={{ marginTop: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '10px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Tag size={14} color="#10B981" />
-        You're saving ₹{discount} on this order
+        You're saving ₹{discount + couponDiscount} on this order
       </div>
       
       <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px', marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -432,17 +733,17 @@ export default function CheckoutPage() {
               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '16px', color: '#0F172A' }}>3. Review Order Details</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                 {items.map(item => (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {item.image ? <img src={item.image} alt={item.name} style={{ maxWidth: '32px', maxHeight: '32px', objectFit: 'contain' }} /> : <ProductSvg name={item.name} category={item.category} size={28} />}
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F1F5F9', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {item.image ? <img src={item.image} alt={item.name} style={{ maxWidth: '34px', maxHeight: '34px', objectFit: 'contain' }} /> : <ProductSvg name={item.name} category={item.category} size={30} />}
                       </div>
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>{item.name}</div>
-                        <div style={{ fontSize: '11.5px', color: '#64748B' }}>Qty: {item.qty} × ₹{item.price}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A', lineHeight: 1.35 }}>{item.name}</div>
+                        <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px', fontWeight: 500 }}>Qty: {item.qty} × ₹{item.price}</div>
                       </div>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>₹{item.price * item.qty}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', flexShrink: 0, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price * item.qty}</div>
                   </div>
                 ))}
               </div>
@@ -531,7 +832,7 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <MapPin size={22} color="#0071E3" />
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                {editingAddrIndex !== null ? 'Edit Delivery Address' : 'Select Delivery Location'}
+                {editingAddrIndex !== null ? 'Edit Delivery Address' : (modalTab === 'map' ? 'Pick Location on Map' : 'Select Delivery Location')}
               </h3>
             </div>
 
@@ -585,6 +886,21 @@ export default function CheckoutPage() {
                   </button>
                 </div>
               </form>
+            ) : modalTab === 'map' ? (
+              <DeliveryLocationMapPicker
+                initialLat={13.014333}
+                initialLng={77.646000}
+                initialTitle="Kalpanaaa Software Solutions — Main Office"
+                onSelectLocation={(newLoc) => {
+                  const updated = [newLoc, ...savedAddresses.filter(a => a.tag !== 'Pinned Location')];
+                  saveAddressesToStorage(updated);
+                  handleSelectAddress(newLoc);
+                  setIsLocationModalOpen(false);
+                  setModalTab('list');
+                  showToast('Delivery location selected from map!');
+                }}
+                onClose={() => setModalTab('list')}
+              />
             ) : (
               /* SAVED ADDRESS LIST & ADD CUSTOM LOCATION */
               <>

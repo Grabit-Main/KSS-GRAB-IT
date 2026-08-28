@@ -15,9 +15,9 @@ export async function api(path, options = {}) {
   const token = getAuthToken();
   const isGet = !options.method || options.method === 'GET';
 
-  // Skip GET requests entirely when no token is available.
-  // The caller always has localStorage as a fallback — no need to hit the API.
-  if (isGet && !token) return null;
+  // For public endpoints (orders, products, categories), allow GET requests even without auth token
+  const isPublicGet = isGet && (path.includes('/orders') || path.includes('/products') || path.includes('/categories'));
+  if (isGet && !token && !isPublicGet) return null;
 
   // ✅ FIX: Abort hung requests after 8 seconds so a slow backend response can't
   // block subsequent poll cycles from starting.
@@ -86,4 +86,9 @@ export function logoutUser() {
   if (splashSeen) {
     sessionStorage.setItem('grabit_splash_displayed', splashSeen);
   }
+
+  try {
+    window.dispatchEvent(new Event('grabit_auth_updated'));
+    window.dispatchEvent(new Event('storage'));
+  } catch {}
 }

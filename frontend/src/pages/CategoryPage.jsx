@@ -259,9 +259,11 @@ export default function CategoryPage() {
   const navigate = useNavigate();
   const [allCategories, setAllCategories] = useState(() => {
     try {
-      const stored = localStorage.getItem('grabit_custom_categories');
+      const stored = localStorage.getItem('grabit_seller_custom_categories');
       const customList = stored ? JSON.parse(stored) : [];
-      return [...customList, ...(window.__grabit_categories || [])];
+      const stored2 = localStorage.getItem('grabit_custom_categories');
+      const customList2 = stored2 ? JSON.parse(stored2) : [];
+      return [...customList, ...customList2, ...(window.__grabit_categories || [])];
     } catch {
       return [];
     }
@@ -270,26 +272,32 @@ export default function CategoryPage() {
   useEffect(() => {
     const updateCategories = () => {
       try {
-        const stored = localStorage.getItem('grabit_custom_categories');
+        const stored = localStorage.getItem('grabit_seller_custom_categories');
         const customList = stored ? JSON.parse(stored) : [];
-        setAllCategories([...customList, ...(window.__grabit_categories || [])]);
+        const stored2 = localStorage.getItem('grabit_custom_categories');
+        const customList2 = stored2 ? JSON.parse(stored2) : [];
+        setAllCategories([...customList, ...customList2, ...(window.__grabit_categories || [])]);
       } catch {}
     };
     updateCategories();
     window.addEventListener('grabit_categories_synced', updateCategories);
     window.addEventListener('grabit_categories_updated', updateCategories);
+    window.addEventListener('storage', updateCategories);
     return () => {
       window.removeEventListener('grabit_categories_synced', updateCategories);
       window.removeEventListener('grabit_categories_updated', updateCategories);
+      window.removeEventListener('storage', updateCategories);
     };
   }, []);
 
-  const cleanSlug = String(slug || '').toLowerCase();
+  const cleanSlug = String(slug || '').toLowerCase().trim();
+  const cleanSlugSpace = cleanSlug.replace(/-/g, ' ');
+
   const matchedCatObj = allCategories.find(c => 
-    (c.slug && c.slug.toLowerCase() === cleanSlug) ||
-    String(c.id) === cleanSlug ||
-    (c.name && c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug) ||
-    (c.name && c.name.toLowerCase() === cleanSlug.replace(/-/g, ' '))
+    (c.slug && String(c.slug).toLowerCase().trim() === cleanSlug) ||
+    String(c.id).toLowerCase().trim() === cleanSlug ||
+    (c.name && String(c.name).toLowerCase().trim() === cleanSlugSpace) ||
+    (c.name && String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug)
   );
 
   const catInfo = CATEGORY_MAP[cleanSlug] || (matchedCatObj ? {
@@ -335,37 +343,40 @@ export default function CategoryPage() {
     updateData();
     window.addEventListener('grabit_products_synced', updateData);
     window.addEventListener('grabit_products_updated', updateData);
+    window.addEventListener('storage', updateData);
     return () => {
       window.removeEventListener('grabit_products_synced', updateData);
       window.removeEventListener('grabit_products_updated', updateData);
+      window.removeEventListener('storage', updateData);
     };
   }, []);
 
   const categoryProducts = allProducts.filter(p => {
     if (!slug) return true;
     const targetSlug = cleanSlug;
-    const targetClean = targetSlug.replace(/-/g, ' ');
-    const pCat = String(p.category || '').toLowerCase();
-    const pSlug = String(p.category_slug || '').toLowerCase();
-    const pCatName = String(p.category_name || '').toLowerCase();
-    const catKey = String(catInfo.catKey || '').toLowerCase();
+    const targetClean = cleanSlugSpace;
+
+    const pCat = String(p.category || '').toLowerCase().trim();
+    const pSlug = String(p.category_slug || '').toLowerCase().trim();
+    const pCatName = String(p.category_name || '').toLowerCase().trim();
+    const pCatId = String(p.category_id || '').toLowerCase().trim();
 
     if (matchedCatObj) {
-      if (String(p.category_id) === String(matchedCatObj.id)) return true;
-      if (String(p.category) === String(matchedCatObj.id)) return true;
-      if (pCat === matchedCatObj.name.toLowerCase()) return true;
-      if (matchedCatObj.slug && (pCat === matchedCatObj.slug.toLowerCase() || pSlug === matchedCatObj.slug.toLowerCase())) return true;
+      const mId = String(matchedCatObj.id || '').toLowerCase().trim();
+      const mName = String(matchedCatObj.name || '').toLowerCase().trim();
+      const mSlug = String(matchedCatObj.slug || '').toLowerCase().trim();
+
+      if (mId && (pCatId === mId || pCat === mId)) return true;
+      if (mName && (pCatName === mName || pCat === mName)) return true;
+      if (mSlug && (pCat === mSlug || pSlug === mSlug)) return true;
     }
 
-    return (
-      pCat === targetSlug ||
-      pSlug === targetSlug ||
-      pCat === catKey ||
-      pSlug === catKey ||
-      pCatName.includes(targetClean) ||
-      targetClean.includes(pCat) ||
-      pCat.includes(targetClean)
-    );
+    if (pCat === targetSlug || pSlug === targetSlug) return true;
+    if (pCatName === targetClean || pCat === targetClean) return true;
+    if (pCatName && targetClean && (pCatName.includes(targetClean) || targetClean.includes(pCatName))) return true;
+    if (pCat && targetClean && (pCat.includes(targetClean) || targetClean.includes(pCat))) return true;
+
+    return false;
   });
   const rawSubCats = subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
 

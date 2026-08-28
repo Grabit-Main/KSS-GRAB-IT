@@ -268,7 +268,70 @@ const matchesSubCategory = (product, subCat) => {
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const catInfo = CATEGORY_MAP[slug] || CATEGORY_MAP['snacks-munchies'];
+
+  const [allCategories, setAllCategories] = useState(() => {
+    try {
+      const stored = localStorage.getItem('grabit_seller_custom_categories');
+      const customList = stored ? JSON.parse(stored) : [];
+      const stored2 = localStorage.getItem('grabit_custom_categories');
+      const customList2 = stored2 ? JSON.parse(stored2) : [];
+      return [...customList, ...customList2, ...(window.__grabit_categories || [])];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const updateCategories = () => {
+      try {
+        const stored = localStorage.getItem('grabit_seller_custom_categories');
+        const customList = stored ? JSON.parse(stored) : [];
+        const stored2 = localStorage.getItem('grabit_custom_categories');
+        const customList2 = stored2 ? JSON.parse(stored2) : [];
+        setAllCategories([...customList, ...customList2, ...(window.__grabit_categories || [])]);
+      } catch {}
+    };
+    updateCategories();
+    window.addEventListener('grabit_categories_synced', updateCategories);
+    window.addEventListener('grabit_categories_updated', updateCategories);
+    window.addEventListener('storage', updateCategories);
+    return () => {
+      window.removeEventListener('grabit_categories_synced', updateCategories);
+      window.removeEventListener('grabit_categories_updated', updateCategories);
+      window.removeEventListener('storage', updateCategories);
+    };
+  }, []);
+
+  const cleanSlug = String(slug || '').toLowerCase().trim();
+  const cleanSlugSpace = cleanSlug.replace(/-/g, ' ');
+
+  const matchedCatObj = allCategories.find(c => 
+    (c.slug && String(c.slug).toLowerCase().trim() === cleanSlug) ||
+    String(c.id).toLowerCase().trim() === cleanSlug ||
+    (c.name && String(c.name).toLowerCase().trim() === cleanSlugSpace) ||
+    (c.name && String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug)
+  );
+
+  const catInfo = CATEGORY_MAP[cleanSlug] || (matchedCatObj ? {
+    title: matchedCatObj.name,
+    sub: `Explore all products in ${matchedCatObj.name}.`,
+    catKey: matchedCatObj.slug || matchedCatObj.id || cleanSlug,
+    isDark: false,
+    heroImg: matchedCatObj.image_url || matchedCatObj.image || matchedCatObj.icon || '/grabit-logo.png',
+    gradient: 'linear-gradient(135deg, #EEF4FF 0%, #E0EDFF 50%, #BFDBFE 100%)',
+    accentColor: '#0066FF',
+    bannerIcons: []
+  } : {
+    title: (slug || 'Category').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    sub: 'Explore all products in this category.',
+    catKey: cleanSlug,
+    isDark: false,
+    heroImg: '/grabit-logo.png',
+    gradient: 'linear-gradient(135deg, #EEF4FF 0%, #E0EDFF 50%, #BFDBFE 100%)',
+    accentColor: '#0066FF',
+    bannerIcons: []
+  });
+
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
@@ -280,12 +343,53 @@ export default function CategoryPage() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
 
+  const [allProductsState, setAllProductsState] = useState(() => [...products]);
+
+  useEffect(() => {
+    const updateProds = () => setAllProductsState([...products]);
+    updateProds();
+    window.addEventListener('grabit_products_synced', updateProds);
+    window.addEventListener('grabit_products_updated', updateProds);
+    window.addEventListener('storage', updateProds);
+    return () => {
+      window.removeEventListener('grabit_products_synced', updateProds);
+      window.removeEventListener('grabit_products_updated', updateProds);
+      window.removeEventListener('storage', updateProds);
+    };
+  }, []);
+
   useEffect(() => {
     setActiveSubCat('All');
     setActiveBrands([]);
   }, [slug]);
 
-  const categoryProducts = products.filter(p => p.category === catInfo.catKey || p.category === slug);
+  const categoryProducts = allProductsState.filter(p => {
+    if (!slug) return true;
+    const targetSlug = cleanSlug;
+    const targetClean = cleanSlugSpace;
+
+    const pCat = String(p.category || '').toLowerCase().trim();
+    const pSlug = String(p.category_slug || '').toLowerCase().trim();
+    const pCatName = String(p.category_name || '').toLowerCase().trim();
+    const pCatId = String(p.category_id || '').toLowerCase().trim();
+
+    if (matchedCatObj) {
+      const mId = String(matchedCatObj.id || '').toLowerCase().trim();
+      const mName = String(matchedCatObj.name || '').toLowerCase().trim();
+      const mSlug = String(matchedCatObj.slug || '').toLowerCase().trim();
+
+      if (mId && (pCatId === mId || pCat === mId)) return true;
+      if (mName && (pCatName === mName || pCat === mName)) return true;
+      if (mSlug && (pCat === mSlug || pSlug === mSlug)) return true;
+    }
+
+    if (pCat === targetSlug || pSlug === targetSlug) return true;
+    if (pCatName === targetClean || pCat === targetClean) return true;
+    if (pCatName && targetClean && (pCatName.includes(targetClean) || targetClean.includes(pCatName))) return true;
+    if (pCat && targetClean && (pCat.includes(targetClean) || targetClean.includes(pCat))) return true;
+
+    return false;
+  });
   const rawSubCats = subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
 
   const subCats = rawSubCats.map(s => {

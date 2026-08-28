@@ -23,7 +23,7 @@ import {
 
 export const DashboardAvailable: React.FC = () => {
   const { state, forceDispatchNow, toggleAvailability, acceptOrder, dispatch } = useDelivery();
-  const { stats, history, agentStatus, orderPool, currentOrder } = state;
+  const { stats, history, agentStatus, orderPool, currentOrder, queuedOrders } = state;
   const navigate = useNavigate();
 
   const loggedInUser = (() => {
@@ -211,6 +211,28 @@ export const DashboardAvailable: React.FC = () => {
               {currentOrder.items.length} items • ₹{currentOrder.totalAmount.toFixed(2)} ({currentOrder.paymentMethod})
             </span>
           </div>
+
+          {/* Queued Orders List */}
+          {queuedOrders && queuedOrders.length > 0 && (
+            <div style={{ marginTop: '8px', paddingTop: '14px', borderTop: '1px solid rgba(0, 113, 227, 0.12)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-graphite)' }}>
+                  ⏳ In Queue for You ({queuedOrders.length} next {queuedOrders.length === 1 ? 'order' : 'orders'})
+                </span>
+                <span style={{ fontSize: '10.5px', background: '#DBEAFE', color: '#0071E3', fontWeight: '800', padding: '2px 6px', borderRadius: '4px' }}>
+                  Auto-Dispatches Next
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {queuedOrders.map((qo, idx) => (
+                  <div key={qo.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11.5px' }}>
+                    <span style={{ fontWeight: '800', color: '#0F172A' }}>#{idx + 1} {qo.orderNumber} • {qo.customer.name}</span>
+                    <span style={{ fontWeight: '800', color: '#0071E3' }}>₹{qo.totalAmount}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div

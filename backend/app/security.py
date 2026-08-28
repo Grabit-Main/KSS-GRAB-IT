@@ -20,18 +20,34 @@ def current_user(authorization: str | None = Header(default=None)) -> dict:
     if raw_token in ("demo-seller-token", "seller-token"):
         return {"sub": "c8d0412d-5c3d-489d-8e43-0dc5dcf90389", "role": "seller", "name": "Fresh Mart Supermarket"}
     if raw_token in ("demo-delivery-token", "delivery-token"):
-        return {"sub": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a", "role": "delivery_partner", "name": "Karthik Rider"}
+        return {"sub": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a", "role": "delivery_agent", "name": "Karthik Rider"}
     if raw_token in ("demo-customer-token", "customer-token"):
         return {"sub": "b0cf5967-7bf0-4ce0-9d74-220c59bc6798", "role": "customer", "name": "Rahul Customer"}
 
     try:
-        return jwt.decode(raw_token, settings().jwt_secret, algorithms=["HS256"])
+        data = jwt.decode(raw_token, settings().jwt_secret, algorithms=["HS256"])
+        if data.get("role") == "delivery_partner":
+            data["role"] = "delivery_agent"
+        return data
     except jwt.PyJWTError as exc:
         raise HTTPException(401, "Session expired or invalid") from exc
 
 
 def require_roles(*roles):
+    # Normalized allowed roles set
+    allowed = set(roles)
+    if "delivery_agent" in allowed or "delivery_partner" in allowed:
+        allowed.add("delivery_agent")
+        allowed.add("delivery_partner")
+    if "seller" in allowed or "merchant" in allowed:
+        allowed.add("seller")
+        allowed.add("merchant")
+    # Admin can always access all endpoints
+    allowed.add("admin")
+
     def check(user: dict = __import__("fastapi").Depends(current_user)):
-        if user["role"] not in roles: raise HTTPException(403, "Insufficient permissions")
+        user_role = user.get("role")
+        if user_role not in allowed:
+            raise HTTPException(403, "Insufficient permissions")
         return user
     return check

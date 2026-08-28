@@ -1,55 +1,31 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { MapPin, Edit2, Plus, X, Trash2 } from 'lucide-react';
+import { MapPin, Edit2, Plus, X, Trash2, Check, Navigation, LocateFixed } from 'lucide-react';
+import DeliveryLocationMapPicker from '../components/common/DeliveryLocationMapPicker';
+import {
+  DEFAULT_CUSTOMER_ADDRESSES,
+  loadCustomerAddresses,
+  saveCustomerAddresses,
+  getCustomerAddressKey
+} from '../utils/addressManager';
 
 const LocationContext = createContext();
 
-const getStorageKey = () => {
-  try {
-    const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
-    const phone = (u.phone || '').replace(/\D/g, '');
-    return phone ? `grabit_addresses_${phone}` : 'grabit_addresses_guest';
-  } catch {
-    return 'grabit_addresses_guest';
-  }
-};
-
-const loadStoredLocations = () => {
-  try {
-    const raw = localStorage.getItem(getStorageKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item, idx) => ({
-          id: item.id || idx + 1,
-          tag: item.tag || item.title || 'Home',
-          isDefault: Boolean(item.isDefault),
-          address: item.address || '',
-          area: item.area || (item.city ? item.city.split(',')[0] : 'Bengaluru'),
-          city: item.city || 'Bengaluru',
-          state: item.state || 'Karnataka',
-          pincode: item.pincode || '',
-          radius: '5 km'
-        }));
-      }
-    }
-    return [];
-  } catch {
-    return [];
-  }
-};
-
-export const defaultLocationsList = [];
+export const defaultLocationsList = DEFAULT_CUSTOMER_ADDRESSES;
 
 export function LocationProvider({ children }) {
-  const [locations, setLocations] = useState(loadStoredLocations);
+  const [locations, setLocations] = useState(() => loadCustomerAddresses());
   const [selectedId, setSelectedId] = useState(() => {
-    const list = loadStoredLocations();
+    const list = loadCustomerAddresses();
     const def = list.find(l => l.isDefault) || list[0];
-    return def ? def.id : null;
+    return def ? def.id : 1;
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState('list'); // 'list' | 'map'
+  const [autoLocateMap, setAutoLocateMap] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingLoc, setEditingLoc] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locateStatus, setLocateStatus] = useState('');
 
   // Form states
   const [formTag, setFormTag] = useState('');
@@ -57,34 +33,33 @@ export function LocationProvider({ children }) {
   const [formArea, setFormArea] = useState('');
   const [formPincode, setFormPincode] = useState('');
 
-  // Sync addresses on login/logout
+  // Sync addresses across windows, login/logout, or custom events
   useEffect(() => {
     const syncLocations = () => {
-      const list = loadStoredLocations();
+      const list = loadCustomerAddresses();
       setLocations(list);
-      const def = list.find(l => l.isDefault) || list[0];
-      setSelectedId(def ? def.id : null);
+      setSelectedId(prevId => {
+        if (list.some(l => l.id === prevId)) return prevId;
+        const def = list.find(l => l.isDefault) || list[0];
+        return def ? def.id : null;
+      });
     };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('grabit_auth_updated', syncLocations);
+      window.addEventListener('grabit_addresses_updated', syncLocations);
       window.addEventListener('storage', syncLocations);
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('grabit_auth_updated', syncLocations);
+        window.removeEventListener('grabit_addresses_updated', syncLocations);
         window.removeEventListener('storage', syncLocations);
       }
     };
   }, []);
 
-  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || {
-    tag: 'Add Location',
-    area: 'Select Location',
-    address: 'Select or add delivery address',
-    city: '',
-    pincode: '',
-    radius: ''
-  };
+  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
 
   const selectLocation = (loc) => {
     setSelectedId(loc.id);
@@ -103,10 +78,10 @@ export function LocationProvider({ children }) {
   const handleOpenEditForm = (e, loc) => {
     e.stopPropagation();
     setEditingLoc(loc);
-    setFormTag(loc.tag);
+    setFormTag(loc.tag || loc.title || 'Home');
     setFormAddress(loc.address);
-    setFormArea(loc.area);
-    setFormPincode(loc.pincode);
+    setFormArea(loc.area || '');
+    setFormPincode(loc.pincode || '');
     setIsAddingNew(true);
   };
 
@@ -117,44 +92,50 @@ export function LocationProvider({ children }) {
     if (selectedId === locId) {
       setSelectedId(updated[0]?.id || null);
     }
-    try {
-      localStorage.setItem(getStorageKey(), JSON.stringify(updated));
-    } catch {}
+    saveCustomerAddresses(updated);
   };
 
   const handleSaveLocation = (e) => {
     e.preventDefault();
-    if (!formTag || !formAddress) return;
+    if (!formTag.trim() || !formAddress.trim()) return;
 
     let updated;
     if (editingLoc) {
       updated = locations.map(l => l.id === editingLoc.id ? {
         ...l,
-        tag: formTag,
-        address: formAddress,
-        area: formArea || formTag,
-        pincode: formPincode || ''
+        title: formTag.trim(),
+        tag: formTag.trim(),
+        address: formAddress.trim(),
+        area: formArea.trim() || formTag.trim(),
+        city: formArea.trim() ? `${formArea.trim()}, Bengaluru` : l.city || 'Bengaluru',
+        pincode: formPincode.trim() || l.pincode || '560034'
       } : l);
     } else {
       const newLoc = {
         id: Date.now(),
-        tag: formTag,
+        title: formTag.trim(),
+        tag: formTag.trim(),
         isDefault: locations.length === 0,
-        address: formAddress,
-        area: formArea || formTag,
-        city: 'Bengaluru',
+        address: formAddress.trim(),
+        area: formArea.trim() || formTag.trim(),
+        city: formArea.trim() ? `${formArea.trim()}, Bengaluru` : 'Bengaluru 560034',
         state: 'Karnataka',
-        pincode: formPincode || '',
+        pincode: formPincode.trim() || '560034',
+        time: '15-25 min delivery',
         radius: '5 km'
       };
       updated = [...locations, newLoc];
       setSelectedId(newLoc.id);
     }
     setLocations(updated);
-    try {
-      localStorage.setItem(getStorageKey(), JSON.stringify(updated));
-    } catch {}
+    saveCustomerAddresses(updated);
     setIsAddingNew(false);
+  };
+
+  const handleFetchCurrentLocation = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setModalTab('map');
+    setAutoLocateMap(true);
   };
 
   return (
@@ -180,18 +161,19 @@ export function LocationProvider({ children }) {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#FFFFFF', borderRadius: '24px', padding: '24px',
-              maxWidth: '440px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              position: 'relative', border: '1px solid #E2E8F0'
+              background: '#FFFFFF', borderRadius: '24px', padding: modalTab === 'map' ? '20px' : '24px',
+              maxWidth: modalTab === 'map' ? '480px' : '440px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              position: 'relative', border: '1px solid #E2E8F0',
+              maxHeight: '90vh', overflowY: 'auto'
             }}
           >
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                {isAddingNew ? (editingLoc ? 'Edit Address' : 'Add New Address') : 'Saved Delivery Locations'}
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                {isAddingNew ? (editingLoc ? 'Edit Address' : 'Add New Address') : (modalTab === 'map' ? 'Choose Delivery Location' : 'Saved Delivery Locations')}
               </h3>
               <button
-                onClick={() => { setIsModalOpen(false); setIsAddingNew(false); }}
+                onClick={() => { setIsModalOpen(false); setIsAddingNew(false); setModalTab('list'); }}
                 style={{
                   width: '32px', height: '32px', borderRadius: '50%',
                   background: '#F1F5F9', border: 'none', display: 'flex',
@@ -206,6 +188,31 @@ export function LocationProvider({ children }) {
             {isAddingNew ? (
               /* ADD / EDIT ADDRESS FORM */
               <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <button
+                  type="button"
+                  onClick={handleFetchCurrentLocation}
+                  disabled={isLocating}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    width: '100%',
+                    padding: '10px 14px',
+                    background: '#EFF6FF',
+                    border: '1px solid #BFDBFE',
+                    borderRadius: '12px',
+                    color: '#0071E3',
+                    fontSize: '12.5px',
+                    fontWeight: 800,
+                    cursor: isLocating ? 'wait' : 'pointer'
+                  }}
+                >
+                  <LocateFixed size={15} color="#0071E3" />
+                  <span>{isLocating ? (locateStatus || 'Locating GPS...') : 'Use Current GPS Location'}</span>
+                </button>
+
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Address Tag (e.g. Home, Work)</label>
                   <input
@@ -271,6 +278,26 @@ export function LocationProvider({ children }) {
                   </button>
                 </div>
               </form>
+            ) : modalTab === 'map' ? (
+              /* 🗺️ INTERACTIVE LEAFLET MAP VIEW (MATCHING SCREENSHOT 2) */
+              <div>
+                <DeliveryLocationMapPicker
+                  initialLat={activeLoc?.lat || 13.014333}
+                  initialLng={activeLoc?.lng || 77.646000}
+                  initialTitle={activeLoc?.title || 'Kalpanaaa Software Solutions — Main Office'}
+                  autoLocate={autoLocateMap}
+                  onSelectLocation={(newLocation) => {
+                    const updated = [newLocation, ...locations.filter(l => l.tag !== 'Pinned Location' && l.tag !== 'Current Location')];
+                    setLocations(updated);
+                    setSelectedId(newLocation.id);
+                    saveCustomerAddresses(updated);
+                    setIsModalOpen(false);
+                    setModalTab('list');
+                    setAutoLocateMap(false);
+                  }}
+                  onClose={() => { setModalTab('list'); setAutoLocateMap(false); }}
+                />
+              </div>
             ) : (
               /* SAVED ADDRESS CARDS LIST */
               <div>
@@ -349,8 +376,13 @@ export function LocationProvider({ children }) {
                           </div>
 
                           {/* Middle Row: Street Address */}
-                          <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1E293B', paddingLeft: '24px' }}>
+                          <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1E293B', paddingLeft: '24px', lineHeight: 1.4 }}>
                             {loc.address}
+                          </div>
+
+                          {/* Delivery Time / ETA Row matching Image 2 */}
+                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#0071E3', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>{loc.time || '15-25 min delivery'}</span>
                           </div>
 
                           {/* Bottom Row: City, State, Pincode */}
@@ -365,15 +397,44 @@ export function LocationProvider({ children }) {
                   </div>
                 )}
 
+                {/* Primary Action Button: Use Current Location (GPS) */}
+                <button
+                  type="button"
+                  onClick={handleFetchCurrentLocation}
+                  disabled={isLocating}
+                  style={{
+                    width: '100%',
+                    padding: '13px 16px',
+                    borderRadius: '16px',
+                    border: '1.5px solid #0071E3',
+                    background: isLocating ? '#EFF6FF' : '#0071E3',
+                    color: isLocating ? '#0071E3' : '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: 900,
+                    cursor: isLocating ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease',
+                    marginBottom: '10px',
+                    boxShadow: isLocating ? 'none' : '0 4px 14px rgba(0, 113, 227, 0.25)'
+                  }}
+                >
+                  <Navigation size={16} color={isLocating ? '#0071E3' : '#FFFFFF'} fill={isLocating ? 'none' : '#FFFFFF'} />
+                  <span>{isLocating ? (locateStatus || 'Fetching Current Location...') : 'Use Current Location'}</span>
+                </button>
+
                 {/* Dotted Action Button: Add New Delivery Address */}
                 <button
+                  type="button"
                   onClick={handleOpenAddForm}
                   style={{
                     width: '100%',
                     padding: '13px',
                     borderRadius: '16px',
-                    border: '1.5px dashed #0071E3',
-                    background: '#FFFFFF',
+                    border: '1.5px dashed #CBD5E1',
+                    background: '#F8FAFC',
                     color: '#0071E3',
                     fontSize: '13.5px',
                     fontWeight: 900,
@@ -384,8 +445,8 @@ export function LocationProvider({ children }) {
                     gap: '8px',
                     transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#0071E3'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
                 >
                   <Plus size={16} color="#0071E3" strokeWidth={2.5} /> Add New Delivery Address
                 </button>

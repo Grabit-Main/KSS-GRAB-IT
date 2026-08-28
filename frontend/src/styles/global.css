@@ -8,7 +8,7 @@ html, body, #root {
   width: 100%;
   max-width: 100vw;
   overflow-x: clip;
-  background: #F5F5F7;
+  background: #F8FAFC;
   scroll-behavior: smooth;
 }
 
@@ -756,4 +756,120 @@ button:active, .btn:active {
 div[style*="overflowX: 'auto'"], div[style*="overflow-x: auto"] {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   🎨 ULTRA-PREMIUM ARCHITECTURAL DESIGN BACKGROUND SYSTEM
+   ═════════════════════════════════════════════════════════════════════════ */
+.professional-design-background {
+  position: relative;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+  background-image:
+    /* Layer 1: High-precision architectural dot matrix pattern */
+    radial-gradient(rgba(148, 163, 184, 0.28) 1.2px, transparent 1.2px),
+    /* Layer 2: Subtle angled grid lines for modern depth */
+    linear-gradient(rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+    /* Layer 3: Vibrant ambient mesh gradient orbs */
+    radial-gradient(circle at 12% 10%, rgba(0, 113, 227, 0.09) 0%, transparent 45%),
+    radial-gradient(circle at 88% 18%, rgba(99, 102, 241, 0.08) 0%, transparent 42%),
+    radial-gradient(circle at 15% 48%, rgba(16, 185, 129, 0.07) 0%, transparent 38%),
+    radial-gradient(circle at 92% 65%, rgba(245, 158, 11, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 50% 92%, rgba(14, 165, 233, 0.08) 0%, transparent 45%),
+    linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #F8FAFC 100%);
+  background-size: 
+    24px 24px,
+    48px 48px,
+    48px 48px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  overflow-x: clip;
+}
+
+/* Ambient Floating Glow Lights */
+@keyframes ambientOrbFloatA {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(25px, -20px) scale(1.06); }
+}
+
+@keyframes ambientOrbFloatB {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-20px, 25px) scale(1.08); }
+}
+
+.ambient-bg-orb-top {
+  position: absolute;
+  top: 10px;
+  left: -40px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 113, 227, 0.14) 0%, rgba(56, 189, 248, 0.04) 55%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientOrbFloatA 14s ease-in-out infinite;
+}
+
+.ambient-bg-orb-mid {
+  position: absolute;
+  top: 500px;
+  right: -50px;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, rgba(244, 63, 94, 0.04) 55%, transparent 70%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientOrbFloatB 18s ease-in-out infinite;
+}
+
+.ambient-bg-orb-bottom {
+  position: absolute;
+  top: 1100px;
+  left: 5%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(245, 158, 11, 0.05) 55%, transparent 70%);
+  filter: blur(65px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientOrbFloatA 16s ease-in-out infinite reverse;
+}
+
+/* Glassmorphic Elevated Section Cards */
+.professional-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease !important;
+}
+
+.professional-card:hover {
+  border-color: rgba(186, 214, 255, 0.9) !important;
+  box-shadow: 0 14px 36px -6px rgba(0, 113, 227, 0.08), 0 6px 16px -2px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+/* Modern category tile style */
+.category-tile-modern {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%) !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.category-tile-modern:hover {
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%) !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 10px 22px rgba(0, 113, 227, 0.12) !important;
+  transform: translateY(-3px) scale(1.02) !important;
 }

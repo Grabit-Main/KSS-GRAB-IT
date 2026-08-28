@@ -68,9 +68,9 @@ export default function CheckoutPage() {
     }
     return {
       title: 'Delivery Location',
-      name: currentName,
-      phone: currentPhone,
-      address: 'Enter your delivery address',
+      name: currentName || 'Valued Customer',
+      phone: currentPhone || '9876543210',
+      address: 'Flat 301, Sunshine Heights, 80 Feet Rd, Koramangala, Bengaluru 560034',
       tag: 'DIRECT DELIVERY',
       time: '15-25 min delivery'
     };
@@ -178,11 +178,218 @@ export default function CheckoutPage() {
 
   if (orderPlaced) {
     return (
-      <div className="container section" style={{ textAlign: 'center', padding: '80px 20px' }}>
-        <div style={{ fontSize: '72px', marginBottom: '24px' }}>🎉</div>
-        <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0071E3', marginBottom: '8px' }}>Order Placed Successfully!</h2>
-        <p style={{ color: '#64748B', fontSize: '16px' }}>Your order is confirmed. Estimated delivery: <strong>{selectedAddress.time}</strong></p>
-        <p style={{ color: '#94A3B8', marginTop: '8px' }}>Redirecting to My Orders...</p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0F1E 0%, #0D1B3E 40%, #0A1628 70%, #060D1A 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+      }}>
+        {/* Animated background orbs */}
+        <div style={{
+          position: 'absolute', top: '10%', left: '15%',
+          width: '320px', height: '320px',
+          background: 'radial-gradient(circle, rgba(0,113,227,0.18) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'orbFloat1 6s ease-in-out infinite'
+        }} />
+        <div style={{
+          position: 'absolute', bottom: '15%', right: '10%',
+          width: '280px', height: '280px',
+          background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'orbFloat2 8s ease-in-out infinite'
+        }} />
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: '600px', height: '600px',
+          background: 'radial-gradient(circle, rgba(0,113,227,0.06) 0%, transparent 65%)',
+          borderRadius: '50%',
+          animation: 'orbPulse 4s ease-in-out infinite'
+        }} />
+
+        {/* CSS Animations */}
+        <style>{`
+          @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -20px) scale(1.1); }
+          }
+          @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-20px, 30px) scale(1.08); }
+          }
+          @keyframes orbPulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%,-50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+          }
+          @keyframes successEntry {
+            0% { opacity: 0; transform: translateY(40px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes iconBounce {
+            0% { opacity: 0; transform: scale(0) rotate(-15deg); }
+            60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+            80% { transform: scale(0.92) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 40px rgba(0,113,227,0.3), 0 0 80px rgba(0,113,227,0.1); }
+            50% { box-shadow: 0 0 60px rgba(0,113,227,0.5), 0 0 120px rgba(0,113,227,0.2); }
+          }
+          @keyframes checkmarkDraw {
+            from { stroke-dashoffset: 100; }
+            to { stroke-dashoffset: 0; }
+          }
+          @keyframes fadeSlideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes progressFill {
+            from { width: 0%; }
+            to { width: 100%; }
+          }
+          @keyframes ringExpand {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+          }
+        `}</style>
+
+        {/* Main card */}
+        <div style={{
+          position: 'relative', zIndex: 10,
+          animation: 'successEntry 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          maxWidth: '480px', width: '90%', margin: '0 auto'
+        }}>
+          {/* Glass card */}
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: '28px',
+            padding: '48px 40px 40px',
+            textAlign: 'center',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
+
+            {/* Animated success icon */}
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '28px', animation: 'iconBounce 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.2s both' }}>
+              <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: '2px solid rgba(16,185,129,0.4)', animation: 'ringExpand 2s ease-out 0.8s infinite' }} />
+              <div style={{
+                width: '90px', height: '90px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'glowPulse 2.5s ease-in-out 1s infinite',
+                boxShadow: '0 0 40px rgba(16,185,129,0.4)',
+                position: 'relative'
+              }}>
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                  <path
+                    d="M10 22L18 30L34 14"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="100"
+                    style={{ animation: 'checkmarkDraw 0.5s ease-out 0.6s both' }}
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div style={{ animation: 'fadeSlideUp 0.5s ease-out 0.5s both' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px',
+                textTransform: 'uppercase', color: '#10B981',
+                marginBottom: '10px'
+              }}>
+                ✦ ORDER CONFIRMED ✦
+              </div>
+              <h1 style={{
+                fontSize: '30px', fontWeight: 900, lineHeight: 1.15,
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #93C5FD 50%, #60A5FA 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text', margin: '0 0 10px',
+                letterSpacing: '-0.5px'
+              }}>
+                Order Placed<br />Successfully!
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500, margin: '0 0 28px' }}>
+                Your items are being prepared by the store
+              </p>
+            </div>
+
+            {/* ETA Highlight */}
+            <div style={{
+              animation: 'fadeSlideUp 0.5s ease-out 0.7s both',
+              background: 'linear-gradient(135deg, rgba(0,113,227,0.2) 0%, rgba(16,185,129,0.1) 100%)',
+              border: '1px solid rgba(0,113,227,0.3)',
+              borderRadius: '16px', padding: '18px 20px',
+              marginBottom: '24px',
+              display: 'flex', alignItems: 'center', gap: '14px'
+            }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                background: 'linear-gradient(135deg, #0071E3, #005BB5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '22px', boxShadow: '0 4px 14px rgba(0,113,227,0.4)'
+              }}>⚡</div>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Estimated Delivery</div>
+                <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px' }}>{selectedAddress.time}</div>
+                <div style={{ color: '#10B981', fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Express delivery • {selectedAddress.title}</div>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div style={{
+              animation: 'fadeSlideUp 0.5s ease-out 0.9s both',
+              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+              gap: '10px', marginBottom: '28px'
+            }}>
+              {[
+                { emoji: '🛍️', label: 'Items', value: `${totalItems}` },
+                { emoji: '💳', label: 'Payment', value: (selectedPayment || 'UPI').toUpperCase().slice(0, 4) },
+                { emoji: '💰', label: 'Saved', value: `₹${discount}` },
+              ].map(({ emoji, label, value }) => (
+                <div key={label} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '14px', padding: '14px 10px'
+                }}>
+                  <div style={{ fontSize: '20px', marginBottom: '5px' }}>{emoji}</div>
+                  <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: 900 }}>{value}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Redirect progress bar */}
+            <div style={{ animation: 'fadeSlideUp 0.5s ease-out 1.1s both' }}>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', fontWeight: 600, marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', background: '#10B981', borderRadius: '50%', display: 'inline-block', animation: 'orbPulse 1s ease-in-out infinite' }} />
+                Redirecting to My Orders...
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '100px', height: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #0071E3, #10B981)',
+                  borderRadius: '100px',
+                  animation: 'progressFill 2s linear 0.5s both'
+                }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '18px', animation: 'fadeSlideUp 0.5s ease-out 1.3s both' }}>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', fontWeight: 600 }}>🔒 100% Secure & Encrypted</span>
+          </div>
+        </div>
       </div>
     );
   }

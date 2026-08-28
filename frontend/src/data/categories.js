@@ -215,6 +215,10 @@ if (typeof window !== 'undefined') {
     syncCategoriesFromBackend();
   }, 0);
 
+  setInterval(() => {
+    syncCategoriesFromBackend();
+  }, 8000);
+
   window.addEventListener('grabit_categories_updated', syncCategoriesFromBackend);
   window.addEventListener('storage', syncCategoriesFromBackend);
 }

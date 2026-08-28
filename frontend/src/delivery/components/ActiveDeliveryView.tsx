@@ -30,7 +30,7 @@ const stepIcons: Record<string, React.ReactNode> = {
 
 export const ActiveDeliveryView: React.FC = () => {
   const { state, advanceStatus, openModal } = useDelivery();
-  const { currentOrder } = state;
+  const { currentOrder, queuedOrders } = state;
 
   if (!currentOrder) return null;
 
@@ -540,6 +540,88 @@ export const ActiveDeliveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── 8. Next in Line Queued Orders (Auto-Dispatches upon Delivery Completion) ── */}
+      {queuedOrders && queuedOrders.length > 0 && (
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1.5px solid #BFDBFE',
+            padding: '20px',
+            boxShadow: '0 4px 16px rgba(0, 113, 227, 0.06)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>⏳</span>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0F172A', margin: 0 }}>
+                  Upcoming In Your Queue ({queuedOrders.length})
+                </h3>
+                <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '600' }}>
+                  Auto-activates as your next delivery once current order is completed
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: '11px', background: '#EFF6FF', color: '#0071E3', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
+              FIFO QUEUE
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {queuedOrders.map((qOrd, qIdx) => (
+              <div
+                key={qOrd.id}
+                style={{
+                  background: '#F8FAFC',
+                  borderRadius: '14px',
+                  border: '1px solid #E2E8F0',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: qIdx === 0 ? '#0071E3' : '#64748B',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: '900'
+                  }}>
+                    #{qIdx + 1}
+                  </span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong style={{ fontSize: '13.5px', color: '#0F172A' }}>{qOrd.orderNumber}</strong>
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0071E3', background: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
+                        {qIdx === 0 ? 'Next Up' : 'In Queue'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+                      To: {qOrd.customer.name} • {qOrd.customer.address}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0F172A' }}>₹{qOrd.totalAmount}</span>
+                  <div style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700' }}>{qOrd.paymentMethod}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -68,10 +68,12 @@ export interface Order {
   deliveredAt?: string;
   failedAt?: string;
   returnedAt?: string;
-  otp: string; // 4-digit OTP for POD
-  assignedAgentId: string;
+  otp?: string; // 4-digit OTP for POD
+  assignedAgentId?: string;
   proofOfDelivery?: ProofOfDelivery;
   issueReport?: IssueReport;
+  isQueued?: boolean;
+  queuePosition?: number;
 }
 
 export interface DeliveryAgent {

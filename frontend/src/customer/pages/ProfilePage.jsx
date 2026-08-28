@@ -9,6 +9,12 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 import { logoutUser } from '../../api';
+import { 
+  DEFAULT_CUSTOMER_ADDRESSES,
+  loadCustomerAddresses,
+  saveCustomerAddresses,
+  getCustomerAddressKey
+} from '../../utils/addressManager';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -65,31 +71,35 @@ export default function ProfilePage() {
   const [giftCardCode, setGiftCardCode] = useState('');
 
   // ── SAVED ADDRESSES STATE (Dynamic per user account) ──
-  const getAddressesKey = (phone) => `grabit_addresses_${(phone || userPhone || 'default').replace(/\D/g, '')}`;
-  const loadUserAddresses = (phone) => {
-    try {
-      const data = localStorage.getItem(getAddressesKey(phone));
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  };
+  const getAddressesKey = (phone) => getCustomerAddressKey(phone || userPhone);
+  const loadUserAddresses = (phone) => loadCustomerAddresses(phone || userPhone);
 
   const [profileAddresses, setProfileAddresses] = useState(() => loadUserAddresses(initialUser?.phone));
   const [editingAddrIdx, setEditingAddrIdx] = useState(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editAddrForm, setEditAddrForm] = useState({ title: '', address: '', city: '', isDefault: false });
 
+  // Sync profile addresses when updated from Header or Checkout
+  useState(() => {
+    const syncAddresses = () => {
+      setProfileAddresses(loadUserAddresses(userPhone));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('grabit_addresses_updated', syncAddresses);
+      window.addEventListener('storage', syncAddresses);
+    }
+  });
+
   const handleStartEditAddress = (idx, addr) => {
     setEditingAddrIdx(idx);
     setIsAddingAddress(false);
-    setEditAddrForm({ title: addr.title, address: addr.address, city: addr.city, isDefault: addr.isDefault || false });
+    setEditAddrForm({ title: addr.title || addr.tag || 'Home', address: addr.address, city: addr.city || 'Bengaluru', isDefault: addr.isDefault || false });
   };
 
   const handleStartAddAddress = () => {
     setEditingAddrIdx(null);
     setIsAddingAddress(true);
-    setEditAddrForm({ title: 'Home', address: '', city: '', isDefault: profileAddresses.length === 0 });
+    setEditAddrForm({ title: 'Home', address: '', city: 'Bengaluru', isDefault: profileAddresses.length === 0 });
   };
 
   const handleSaveEditAddress = (e) => {
@@ -100,24 +110,36 @@ export default function ProfilePage() {
     }
 
     let updated = [...profileAddresses];
+    const newAddr = {
+      id: Date.now(),
+      title: editAddrForm.title.trim() || 'Home',
+      tag: editAddrForm.title.trim() || 'Home',
+      address: editAddrForm.address.trim(),
+      area: editAddrForm.address.split(',')[0] || 'Koramangala',
+      city: editAddrForm.city.trim() || 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560034',
+      time: '15-25 min delivery',
+      radius: '5 km',
+      isDefault: editAddrForm.isDefault || false
+    };
+
     if (isAddingAddress) {
-      if (editAddrForm.isDefault) {
+      if (newAddr.isDefault) {
         updated = updated.map(a => ({ ...a, isDefault: false }));
       }
-      updated.push({ ...editAddrForm, isDefault: editAddrForm.isDefault || updated.length === 0 });
-      showToast(`Address "${editAddrForm.title}" saved successfully!`);
+      updated.push({ ...newAddr, isDefault: newAddr.isDefault || updated.length === 0 });
+      showToast(`Address "${newAddr.title}" saved successfully!`);
     } else if (editingAddrIdx !== null) {
-      if (editAddrForm.isDefault) {
+      if (newAddr.isDefault) {
         updated = updated.map(a => ({ ...a, isDefault: false }));
       }
-      updated[editingAddrIdx] = { ...updated[editingAddrIdx], ...editAddrForm };
-      showToast(`Address "${editAddrForm.title}" updated successfully!`);
+      updated[editingAddrIdx] = { ...updated[editingAddrIdx], ...newAddr };
+      showToast(`Address "${newAddr.title}" updated successfully!`);
     }
 
     setProfileAddresses(updated);
-    try {
-      localStorage.setItem(getAddressesKey(userPhone), JSON.stringify(updated));
-    } catch {}
+    saveCustomerAddresses(updated, userPhone);
     setEditingAddrIdx(null);
     setIsAddingAddress(false);
   };
@@ -125,9 +147,7 @@ export default function ProfilePage() {
   const handleDeleteAddress = (idx) => {
     const updated = profileAddresses.filter((_, i) => i !== idx);
     setProfileAddresses(updated);
-    try {
-      localStorage.setItem(getAddressesKey(userPhone), JSON.stringify(updated));
-    } catch {}
+    saveCustomerAddresses(updated, userPhone);
     showToast('Delivery address removed.');
   };
 

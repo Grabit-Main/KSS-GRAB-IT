@@ -1,3 +1,5 @@
+import { get } from '../../api';
+
 // Comprehensive Product Catalog (270+ Products, 22-25 Products Per Category)
 
 export const products = [
@@ -348,10 +350,145 @@ export const searchProducts = (query) => {
 
   const matches = products.filter(p =>
     p.name.toLowerCase().includes(q) ||
-    p.category.toLowerCase().includes(q) ||
-    p.brand.toLowerCase().includes(q) ||
+    (p.category && p.category.toLowerCase().includes(q)) ||
+    (p.brand && p.brand.toLowerCase().includes(q)) ||
     (p.weight && p.weight.toLowerCase().includes(q))
   );
 
   return matches.length > 0 ? matches : products.filter(p => p.rating >= 4.7).slice(0, 30);
 };
+
+export const baseProducts = [...products];
+
+export async function syncProductsFromBackend() {
+  try {
+    let apiProducts = [];
+    try {
+      const res = await get('/products/').catch(() => []);
+      apiProducts = Array.isArray(res) ? res : (res?.results || []);
+    } catch {}
+
+    let customSellerProducts = [];
+    try {
+      customSellerProducts = JSON.parse(localStorage.getItem('grabit_seller_custom_products') || '[]');
+    } catch {}
+
+    let deletedIds = new Set();
+    try {
+      deletedIds = new Set(JSON.parse(localStorage.getItem('grabit_seller_deleted_product_ids') || '[]').map(String));
+    } catch {}
+
+    let overrides = {};
+    try {
+      overrides = JSON.parse(localStorage.getItem('grabit_seller_product_overrides') || '{}');
+    } catch {}
+
+    const merged = [];
+    const seenIds = new Set();
+
+    // 1. Process custom seller products first
+    for (const cp of customSellerProducts) {
+      const idStr = String(cp.id);
+      if (deletedIds.has(idStr)) continue;
+      seenIds.add(idStr);
+
+      const catVal = String(cp.category || cp.category_slug || cp.category_id || cp.category_name || '').toLowerCase();
+      const catNameVal = String(cp.category_name || cp.category || '').toLowerCase();
+
+      merged.push({
+        id: cp.id,
+        name: cp.name,
+        price: Number(cp.price) || 0,
+        mrp: Number(cp.mrp || cp.discount_price || cp.price) || 0,
+        discount: cp.mrp ? Math.round(((cp.mrp - cp.price) / cp.mrp) * 100) : 10,
+        image: cp.image || cp.image_url || '/grabit-logo.png',
+        category: cp.category || cp.category_slug || cp.category_id || 'produce',
+        category_slug: cp.category_slug || cp.category || (cp.category_name ? cp.category_name.toLowerCase().replace(/\s+/g, '-') : ''),
+        category_name: cp.category_name || cp.category || '',
+        category_id: cp.category_id || cp.category || '',
+        brand: cp.brand || 'Grabit Seller',
+        weight: cp.unit || '1 unit',
+        delivery_time: cp.delivery_time || '8 mins',
+        rating: Number(cp.rating) || 5.0,
+        reviews: Number(cp.reviews) || 1,
+        inStock: cp.is_active !== false && (cp.stock_quantity === undefined || Number(cp.stock_quantity) > 0),
+        stock_quantity: parseInt(cp.stock_quantity ?? 50, 10),
+      });
+    }
+
+    // 2. Process API products
+    for (const apiProd of apiProducts) {
+      const idStr = String(apiProd.id);
+      if (deletedIds.has(idStr)) continue;
+
+      const ov = overrides[idStr] || {};
+      const catVal = String(ov.category || apiProd.category_slug || apiProd.category_id || apiProd.category || '').toLowerCase();
+      const catNameVal = String(ov.category_name || apiProd.category_name || apiProd.category || apiProd.categories?.name || '').toLowerCase();
+
+      const prodObj = {
+        id: apiProd.id,
+        name: ov.name || apiProd.name,
+        price: Number(ov.price ?? apiProd.price) || 0,
+        mrp: Number(ov.mrp ?? apiProd.mrp ?? apiProd.price) || 0,
+        discount: 10,
+        image: ov.image || apiProd.image_url || apiProd.image || 'default-product.png',
+        category: catVal || 'produce',
+        category_slug: apiProd.category_slug || (catNameVal ? catNameVal.replace(/\s+/g, '-') : ''),
+        category_name: catNameVal,
+        category_id: apiProd.category_id || apiProd.category || '',
+        brand: ov.brand || apiProd.brand || 'Grabit Fresh',
+        weight: '1 unit',
+        rating: 5.0,
+        reviews: 1,
+        inStock: ov.inStock ?? ((apiProd.stock ?? apiProd.stock_quantity ?? 1) > 0),
+        stock_quantity: parseInt(ov.stock_quantity ?? apiProd.stock ?? apiProd.stock_quantity ?? 50, 10),
+      };
+
+      if (seenIds.has(idStr)) {
+        const idx = merged.findIndex(p => String(p.id) === idStr);
+        if (idx >= 0) merged[idx] = { ...merged[idx], ...prodObj };
+      } else {
+        merged.push(prodObj);
+        seenIds.add(idStr);
+      }
+    }
+
+    // 3. Process base products
+    for (const bp of baseProducts) {
+      const idStr = String(bp.id);
+      if (deletedIds.has(idStr)) continue;
+      if (!seenIds.has(idStr)) {
+        const ov = overrides[idStr] || {};
+        merged.push({
+          ...bp,
+          ...ov,
+          category_slug: bp.category_slug || bp.category,
+          category_name: bp.category_name || bp.category,
+        });
+        seenIds.add(idStr);
+      }
+    }
+
+    products.length = 0;
+    products.push(...merged);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('grabit_products_synced'));
+    }
+  } catch (err) {
+    console.warn('Sync products error:', err);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    syncProductsFromBackend();
+  }, 0);
+
+  setInterval(() => {
+    syncProductsFromBackend();
+  }, 3000);
+
+  window.addEventListener('grabit_products_updated', syncProductsFromBackend);
+  window.addEventListener('storage', syncProductsFromBackend);
+}

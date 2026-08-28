@@ -63,8 +63,8 @@ const MEGA_CATEGORIES = [
 
 const CATEGORY_HEADER_THEMES = {
   '/': {
-    bg: '#F5F5F7',
-    border: '#D2D2D7',
+    bg: '#FFFFFF',
+    border: '#E2E8F0',
     accent: '#0071E3',
     placeholder: 'Search for milk, butter, chips, snacks...'
   },
@@ -700,8 +700,10 @@ export default function Header() {
       {/* 📱 NON-STICKY MICRO CATEGORY VISUAL STRIP (Scrolls away naturally with page content) */}
       {isMobile && showCategoryStrip && (
         <div style={{
-          background: currentTheme.bg,
-          borderBottom: `1px solid ${currentTheme.border}`,
+          background: 'rgba(255, 255, 255, 0.88)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
           padding: '10px 12px 8px'
         }}>
           <div style={{
@@ -739,11 +741,11 @@ export default function Header() {
                   <div style={{
                     width: '48px', height: '48px', borderRadius: '14px',
                     background: '#FFFFFF',
-                    border: isActive ? `2.5px solid ${item.color}` : '1.5px solid #D2D2D7',
+                    border: isActive ? `2.5px solid ${item.color}` : '1.5px solid #E2E8F0',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     overflow: 'hidden',
-                    boxShadow: isActive ? `0 4px 12px ${item.color}30` : '0 2px 6px rgba(0,0,0,0.04)',
-                    transform: isActive ? 'scale(1.03)' : 'none',
+                    boxShadow: isActive ? `0 6px 16px ${item.color}35` : '0 2px 6px rgba(0,0,0,0.04)',
+                    transform: isActive ? 'scale(1.05)' : 'none',
                     transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
                   }}>
                     <ProductSvg name={item.img} size={36} />

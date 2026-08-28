@@ -8,7 +8,225 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { get } from '../../api';
 
+const ORDER_CYCLE_STAGES = [
+  { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & payment verified', icon: '🛒' },
+  { key: 'preparing', label: 'Preparing', fullLabel: 'Store Preparing', desc: 'Store is picking & packing items', icon: '🍳' },
+  { key: 'ready', label: 'Packed', fullLabel: 'Ready for Pickup', desc: 'Packed & awaiting rider pickup', icon: '📦' },
+  { key: 'out_for_delivery', label: 'On Way', fullLabel: 'Out for Delivery', desc: 'Rider en-route to your doorstep', icon: '🛵' },
+  { key: 'delivered', label: 'Delivered', fullLabel: 'Order Delivered', desc: 'Order delivered safely', icon: '🎉' }
+];
+
+const getCycleStepIndex = (statusStr) => {
+  const st = String(statusStr || '').toLowerCase();
+  if (st === 'delivered') return 4;
+  if (st === 'out_for_delivery' || st === 'out-for-delivery') return 3;
+  if (st === 'ready' || st === 'ready_for_pickup') return 2;
+  if (st === 'preparing' || st === 'confirmed') return 1;
+  if (st === 'placed') return 0;
+  return 0;
+};
+
+const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
+  const currentStep = getCycleStepIndex(status);
+  const isDelivered = currentStep === 4;
+  const isCancelled = String(status || '').toLowerCase() === 'cancelled';
+  const activeStage = ORDER_CYCLE_STAGES[currentStep] || ORDER_CYCLE_STAGES[0];
+
+  if (isCancelled) {
+    return (
+      <div style={{
+        background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px',
+        padding: '12px 16px', color: '#991B1B', fontSize: '13px', fontWeight: 800,
+        display: 'flex', alignItems: 'center', gap: '8px'
+      }}>
+        <span style={{ fontSize: '14px' }}>✕</span> Order Cancelled
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: expanded
+        ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
+        : '#F8FAFC',
+      borderRadius: '16px',
+      padding: expanded ? '20px' : '14px 16px',
+      border: expanded ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+      color: expanded ? '#FFFFFF' : '#0F172A',
+      marginBottom: '16px',
+      boxShadow: expanded ? '0 10px 30px rgba(0,0,0,0.25)' : 'none'
+    }}>
+      <style>{`
+        @keyframes trackerPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.5; }
+        }
+        @keyframes riderMove {
+          0%, 100% { transform: translateX(0px); }
+          50% { transform: translateX(4px); }
+        }
+      `}</style>
+
+      {/* Header Info Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+            background: isDelivered ? '#10B981' : '#0071E3',
+            boxShadow: isDelivered ? '0 0 6px #10B981' : '0 0 6px #0071E3',
+            animation: isDelivered ? 'none' : 'trackerPulse 1.8s ease-in-out infinite'
+          }} />
+          <span style={{
+            fontSize: '12px', fontWeight: 800,
+            color: expanded ? '#93C5FD' : '#0071E3',
+            textTransform: 'uppercase', letterSpacing: '0.5px'
+          }}>
+            {isDelivered ? '✓ Order Delivered' : 'Live Tracker Status'}
+          </span>
+        </div>
+        {!isDelivered && (
+          <div style={{
+            background: expanded ? 'rgba(0,113,227,0.25)' : '#EFF6FF',
+            color: expanded ? '#60A5FA' : '#0071E3',
+            border: expanded ? '1px solid rgba(0,113,227,0.4)' : '1px solid #BFDBFE',
+            padding: '3px 10px', borderRadius: '20px',
+            fontSize: '11.5px', fontWeight: 800,
+            display: 'inline-flex', alignItems: 'center', gap: '4px'
+          }}>
+            ⚡ ETA: {eta || '15 min'}
+          </div>
+        )}
+      </div>
+
+      {/* 5-Step Timeline Graphic */}
+      <div style={{ position: 'relative', margin: '14px 0 16px', padding: '0 4px' }}>
+        {/* Background track */}
+        <div style={{
+          position: 'absolute', top: '15px', left: '16px', right: '16px', height: '3px',
+          background: expanded ? 'rgba(255,255,255,0.12)' : '#E2E8F0', zIndex: 0
+        }} />
+        {/* Progress track */}
+        <div style={{
+          position: 'absolute', top: '15px', left: '16px',
+          width: `calc(${(currentStep / 4) * 100}% - ${(currentStep / 4) * 32}px)`,
+          height: '3px',
+          background: 'linear-gradient(90deg, #0071E3, #10B981)',
+          transition: 'width 0.5s ease', zIndex: 1
+        }} />
+
+        {/* Nodes row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+          {ORDER_CYCLE_STAGES.map((stage, idx) => {
+            const isDone = idx < currentStep;
+            const isCurrent = idx === currentStep;
+            return (
+              <div key={stage.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20%' }}>
+                <div style={{
+                  width: isCurrent ? '32px' : '28px',
+                  height: isCurrent ? '32px' : '28px',
+                  borderRadius: '50%',
+                  background: isDone
+                    ? '#10B981'
+                    : isCurrent
+                    ? '#0071E3'
+                    : expanded ? 'rgba(255,255,255,0.1)' : '#FFFFFF',
+                  border: isCurrent
+                    ? '3px solid #FFFFFF'
+                    : isDone
+                    ? '2px solid #10B981'
+                    : expanded ? '2px solid rgba(255,255,255,0.2)' : '2px solid #CBD5E1',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: isCurrent ? '0 0 12px rgba(0,113,227,0.5)' : isDone ? '0 2px 6px rgba(16,185,129,0.2)' : 'none',
+                  fontSize: isCurrent ? '14px' : '11px',
+                  transition: 'all 0.25s ease'
+                }}>
+                  {isDone ? (
+                    <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                  ) : (
+                    <span>{stage.icon}</span>
+                  )}
+                </div>
+
+                {/* Short Clean Label (No Overlap) */}
+                <span style={{
+                  fontSize: '10px', fontWeight: isCurrent ? 800 : 600,
+                  color: isCurrent
+                    ? (expanded ? '#60A5FA' : '#0071E3')
+                    : isDone
+                    ? (expanded ? '#34D399' : '#10B981')
+                    : (expanded ? 'rgba(255,255,255,0.35)' : '#94A3B8'),
+                  marginTop: '5px', textAlign: 'center',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  maxWidth: '100%'
+                }}>
+                  {stage.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active Stage Details Card */}
+      <div style={{
+        padding: '12px 14px', borderRadius: '12px',
+        background: expanded ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
+        border: expanded ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: expanded ? 'rgba(0,113,227,0.2)' : '#EFF6FF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '18px', flexShrink: 0,
+            animation: currentStep === 3 ? 'riderMove 1.5s ease-in-out infinite' : 'none'
+          }}>
+            {activeStage.icon}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 800, color: expanded ? '#FFFFFF' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Current Status: {activeStage.fullLabel}
+            </div>
+            <div style={{ fontSize: '11px', color: expanded ? 'rgba(255,255,255,0.6)' : '#64748B', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {activeStage.desc}
+            </div>
+          </div>
+        </div>
+        {currentStep === 3 && (
+          <span style={{
+            background: '#ECFDF5', color: '#059669', fontSize: '10px', fontWeight: 800,
+            padding: '3px 8px', borderRadius: '8px', border: '1px solid #A7F3D0', flexShrink: 0
+          }}>
+            🛵 Rider Assigned
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const STATUS_TABS = ['All Orders', 'Ongoing', 'Delivered', 'Cancelled'];
+
+const getCurrentUserPhone = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+    return (u.phone || '').replace(/\D/g, '');
+  } catch {
+    return '';
+  }
+};
+
+const loadFastCachedOrders = () => {
+  try {
+    const raw = sessionStorage.getItem('grabit_fast_orders_cache');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [];
+};
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('All Orders');
@@ -22,99 +240,90 @@ export default function OrdersPage() {
   const w = useWindowWidth();
   const isMobile = w <= 768;
 
-  const loadAllOrders = useCallback(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      const reversed = [...stored].reverse();
-      return reversed.map(o => {
-        // Map all real-world statuses to normalized display values
-        let normStatus = 'confirmed';
-        let step = 1;
-        if (o.status === 'delivered') { normStatus = 'delivered'; step = 3; }
-        else if (o.status === 'out_for_delivery' || o.status === 'out-for-delivery') { normStatus = 'out-for-delivery'; step = 2; }
-        else if (o.status === 'cancelled') { normStatus = 'cancelled'; step = 0; }
-        else if (o.status === 'ready_for_pickup' || o.status === 'ready') { normStatus = 'ready'; step = 1; }
-        else if (o.status === 'preparing' || o.status === 'placed') { normStatus = 'confirmed'; step = 1; }
+  const formatApiOrder = useCallback((o) => {
+    let normStatus = 'placed';
+    let step = 0;
+    const st = String(o.status || '').toLowerCase();
+    if (st === 'delivered') { normStatus = 'delivered'; step = 4; }
+    else if (st === 'out_for_delivery' || st === 'out-for-delivery' || st === 'picked_up') { normStatus = 'out-for-delivery'; step = 3; }
+    else if (st === 'ready_for_pickup' || st === 'ready') { normStatus = 'ready'; step = 2; }
+    else if (st === 'preparing' || st === 'confirmed') { normStatus = 'preparing'; step = 1; }
+    else if (st === 'cancelled') { normStatus = 'cancelled'; step = -1; }
+    else { normStatus = 'placed'; step = 0; }
 
-        return {
-          id: o.id || `GB${o.rawId?.slice(-6) || '9921'}`,
-          rawId: o.rawId,
-          date: o.date ? `${o.date}, ${o.time || '10:00 AM'}` : 'Just now',
-          status: normStatus,
-          eta: o.estimated_time || 'Arriving in 15 min',
-          trackerStep: step,
-          items: (o.items || []).map(it => ({
-            name: it.name,
-            qty: it.qty || it.quantity || 1,
-            price: it.price || 50,
-            image: it.image || 'lays-classic-salted'
-          })),
-          totalItems: (o.items || []).reduce((acc, it) => acc + (it.qty || it.quantity || 1), 0),
-          total: o.total_amount || 199,
-          address: o.delivery_address || o.address || 'Delivery Address',
-          paymentMethod: o.payment_method || 'UPI',
-          deliverySlot: o.estimated_time || '10-15 min express delivery',
-          discount: o.discount || 0
-        };
-      });
-    } catch {
-      return [];
-    }
+    const rawItems = Array.isArray(o.items) ? o.items : (() => {
+      try { return JSON.parse(o.items || '[]'); } catch { return []; }
+    })();
+    const dateStr = o.created_at
+      ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : (o.date || 'Just now');
+    const timeStr = o.created_at
+      ? new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : (o.time || '10:00 AM');
+
+    return {
+      id: o.id || `GB${String(o.id || '').slice(-6) || '9921'}`,
+      rawId: o.id,
+      date: `${dateStr}, ${timeStr}`,
+      status: normStatus,
+      eta: o.estimated_time || 'Arriving in 15 min',
+      trackerStep: step,
+      items: rawItems.map(it => ({
+        name: it.name || it.product_name || 'Item',
+        qty: it.qty || it.quantity || 1,
+        price: it.price || it.unit_price || 50,
+        image: it.image || it.image_url || 'lays-classic-salted'
+      })),
+      totalItems: rawItems.reduce((acc, it) => acc + (it.qty || it.quantity || 1), 0),
+      total: Number(o.total_amount || o.total) || 199,
+      address: o.delivery_address || o.address || 'Delivery Address',
+      paymentMethod: o.payment_method || 'UPI',
+      deliverySlot: o.estimated_time || '10-15 min express delivery',
+      discount: Number(o.discount) || 0
+    };
   }, []);
 
-  const [ordersList, setOrdersList] = useState(loadAllOrders);
+  const [ordersList, setOrdersList] = useState(loadFastCachedOrders);
 
-  const fetchBackendUpdates = useCallback(async () => {
+  const fetchCloudOrders = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      if (localOrders.length === 0) return;
-      
-      const apiOrders = await get('/orders/');
-      if (!Array.isArray(apiOrders)) return;
-
-      let changed = false;
-      const updatedOrders = localOrders.map(local => {
-        const backendMatch = apiOrders.find(api => api.id === local.rawId || api.id === local.id);
-        if (backendMatch && (backendMatch.status !== local.status || backendMatch.delivery_agent_id !== local.delivery_agent_id)) {
-          changed = true;
-          return { ...local, status: backendMatch.status, delivery_agent_id: backendMatch.delivery_agent_id };
-        }
-        return local;
-      });
-
-      if (changed) {
-        localStorage.setItem('grabit_orders', JSON.stringify(updatedOrders));
-        window.dispatchEvent(new Event('grabit_orders_updated'));
+      const currentPhone = getCurrentUserPhone();
+      const fetchPath = currentPhone ? `/orders/user/${currentPhone}` : '/orders/';
+      const apiOrders = await get(fetchPath).catch(() => []);
+      if (Array.isArray(apiOrders)) {
+        const formatted = apiOrders
+          .filter(o => {
+            const addr = (o.delivery_address || o.address || '').trim();
+            const items = Array.isArray(o.items) ? o.items
+              : (() => { try { return JSON.parse(o.items || '[]'); } catch { return []; } })();
+            return addr.length > 4 && items.length > 0 && Number(o.total_amount || o.total || 0) > 0;
+          })
+          .map(formatApiOrder);
+        setOrdersList(formatted);
+        try {
+          sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify(formatted));
+        } catch {}
       }
     } catch (error) {
-      console.warn("Failed to fetch order updates", error);
+      console.warn('Failed to fetch orders from cloud', error);
     } finally {
       isFetchingRef.current = false;
     }
-  }, []);
+  }, [formatApiOrder]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
-    const sync = () => setOrdersList(loadAllOrders());
-    window.addEventListener('storage', sync);
-    window.addEventListener('grabit_orders_updated', sync);
-    
-    fetchBackendUpdates();
-    const interval = setInterval(() => {
-      sync();
-      fetchBackendUpdates();
-    }, 2500);
-    return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('grabit_orders_updated', sync);
-      clearInterval(interval);
-    };
-  }, [loadAllOrders, fetchBackendUpdates]);
+    fetchCloudOrders();
+    const interval = setInterval(fetchCloudOrders, 10000);
+    return () => clearInterval(interval);
+  }, [fetchCloudOrders]);
+
+
 
   const dynamicStats = useMemo(() => {
     const total = ordersList.length;
@@ -298,57 +507,18 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Active Express Order Live Tracker Banner */}
-                  {(order.status === 'out-for-delivery' || order.status === 'out_for_delivery') && (
-                    <div style={{
-                      background: 'linear-gradient(135deg, #EFF6FF 0%, #F0F7FF 100%)',
-                      borderRadius: '14px', padding: '14px 16px', marginBottom: '16px',
-                      border: '1px solid #BFDBFE'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <Zap size={16} color="#0071E3" fill="#0071E3" />
-                        <span style={{ fontWeight: 900, fontSize: '13.5px', color: '#0071E3' }}>
-                          Arriving in {order.eta || '15 min'}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '11.5px', color: '#475569', margin: '0 0 14px 0', fontWeight: 500 }}>
-                        Our delivery partner is on the way to deliver your order
-                      </p>
-
-                      {/* Tracker Progress Bar */}
-                      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        {trackerSteps.map((s, i) => {
-                          const isDone = i <= (order.trackerStep || 2);
-                          return (
-                            <div key={s} style={{ flex: i < trackerSteps.length - 1 ? 1 : 'none', display: 'flex', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', zIndex: 1 }}>
-                                <div style={{
-                                  width: '24px', height: '24px', borderRadius: '50%',
-                                  background: isDone ? '#0071E3' : '#CBD5E1',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: isDone ? '0 2px 6px rgba(0,113,227,0.3)' : 'none'
-                                }}>
-                                  <Check size={13} color="white" strokeWidth={3} />
-                                </div>
-                                <span style={{ fontSize: '9px', fontWeight: 800, color: isDone ? '#0F172A' : '#94A3B8', whiteSpace: 'nowrap' }}>
-                                  {s}
-                                </span>
-                              </div>
-                              {i < trackerSteps.length - 1 && (
-                                <div style={{
-                                  flex: 1, height: '3px', borderRadius: '2px',
-                                  background: i < (order.trackerStep || 2) ? '#0071E3' : '#E2E8F0',
-                                  margin: '0 2px', marginBottom: '16px'
-                                }} />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                  {(order.status === 'out-for-delivery' || order.status === 'out_for_delivery' || order.status === 'confirmed' || order.status === 'preparing' || order.status === 'placed') && (
+                    <OrderTrackerCycle status={order.status} eta={order.eta} orderNumber={order.id} />
                   )}
 
                   {/* Order Item Thumbnails */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  <div
+                    className="hide-scrollbar"
+                    style={{
+                      display: 'flex', gap: '8px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '4px',
+                      scrollbarWidth: 'none', msOverflowStyle: 'none'
+                    }}
+                  >
                     {order.items.map((item, i) => (
                       <div
                         key={i}
@@ -366,35 +536,88 @@ export default function OrdersPage() {
 
                   {/* Order Card Footer */}
                   <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    paddingTop: '12px', borderTop: '1px solid #F1F5F9', flexWrap: 'wrap', gap: '10px'
+                    display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    paddingTop: '14px',
+                    borderTop: '1px solid #E2E8F0',
+                    gap: '12px'
                   }}>
-                    <div style={{ fontSize: '12.5px', color: '#475569' }}>
-                      <strong style={{ color: '#0F172A', fontWeight: 900 }}>{order.totalItems} items</strong> • Total <strong style={{ color: '#0071E3', fontWeight: 900 }}>₹{order.total}</strong>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '13.5px',
+                      color: '#475569',
+                      fontWeight: 700
+                    }}>
+                      <span>
+                        <strong style={{ color: '#0F172A', fontWeight: 900 }}>{order.totalItems} items</strong>
+                        <span style={{ margin: '0 6px', color: '#CBD5E1' }}>•</span>
+                        Total <strong style={{ color: '#0071E3', fontWeight: 900, fontSize: '15px' }}>₹{Number(order.total || 0).toLocaleString('en-IN')}</strong>
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '10px',
+                      width: isMobile ? '100%' : 'auto',
+                      minWidth: isMobile ? '100%' : '260px'
+                    }}>
                       <button
+                        type="button"
                         onClick={() => setSelectedOrderModal(order)}
                         style={{
-                          background: '#FFFFFF', border: '1px solid #CBD5E1',
-                          borderRadius: '10px', padding: '6px 12px', fontSize: '12px',
-                          fontWeight: 800, color: '#0F172A', cursor: 'pointer',
+                          background: '#FFFFFF',
+                          border: '1.5px solid #CBD5E1',
+                          borderRadius: '12px',
+                          padding: '10px 16px',
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                         }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#0071E3'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
                       >
                         View Details
                       </button>
                       <button
-                        onClick={() => handleReorder(order)}
-                        style={{
-                          background: '#0071E3', border: 'none',
-                          borderRadius: '10px', padding: '6px 14px', fontSize: '12px',
-                          fontWeight: 900, color: '#FFFFFF', cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(0,113,227,0.25)'
+                        type="button"
+                        onClick={() => {
+                          const isActive = isOngoingStatus(order.status);
+                          if (isActive) {
+                            setSelectedOrderModal(order);
+                          } else {
+                            handleReorder(order);
+                          }
                         }}
+                        style={{
+                          background: '#0071E3',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '10px 18px',
+                          fontSize: '13px',
+                          fontWeight: 900,
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 14px rgba(0,113,227,0.25)',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#005BB5'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#0071E3'}
                       >
-                        {order.status === 'out-for-delivery' ? 'Track Order' : 'Reorder'}
+                        {isOngoingStatus(order.status) ? 'Track Order' : 'Reorder'}
                       </button>
                     </div>
                   </div>
@@ -460,11 +683,19 @@ export default function OrdersPage() {
             </button>
 
             <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 4px', color: '#0F172A' }}>
-              Order #GB{selectedOrderModal.id}
+              Order #{selectedOrderModal.id}
             </h3>
             <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px', fontWeight: 600 }}>
               Placed on {selectedOrderModal.date} • Total ₹{selectedOrderModal.total}
             </div>
+
+            {/* Real-time Status Tracker Cycle */}
+            <OrderTrackerCycle
+              status={selectedOrderModal.status}
+              eta={selectedOrderModal.eta}
+              orderNumber={selectedOrderModal.id}
+              expanded={true}
+            />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto' }}>
               {selectedOrderModal.items.map((item, idx) => (

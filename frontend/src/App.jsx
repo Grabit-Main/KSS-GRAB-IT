@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { LocationProvider } from './context/LocationContext';
 import { ToastProvider } from './context/ToastContext';
@@ -37,6 +37,28 @@ function ScrollToTop() {
       window.scrollTo(0, 0);
     }
   }, [location.pathname, location.search]);
+  return null;
+}
+
+// Prompts for login first if user hasn't logged in or skipped yet
+function InitialLoginCheck() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const session = localStorage.getItem('grabit_session');
+    const skipped = sessionStorage.getItem('grabit_skipped_login');
+    const isSpecialPath =
+      location.pathname.startsWith('/seller') ||
+      location.pathname.startsWith('/delivery') ||
+      location.pathname.startsWith('/admin') ||
+      location.pathname === '/login';
+
+    if (!session && !skipped && !isSpecialPath && location.pathname === '/') {
+      navigate('/login', { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   return null;
 }
 
@@ -118,6 +140,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <InitialLoginCheck />
       <ToastProvider>
         <LocationProvider>
           <WishlistProvider>
