@@ -645,7 +645,7 @@ export default function OrdersPage() {
                           onClick={() => {
                             const isActive = isOngoingStatus(order.status);
                             if (isActive) {
-                              setSelectedOrderModal(order);
+                              navigate(`/orders/track/${order.rawId || order.id}`, { state: { order } });
                             } else {
                               handleReorder(order);
                             }

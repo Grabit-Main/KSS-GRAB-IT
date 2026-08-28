@@ -12,6 +12,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
+import OrderTrackingPage from './pages/OrderTrackingPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ProfilePage from './pages/ProfilePage';
 import HelpPage from './pages/HelpPage';
@@ -44,14 +45,19 @@ function InitialLoginCheck() {
 
   useEffect(() => {
     const session = localStorage.getItem('grabit_session');
-    const skipped = sessionStorage.getItem('grabit_skipped_login');
-    const isSpecialPath =
-      location.pathname.startsWith('/seller') ||
-      location.pathname.startsWith('/delivery') ||
-      location.pathname.startsWith('/admin') ||
-      location.pathname === '/login';
+    const userStr = localStorage.getItem('grabit_user');
+    const path = location.pathname;
 
-    if (!session && !skipped && !isSpecialPath && location.pathname === '/') {
+    const isProtected =
+      path === '/checkout' ||
+      path === '/orders' ||
+      path.startsWith('/orders/track') ||
+      path.startsWith('/order-tracking') ||
+      path === '/profile' ||
+      path === '/wishlist';
+
+    if (isProtected && (!session || !userStr)) {
+      sessionStorage.setItem('grabit_intended_path', path);
       navigate('/login', { replace: true });
     }
   }, [location.pathname, navigate]);
@@ -78,6 +84,8 @@ function AnimatedRoutes() {
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders" element={<OrdersPage />} />
+      <Route path="/orders/track/:orderId" element={<OrderTrackingPage />} />
+      <Route path="/order-tracking/:orderId" element={<OrderTrackingPage />} />
       <Route path="/search" element={<SearchResultsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/wishlist" element={<WishlistPage />} />

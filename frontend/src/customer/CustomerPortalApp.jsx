@@ -12,6 +12,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
+import OrderTrackingPage from './pages/OrderTrackingPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ProfilePage from './pages/ProfilePage';
 import HelpPage from './pages/HelpPage';
@@ -57,6 +58,22 @@ function CustomerAnimatedRoutes() {
           element={
             <AuthGuard allowedRoles={['customer', 'admin']}>
               <OrdersPage />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/orders/track/:orderId"
+          element={
+            <AuthGuard allowedRoles={['customer', 'admin']}>
+              <OrderTrackingPage />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/order-tracking/:orderId"
+          element={
+            <AuthGuard allowedRoles={['customer', 'admin']}>
+              <OrderTrackingPage />
             </AuthGuard>
           }
         />
