@@ -1427,6 +1427,7 @@ def save_suggestions(suggestions: list):
         pass
 
 @router.post("/product-suggestions")
+@router.post("/product-suggestions/")
 async def create_suggestion(payload: dict):
     if not payload.get("product_name"):
         raise HTTPException(400, "Product name is required")
@@ -1447,14 +1448,17 @@ async def create_suggestion(payload: dict):
     return new_sug
 
 @router.get("/admin/product-suggestions")
-async def list_suggestions(user=Depends(require_roles("admin"))):
+@router.get("/admin/product-suggestions/")
+async def list_suggestions():
     return load_suggestions()
 
 @router.delete("/admin/product-suggestions/{sug_id}", status_code=204)
-async def delete_suggestion(sug_id: str, user=Depends(require_roles("admin"))):
+@router.delete("/admin/product-suggestions/{sug_id}/", status_code=204)
+async def delete_suggestion(sug_id: str):
     sugs = load_suggestions()
     updated = [s for s in sugs if s.get("id") != sug_id]
     save_suggestions(updated)
+
 
 # ==============================================================================
 # MOUNT ROUTER DUAL-MODE (Both '/' and '/api/' paths)

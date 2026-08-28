@@ -907,13 +907,17 @@ export function AdminPortalApp() {
                   <>
                     <div onClick={() => setNotificationsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
                     <div style={{
-                      position: 'absolute', top: '44px', right: 0,
+                      position: isMobile ? 'fixed' : 'absolute',
+                      top: isMobile ? '64px' : '44px',
+                      right: isMobile ? '14px' : 0,
+                      left: isMobile ? '14px' : 'auto',
                       width: isMobile ? 'calc(100vw - 28px)' : '340px',
-                      maxHeight: '420px',
+                      maxWidth: '380px',
+                      maxHeight: '440px',
                       background: '#FFFFFF', borderRadius: '16px',
                       border: '1px solid #E2E8F0',
-                      boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
-                      zIndex: 999, overflow: 'hidden',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+                      zIndex: 9999, overflow: 'hidden',
                       display: 'flex', flexDirection: 'column'
                     }}>
                       {/* Panel Header */}
