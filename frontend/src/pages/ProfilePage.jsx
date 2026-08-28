@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   User, ShoppingBag, MessageSquare, Heart, Wallet, ChevronRight, 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
+import { forceScrollToTop } from '../utils/scrollToTop';
 import { 
   DEFAULT_CUSTOMER_ADDRESSES,
   loadCustomerAddresses,
@@ -20,6 +21,10 @@ export default function ProfilePage() {
   const { showToast } = useToast();
   const w = useWindowWidth();
   const isMobile = w <= 768;
+
+  useEffect(() => {
+    forceScrollToTop();
+  }, []);
 
   const getStoredUser = () => {
     try {

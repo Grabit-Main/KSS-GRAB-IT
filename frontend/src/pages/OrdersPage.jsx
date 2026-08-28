@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { get } from '../api';
+import { forceScrollToTop } from '../utils/scrollToTop';
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & payment verified', icon: '🛒' },
@@ -358,8 +359,8 @@ export default function OrdersPage() {
   }, [formatApiOrder]);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+    forceScrollToTop();
+  }, [activeFilter, selectedOrder]);
 
   useEffect(() => {
     fetchCloudOrders();

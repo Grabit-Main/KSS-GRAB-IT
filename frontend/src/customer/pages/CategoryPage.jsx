@@ -8,6 +8,7 @@ import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
 import { subCategories, brands } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
+import { forceScrollToTop } from '../../utils/scrollToTop';
 const CATEGORY_MAP = {
   'snacks-munchies': {
     title: 'Snacks & Munchies',
@@ -361,7 +362,12 @@ export default function CategoryPage() {
   useEffect(() => {
     setActiveSubCat('All');
     setActiveBrands([]);
+    forceScrollToTop();
   }, [slug]);
+
+  useEffect(() => {
+    forceScrollToTop();
+  }, [activeSubCat]);
 
   const categoryProducts = allProductsState.filter(p => {
     if (!slug) return true;

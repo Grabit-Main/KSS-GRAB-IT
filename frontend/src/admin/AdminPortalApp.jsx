@@ -30,6 +30,7 @@ import {
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
+import { forceScrollToTop } from '../utils/scrollToTop';
 
 // ── Window Width Hook ──
 const useWindowWidth = () => {
@@ -145,6 +146,10 @@ export function AdminPortalApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState('MONTHLY');
+
+  useEffect(() => {
+    forceScrollToTop();
+  }, [activeTab]);
 
   // ── Data State ──
   const [orders, setOrders] = useState([]);

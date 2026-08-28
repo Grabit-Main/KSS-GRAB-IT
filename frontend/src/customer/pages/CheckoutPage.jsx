@@ -17,6 +17,9 @@ const PAYMENT_METHODS = [
   { id: 'cod', icon: <Banknote size={18} color="#0071E3" />, label: 'Cash on Delivery', sub: 'Pay in cash when your order arrives' },
 ];
 
+import { useEffect } from 'react';
+import { forceScrollToTop } from '../../utils/scrollToTop';
+
 export default function CheckoutPage() {
   const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart } = useCart();
   const { showToast } = useToast();
@@ -24,6 +27,11 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const navigate = useNavigate();
+
+  // Instant scroll to top whenever step changes
+  useEffect(() => {
+    forceScrollToTop();
+  }, [step]);
 
   const w = useWindowWidth();
   const isMobile = w <= 768;

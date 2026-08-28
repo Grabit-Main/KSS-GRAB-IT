@@ -22,16 +22,14 @@ import FloatingCartBar from './components/common/FloatingCartBar';
 import './styles/global.css';
 import './styles/components.css';
 
+import { forceScrollToTop } from '../utils/scrollToTop';
+
 // Automatically scroll to top synchronously BEFORE paint on route change
 function ScrollToTop() {
   const location = useLocation();
   useLayoutEffect(() => {
-    try {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    } catch {
-      window.scrollTo(0, 0);
-    }
-  }, [location.pathname, location.search]);
+    forceScrollToTop();
+  }, [location.pathname, location.search, location.hash]);
   return null;
 }
 

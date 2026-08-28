@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
+import { forceScrollToTop } from '../utils/scrollToTop';
 import {
   DEFAULT_CUSTOMER_ADDRESSES,
   loadCustomerAddresses,
@@ -24,6 +25,10 @@ export default function CartPage() {
   const recommended = products.slice(0, 6);
   const w = useWindowWidth();
   const isMobile = w <= 640;
+
+  useEffect(() => {
+    forceScrollToTop();
+  }, []);
 
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [couponInputCode, setCouponInputCode] = useState('');

@@ -24,6 +24,8 @@ const PAYMENT_METHODS = [
   { id: 'cod', icon: <Banknote size={18} color="#0071E3" />, label: 'Cash on Delivery', sub: 'Pay in cash when your order arrives' },
 ];
 
+import { forceScrollToTop } from '../utils/scrollToTop';
+
 export default function CheckoutPage() {
   const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
   const { showToast } = useToast();
@@ -31,6 +33,11 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const navigate = useNavigate();
+
+  // Instant scroll to top whenever step changes
+  useEffect(() => {
+    forceScrollToTop();
+  }, [step]);
 
   // Enforce login for checkout: if user is not logged in, proceed to login page first
   useEffect(() => {

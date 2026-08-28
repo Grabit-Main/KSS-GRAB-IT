@@ -28,6 +28,7 @@ import { NewOrderPopup } from './components/NewOrderPopup';
 
 import './index.css';
 import './App.css';
+import { forceScrollToTop } from '../utils/scrollToTop';
 
 function DeliveryAppLayout() {
   const { state, unreadCount } = useDelivery();
@@ -38,12 +39,8 @@ function DeliveryAppLayout() {
 
   // Scroll to top on every delivery sub-route change
   useLayoutEffect(() => {
-    try {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    } catch {
-      window.scrollTo(0, 0);
-    }
-  }, [location.pathname]);
+    forceScrollToTop();
+  }, [location.pathname, location.search, location.hash]);
 
   React.useEffect(() => {
     try {
