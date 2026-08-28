@@ -21,9 +21,18 @@ export function LoginPage() {
 
   const handleSkip = () => {
     sessionStorage.setItem('grabit_skipped_login', 'true');
+    localStorage.removeItem('grabit_session');
+    localStorage.removeItem('grabit_user');
+    localStorage.removeItem('grabit_seller_access');
+    localStorage.removeItem('grabit_seller_profile');
     const intended = sessionStorage.getItem('grabit_intended_path');
     if (intended) {
       sessionStorage.removeItem('grabit_intended_path');
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
+      window.dispatchEvent(new Event('grabit_addresses_updated'));
+      window.dispatchEvent(new Event('storage'));
     }
     navigate('/', { replace: true });
   };

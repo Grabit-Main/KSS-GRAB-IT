@@ -48,10 +48,27 @@ export const getCustomerAddressKey = (userOrPhone) => {
 
 export const loadCustomerAddresses = (userOrPhone) => {
   try {
-    const key = getCustomerAddressKey(userOrPhone);
-    const raw = localStorage.getItem(key) ||
-      localStorage.getItem('grabit_addresses_default') ||
-      localStorage.getItem('grabit_addresses_guest');
+    let activePhone = '';
+    if (typeof userOrPhone === 'string') {
+      activePhone = userOrPhone;
+    } else if (userOrPhone && typeof userOrPhone === 'object') {
+      activePhone = userOrPhone.phone || '';
+    } else {
+      const session = localStorage.getItem('grabit_session');
+      const uStr = localStorage.getItem('grabit_user');
+      if (!session || !uStr) {
+        return [];
+      }
+      const u = JSON.parse(uStr || '{}');
+      activePhone = u.phone || '';
+    }
+
+    if (!activePhone) {
+      return [];
+    }
+
+    const key = getCustomerAddressKey(activePhone);
+    const raw = localStorage.getItem(key);
 
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -71,15 +88,13 @@ export const loadCustomerAddresses = (userOrPhone) => {
         }));
       }
     }
-  } catch {}
 
-  // Auto-seed default addresses if none exist yet
-  try {
-    const key = getCustomerAddressKey(userOrPhone);
+    // Auto-seed default addresses for a logged-in user if none exist yet
     localStorage.setItem(key, JSON.stringify(DEFAULT_CUSTOMER_ADDRESSES));
-  } catch {}
-
-  return DEFAULT_CUSTOMER_ADDRESSES;
+    return DEFAULT_CUSTOMER_ADDRESSES;
+  } catch {
+    return [];
+  }
 };
 
 export const saveCustomerAddresses = (addresses, userOrPhone) => {
