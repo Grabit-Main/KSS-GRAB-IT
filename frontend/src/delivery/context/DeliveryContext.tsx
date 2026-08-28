@@ -709,15 +709,34 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
           orderPool: poolOrders
         };
       }
-      // If rider was available and has received an assigned active order from seller
-      if (activeOrder) {
+      // If rider is currently viewing delivery success modal, do not re-assign
+      if (state.activeModal === 'DELIVERY_SUCCESS') {
         return {
           ...state,
-          agentStatus: 'ON_DELIVERY',
-          currentOrder: activeOrder,
           queuedOrders,
           orderPool: poolOrders
         };
+      }
+      // If rider was available and has received an assigned active order from seller
+      if (activeOrder) {
+        let isDelivered = false;
+        try {
+          const dList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+          const dSet = new Set(Array.isArray(dList) ? dList.map((x: any) => String(x).toLowerCase().trim()) : []);
+          const aId = String(activeOrder.id || '').toLowerCase().trim();
+          const aNum = String(activeOrder.orderNumber || '').toLowerCase().trim();
+          if (dSet.has(aId) || dSet.has(aNum)) isDelivered = true;
+        } catch {}
+
+        if (!isDelivered) {
+          return {
+            ...state,
+            agentStatus: 'ON_DELIVERY',
+            currentOrder: activeOrder,
+            queuedOrders,
+            orderPool: poolOrders
+          };
+        }
       }
       return {
         ...state,
@@ -854,28 +873,91 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const completeDelivery = useCallback((pod: ProofOfDelivery) => {
     soundEngine.playSuccessChime();
+    const deliveredOrder = state.currentOrder;
     dispatch({ type: 'COMPLETE_DELIVERY', payload: { pod } });
-    // Persist delivered status to cloud only
-    const rawId = state.currentOrder?.id;
-    if (rawId) {
-      patch(`/orders/${encodeURIComponent(rawId)}/status`, {
-        status: 'delivered',
-        delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a'
-      })
-        .then(() => {
-          // After backend confirms delivery, refetch history from cloud
-          setTimeout(() => {
-            get('/delivery/history')
-              .then((cloudOrders: any[]) => {
-                if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-                  const entries = cloudOrders.map(mapApiOrderToHistoryEntry);
-                  dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: entries });
-                }
-              })
-              .catch(() => {});
-          }, 300);
+
+    if (deliveredOrder) {
+      const rawId = String(deliveredOrder.id || '');
+      const orderNum = String(deliveredOrder.orderNumber || '');
+
+      // 1. Mark in delivered IDs set so polling never brings it back
+      try {
+        const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+        const deliveredSet = new Set(Array.isArray(deliveredList) ? deliveredList.map((x: any) => String(x).toLowerCase().trim()) : []);
+        if (rawId) deliveredSet.add(rawId.toLowerCase().trim());
+        if (orderNum) deliveredSet.add(orderNum.toLowerCase().trim());
+        localStorage.setItem('grabit_delivered_order_ids', JSON.stringify(Array.from(deliveredSet)));
+      } catch {}
+
+      // 2. Mark as delivered in grabit_orders
+      try {
+        const storedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        if (Array.isArray(storedOrders)) {
+          const updatedOrders = storedOrders.map((o: any) => {
+            const oId = String(o.id || '').toLowerCase().trim();
+            const oRaw = String(o.rawId || '').toLowerCase().trim();
+            const oNum = String(o.orderNumber || '').toLowerCase().trim();
+            const rLower = rawId.toLowerCase().trim();
+            const nLower = orderNum.toLowerCase().trim();
+
+            if (oId === rLower || oId === nLower || oRaw === rLower || oRaw === nLower || oNum === rLower || oNum === nLower) {
+              return { ...o, status: 'delivered', delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' };
+            }
+            return o;
+          });
+          localStorage.setItem('grabit_orders', JSON.stringify(updatedOrders));
+        }
+
+        // 3. Mark as delivered in all user-specific order stores (grabit_orders_<phone>)
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('grabit_orders_')) {
+            try {
+              const uOrders = JSON.parse(localStorage.getItem(k) || '[]');
+              if (Array.isArray(uOrders)) {
+                const updatedU = uOrders.map((uo: any) => {
+                  const uId = String(uo.id || '').toLowerCase().trim();
+                  const uRaw = String(uo.rawId || '').toLowerCase().trim();
+                  const uNum = String(uo.orderNumber || '').toLowerCase().trim();
+                  const rLower = rawId.toLowerCase().trim();
+                  const nLower = orderNum.toLowerCase().trim();
+
+                  if (uId === rLower || uId === nLower || uRaw === rLower || uRaw === nLower || uNum === rLower || uNum === nLower) {
+                    return { ...uo, status: 'delivered', delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' };
+                  }
+                  return uo;
+                });
+                localStorage.setItem(k, JSON.stringify(updatedU));
+              }
+            } catch {}
+          }
+        }
+
+        window.dispatchEvent(new Event('grabit_orders_updated'));
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      // 4. Persist delivered status to cloud
+      if (rawId) {
+        patch(`/orders/${encodeURIComponent(rawId)}/status`, {
+          status: 'delivered',
+          delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a'
         })
-        .catch(() => {});
+          .then(() => {
+            // After backend confirms delivery, refetch history from cloud
+            setTimeout(() => {
+              get('/delivery/history')
+                .then((cloudOrders: any[]) => {
+                  if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+                    const entries = cloudOrders.map(mapApiOrderToHistoryEntry);
+                    dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: entries });
+                  }
+                })
+                .catch(() => {});
+            }, 300);
+          })
+          .catch(() => {});
+      }
     }
   }, [state.currentOrder]);
 
@@ -986,6 +1068,15 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         if (!isMounted) return;
 
+        // Load set of delivered orders to strictly prevent re-assigning finished deliveries
+        let deliveredIds = new Set<string>();
+        try {
+          const savedDelivered = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+          if (Array.isArray(savedDelivered)) {
+            deliveredIds = new Set(savedDelivered.map((id: any) => String(id).toLowerCase().trim()));
+          }
+        } catch {}
+
         // Determine current logged in rider
         let loggedRiderPhone = '+919999900003';
         let loggedRiderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
@@ -999,8 +1090,16 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const poolRaw: any[] = [];
 
         for (const o of uniqueOrders) {
-          const st = String(o.status || '').toLowerCase();
+          const st = String(o.status || '').toLowerCase().trim();
           if (st === 'delivered' || st === 'cancelled') continue;
+
+          const oid = String(o.id || '').toLowerCase().trim();
+          const oraw = String(o.rawId || '').toLowerCase().trim();
+          const onum = String(o.orderNumber || '').toLowerCase().trim();
+
+          if (deliveredIds.has(oid) || deliveredIds.has(oraw) || deliveredIds.has(onum)) {
+            continue; // ALREADY DELIVERED! STRICTLY SKIP!
+          }
 
           const agent = String(o.delivery_agent_id || '').trim();
           if (
