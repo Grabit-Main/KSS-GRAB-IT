@@ -843,21 +843,15 @@ export function AdminPortalApp() {
             top: 0,
             zIndex: 90
           }}>
-            {/* Left: Mobile Hamburger (search bar removed) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-              {isMobile && (
-                <button
-                  type="button"
-                  onClick={() => setMobileDrawerOpen(true)}
-                  style={{
-                    background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px',
-                    width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: '#0F172A', flexShrink: 0
-                  }}
-                >
-                  <Menu size={18} />
-                </button>
-              )}
+            {/* Left: GrabIt Admin Branding (hamburger removed — mobile uses bottom nav) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>G</div>
+                <div>
+                  <div style={{ fontSize: isMobile ? '13px' : '15px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>GrabIt Admin</div>
+                  <div style={{ fontSize: '9px', fontWeight: 800, color: '#0071E3', letterSpacing: '0.5px' }}>EXECUTIVE CONSOLE</div>
+                </div>
+              </div>
             </div>
 
             {/* Right: Notification Bell & Sign Out Button */}
@@ -881,26 +875,91 @@ export function AdminPortalApp() {
               </div>
 
               {/* Notification Bell */}
-              <button
-                type="button"
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                style={{
-                  width: '36px', height: '36px', borderRadius: '8px',
-                  border: '1px solid #E2E8F0', background: '#F8FAFC',
-                  color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', position: 'relative'
-                }}
-              >
-                <Bell size={16} />
-                <span style={{
-                  position: 'absolute', top: '-2px', right: '-2px',
-                  width: '16px', height: '16px', borderRadius: '50%',
-                  background: '#EF4444', color: '#FFFFFF', fontSize: '9px', fontWeight: 900,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFFFFF'
-                }}>
-                  3
-                </span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(prev => !prev)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '8px',
+                    border: notificationsOpen ? '1.5px solid #0071E3' : '1px solid #E2E8F0',
+                    background: notificationsOpen ? '#EFF6FF' : '#F8FAFC',
+                    color: notificationsOpen ? '#0071E3' : '#475569',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', position: 'relative', transition: 'all 0.15s'
+                  }}
+                >
+                  <Bell size={16} />
+                  {orders.filter(o => ['placed','confirmed'].includes(o.status)).length > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '-3px', right: '-3px',
+                      minWidth: '16px', height: '16px', borderRadius: '50%',
+                      background: '#EF4444', color: '#FFFFFF', fontSize: '9px', fontWeight: 900,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '2px solid #FFFFFF', padding: '0 2px'
+                    }}>
+                      {Math.min(orders.filter(o => ['placed','confirmed'].includes(o.status)).length, 9)}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown Panel */}
+                {notificationsOpen && (
+                  <>
+                    <div onClick={() => setNotificationsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+                    <div style={{
+                      position: 'absolute', top: '44px', right: 0,
+                      width: isMobile ? 'calc(100vw - 28px)' : '340px',
+                      maxHeight: '420px',
+                      background: '#FFFFFF', borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
+                      zIndex: 999, overflow: 'hidden',
+                      display: 'flex', flexDirection: 'column'
+                    }}>
+                      {/* Panel Header */}
+                      <div style={{ padding: '14px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>Notifications</div>
+                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px' }}>
+                            {orders.filter(o => ['placed','confirmed'].includes(o.status)).length} pending orders need attention
+                          </div>
+                        </div>
+                        <button onClick={() => setNotificationsOpen(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: '13px', fontWeight: 900 }}>✕</button>
+                      </div>
+                      {/* Notification List */}
+                      <div style={{ overflowY: 'auto', flex: 1 }}>
+                        {orders.length === 0 ? (
+                          <div style={{ padding: '32px 16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>🔔 No notifications yet</div>
+                        ) : (
+                          orders.slice(0, 8).map((o, i) => {
+                            const statusColor = o.status === 'delivered' ? '#10B981' : o.status === 'out_for_delivery' ? '#0071E3' : o.status === 'preparing' ? '#F59E0B' : o.status === 'cancelled' ? '#EF4444' : '#8B5CF6';
+                            const statusIcon = o.status === 'delivered' ? '✅' : o.status === 'out_for_delivery' ? '🚴' : o.status === 'preparing' ? '🍳' : o.status === 'cancelled' ? '❌' : '🛒';
+                            const isNew = ['placed','confirmed'].includes(o.status);
+                            return (
+                              <div key={i} onClick={() => { setSelectedOrderModal(o); setNotificationsOpen(false); }} style={{ padding: '12px 16px', borderBottom: '1px solid #F8FAFC', cursor: 'pointer', background: isNew ? '#FAFBFF' : '#FFFFFF', display: 'flex', alignItems: 'center', gap: '12px', transition: 'background 0.15s' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${statusColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{statusIcon}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    Order #{(o.id || o.order_id || String(i+1)).toString().slice(-6)} — {(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {o.customer_name || o.user?.name || 'Customer'} · ₹{parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}
+                                  </div>
+                                </div>
+                                {isNew && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                      {/* Footer */}
+                      <div style={{ padding: '10px 16px', borderTop: '1px solid #F1F5F9', textAlign: 'center' }}>
+                        <button onClick={() => { setActiveTab('orders'); setNotificationsOpen(false); }} style={{ background: 'none', border: 'none', color: '#0071E3', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Orders →</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Sign Out Button */}
               <button
@@ -1128,69 +1187,58 @@ export function AdminPortalApp() {
                     </div>
                   </div>
 
-                  {/* RIGHT: Traffic & Channel Donut Card */}
+                  {/* RIGHT: Live Order Status Breakdown */}
                   <div className="hover-card" style={{
-                    background: '#FFFFFF',
-                    borderRadius: '18px',
-                    border: '1px solid #E2E8F0',
-                    padding: isMobile ? '16px' : '22px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
+                    background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
+                    padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                    display: 'flex', flexDirection: 'column', gap: '12px'
                   }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                          Traffic &amp; Channel Share
-                        </h3>
-                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', padding: '2px 7px', borderRadius: '5px' }}>
-                          Live
-                        </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px' }}>Order Status Breakdown</h3>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>Live pipeline for {currentChart.summaryLabel}</div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>Real-time acquisition distribution</div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', padding: '2px 7px', borderRadius: '5px' }}>Live</span>
                     </div>
 
-                    {/* Donut Graphic */}
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '14px 0' }}>
-                      <svg width="150" height="150" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="90" cy="90" r="65" stroke="#F1F5F9" strokeWidth="18" fill="none" />
-                        {/* 55% Mobile App */}
-                        <circle cx="90" cy="90" r="65" stroke="#E11D48" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="183.8" strokeLinecap="round" />
-                        {/* 33% Web */}
-                        <circle cx="90" cy="90" r="65" stroke="#8B5CF6" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="273.6" style={{ transform: 'rotate(198deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
-                        {/* 12% Search */}
-                        <circle cx="90" cy="90" r="65" stroke="#06B6D4" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="359.4" style={{ transform: 'rotate(317deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
-                      </svg>
-                      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{
-                          width: '36px', height: '36px', borderRadius: '50%',
-                          background: '#F59E0B', color: '#FFFFFF',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          <ShoppingBag size={18} />
-                        </div>
-                        <div style={{ fontSize: '12px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>100%</div>
-                      </div>
-                    </div>
+                    {/* Status rows */}
+                    {(() => {
+                      const statuses = [
+                        { key: 'placed',           label: 'New Orders',     icon: '🛒', color: '#8B5CF6' },
+                        { key: 'confirmed',         label: 'Confirmed',      icon: '✅', color: '#0071E3' },
+                        { key: 'preparing',         label: 'Preparing',      icon: '👨‍🍳', color: '#F59E0B' },
+                        { key: 'out_for_delivery',  label: 'Out for Delivery',icon: '🚴', color: '#06B6D4' },
+                        { key: 'delivered',         label: 'Delivered',      icon: '📦', color: '#10B981' },
+                        { key: 'cancelled',         label: 'Cancelled',      icon: '❌', color: '#EF4444' },
+                      ];
+                      const total = Math.max(periodOrders.length, 1);
+                      return statuses.map(s => {
+                        const count = periodOrders.filter(o => o.status === s.key).length;
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={s.key}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '13px' }}>{s.icon}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>{s.label}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 900, color: s.color }}>{count}</span>
+                                <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600, minWidth: '28px', textAlign: 'right' }}>{pct}%</span>
+                              </div>
+                            </div>
+                            <div style={{ height: '5px', borderRadius: '4px', background: '#F1F5F9', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, background: s.color, borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
 
-                    {/* Donut Legend */}
-                    <div style={{
-                      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px',
-                      paddingTop: '12px', borderTop: '1px solid #F1F5F9', textAlign: 'center'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#8B5CF6' }}>33%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Web</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#E11D48' }}>55%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Mobile</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#06B6D4' }}>12%</div>
-                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Search</div>
-                      </div>
+                    {/* Summary total */}
+                    <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>Total ({currentChart.summaryLabel})</span>
+                      <span style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>{periodOrders.length} orders</span>
                     </div>
                   </div>
                 </div>
@@ -2270,21 +2318,23 @@ export function AdminPortalApp() {
 
           </main>
 
-          {/* ── MOBILE BOTTOM NAVIGATION BAR (FIXED AT BOTTOM FOR PHONES) ── */}
+          {/* ── MOBILE BOTTOM NAVIGATION BAR (FIXED, NO SCROLL) ── */}
           {isMobile && (
             <nav style={{
               position: 'fixed',
               bottom: 0,
               left: 0,
               right: 0,
-              height: '60px',
+              height: '62px',
               background: '#FFFFFF',
-              borderTop: '1px solid #E2E8F0',
+              borderTop: '1.5px solid #E2E8F0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-around',
               zIndex: 900,
-              boxShadow: '0 -2px 10px rgba(0,0,0,0.03)'
+              boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
+              overscrollBehavior: 'none',
+              touchAction: 'none',
             }}>
               {NAV_ITEMS.map((tab) => {
                 const Icon = tab.icon;
@@ -2293,22 +2343,24 @@ export function AdminPortalApp() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => { setActiveTab(tab.id); forceScrollToTop(); }}
                     style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'none',
-                      border: 'none',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      background: 'none', border: 'none',
                       color: active ? '#0071E3' : '#94A3B8',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                      flex: 1
+                      cursor: 'pointer', padding: '4px 6px', flex: 1,
+                      minWidth: 0,
                     }}
                   >
-                    <Icon size={20} color={active ? '#0071E3' : '#94A3B8'} strokeWidth={active ? 2.5 : 2} />
-                    <span style={{ fontSize: '10px', fontWeight: active ? 800 : 600, marginTop: '2px' }}>
+                    <div style={{
+                      width: active ? '36px' : '28px', height: '28px', borderRadius: '8px',
+                      background: active ? '#EFF6FF' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s ease', marginBottom: '1px'
+                    }}>
+                      <Icon size={18} color={active ? '#0071E3' : '#94A3B8'} strokeWidth={active ? 2.5 : 2} />
+                    </div>
+                    <span style={{ fontSize: '9.5px', fontWeight: active ? 800 : 600, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '52px', textAlign: 'center' }}>
                       {tab.label}
                     </span>
                   </button>
