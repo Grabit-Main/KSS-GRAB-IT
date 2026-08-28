@@ -831,46 +831,39 @@ export function AdminPortalApp() {
             zIndex: 90,
             boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
           }}>
-            {/* Left: Sleek Executive Title (Compact, clean, no text wrapping) */}
+            {/* Left: Official GrabIt Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <div style={{
-                width: '34px', height: '34px', borderRadius: '10px',
-                background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#FFFFFF', fontWeight: 900, fontSize: '16px',
-                boxShadow: '0 3px 8px rgba(0, 113, 227, 0.25)',
-                flexShrink: 0
+              <img
+                src="/grabit-logo.png"
+                alt="GrabIt"
+                style={{
+                  height: isMobile ? '32px' : '36px',
+                  width: 'auto',
+                  objectFit: 'contain'
+                }}
+              />
+              <span style={{
+                fontSize: '10.5px',
+                fontWeight: 900,
+                color: '#0071E3',
+                background: '#EFF6FF',
+                border: '1px solid #BFDBFE',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase'
               }}>
-                G
-              </div>
-              <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h1 style={{
-                    fontSize: isMobile ? '15px' : '16.5px',
-                    fontWeight: 900,
-                    color: '#0F172A',
-                    margin: 0,
-                    whiteSpace: 'nowrap',
-                    letterSpacing: '-0.3px'
-                  }}>
-                    GrabIt Admin
-                  </h1>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                    background: '#ECFDF5', border: '1px solid #A7F3D0',
-                    color: '#059669', fontSize: '9.5px', fontWeight: 800,
-                    padding: '2px 7px', borderRadius: '100px', flexShrink: 0
-                  }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10B981' }} />
-                    Live
-                  </span>
-                </div>
-                {!isMobile && (
-                  <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600, marginTop: '1px', whiteSpace: 'nowrap' }}>
-                    Supermarket & Express Logistics Console
-                  </div>
-                )}
-              </div>
+                Admin
+              </span>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                background: '#ECFDF5', border: '1px solid #A7F3D0',
+                color: '#059669', fontSize: '9.5px', fontWeight: 800,
+                padding: '2px 7px', borderRadius: '100px', flexShrink: 0
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10B981' }} />
+                Live
+              </span>
             </div>
 
             {/* Right: Notification Bell & Sign Out Button */}
