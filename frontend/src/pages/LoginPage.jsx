@@ -243,7 +243,7 @@ export function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 16px',
-        background: 'radial-gradient(ellipse at 50% -10%, #3B1578 0%, #170938 50%, #0A031B 100%)',
+        background: 'radial-gradient(ellipse at 50% -10%, #0071E3 0%, #0F172A 70%, #0A0F1D 100%)',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
         boxSizing: 'border-box',
         WebkitFontSmoothing: 'antialiased',
@@ -258,7 +258,7 @@ export function LoginPage() {
         width: '380px',
         height: '380px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(147, 51, 234, 0.4) 0%, rgba(0,0,0,0) 70%)',
+        background: 'radial-gradient(circle, rgba(0, 113, 227, 0.45) 0%, rgba(0,0,0,0) 70%)',
         filter: 'blur(55px)',
         pointerEvents: 'none',
       }} />
@@ -269,7 +269,7 @@ export function LoginPage() {
         width: '420px',
         height: '420px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, rgba(0,0,0,0) 70%)',
+        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(0,0,0,0) 70%)',
         filter: 'blur(65px)',
         pointerEvents: 'none',
       }} />
@@ -300,14 +300,14 @@ export function LoginPage() {
           transition: all 0.2s ease;
         }
         .glass-role-btn:hover {
-          background: #EEF2FF;
-          color: #4F46E5;
-          border-color: #C7D2FE;
+          background: #EFF6FF;
+          color: #0071E3;
+          border-color: #BFDBFE;
         }
 
         .phone-input-group:focus-within {
-          border-color: #8B5CF6 !important;
-          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+          border-color: #0071E3 !important;
+          box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15) !important;
         }
       `}</style>
 
@@ -321,7 +321,7 @@ export function LoginPage() {
           backgroundColor: '#FFFFFF',
           borderRadius: '32px',
           overflow: 'hidden',
-          boxShadow: '0 30px 70px rgba(0, 0, 0, 0.45), 0 0 50px rgba(147, 51, 234, 0.25)',
+          boxShadow: '0 30px 70px rgba(0, 0, 0, 0.45), 0 0 50px rgba(0, 113, 227, 0.25)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
           display: 'flex',
           flexDirection: 'column',
@@ -352,7 +352,7 @@ export function LoginPage() {
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-              color: '#EC4899',
+              color: '#0071E3',
               border: 'none',
               borderRadius: '20px',
               padding: '6px 18px',
@@ -373,11 +373,11 @@ export function LoginPage() {
           
           {/* Main Headline */}
           <div style={{ textAlign: 'left' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(139, 92, 246, 0.1)', color: '#7C3AED', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.4px', marginBottom: '8px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0, 113, 227, 0.1)', color: '#0071E3', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.4px', marginBottom: '8px' }}>
               ⚡ 10-MIN EXPRESS DISPATCH
             </div>
             <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.3px', lineHeight: '1.25' }}>
-              Groceries delivered in <span style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 900 }}>minutes</span>
+              Groceries delivered in <span style={{ background: 'linear-gradient(135deg, #0071E3 0%, #00C6FF 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 900 }}>minutes</span>
             </h2>
             {step !== 'phone' && (
               <p style={{ color: '#4B5563', fontSize: '13px', margin: '8px 0 0', fontWeight: 600 }}>
@@ -477,7 +477,7 @@ export function LoginPage() {
                 disabled={busy}
                 style={{
                   width: '100%',
-                  background: isPhoneValid ? 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' : '#F1F5F9',
+                  background: isPhoneValid ? 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)' : '#F1F5F9',
                   color: isPhoneValid ? '#FFFFFF' : '#94A3B8',
                   border: 0,
                   borderRadius: '16px',
@@ -485,7 +485,7 @@ export function LoginPage() {
                   fontSize: '15px',
                   fontWeight: 800,
                   cursor: isPhoneValid ? 'pointer' : 'default',
-                  boxShadow: isPhoneValid ? '0 8px 24px rgba(124, 58, 237, 0.35)' : 'none',
+                  boxShadow: isPhoneValid ? '0 8px 24px rgba(0, 113, 227, 0.35)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -578,7 +578,7 @@ export function LoginPage() {
                 type="submit"
                 disabled={busy}
                 style={{
-                  background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
                   color: '#FFFFFF',
                   border: 0,
                   borderRadius: '16px',
@@ -586,7 +586,7 @@ export function LoginPage() {
                   fontSize: '15px',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                  boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -620,9 +620,9 @@ export function LoginPage() {
                     type="button"
                     onClick={() => setOtp('123456')}
                     style={{
-                      background: '#EEF2FF',
-                      border: '1px solid #C7D2FE',
-                      color: '#4F46E5',
+                      background: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      color: '#0071E3',
                       padding: '3px 9px',
                       borderRadius: '8px',
                       fontSize: '11px',
@@ -661,7 +661,7 @@ export function LoginPage() {
                 type="submit"
                 disabled={busy}
                 style={{
-                  background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
                   color: '#FFFFFF',
                   border: 0,
                   borderRadius: '16px',
@@ -669,7 +669,7 @@ export function LoginPage() {
                   fontSize: '15px',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                  boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -683,14 +683,14 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setStep('phone')}
-                  style={{ background: 'none', border: 0, color: '#8B5CF6', cursor: 'pointer', fontWeight: 800 }}
+                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
                 >
                   Change number
                 </button>
                 <button
                   type="button"
                   onClick={() => requestOtpFor(fullPhone)}
-                  style={{ background: 'none', border: 0, color: '#8B5CF6', cursor: 'pointer', fontWeight: 800 }}
+                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
                 >
                   Resend code
                 </button>
@@ -724,12 +724,12 @@ export function LoginPage() {
                       gap: '4px',
                       padding: '10px 4px',
                       borderRadius: '14px',
-                      border: isSelected ? '2px solid #8B5CF6' : '1px solid #E2E8F0',
-                      background: isSelected ? 'linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)' : '#F8FAFC',
-                      color: isSelected ? '#7C3AED' : '#475569',
+                      border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                      background: isSelected ? 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)' : '#F8FAFC',
+                      color: isSelected ? '#0071E3' : '#475569',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 4px 12px rgba(139, 92, 246, 0.2)' : '0 1px 2px rgba(0,0,0,0.02)',
+                      boxShadow: isSelected ? '0 4px 12px rgba(0, 113, 227, 0.2)' : '0 1px 2px rgba(0,0,0,0.02)',
                     }}
                   >
                     <span style={{ fontSize: '18px' }}>{item.icon}</span>
