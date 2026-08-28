@@ -407,6 +407,27 @@ export function AdminPortalApp() {
     });
   }, [orders, searchQuery, statusFilter]);
 
+  const periodOrders = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    const now = new Date();
+    return orders.filter(o => {
+      if (!isValidRealOrder(o)) return false;
+      if (!o.created_at) return true;
+      const d = new Date(o.created_at);
+      if (isNaN(d.getTime())) return true;
+      if (timeFilter === 'DAILY') {
+        return d.toDateString() === now.toDateString();
+      } else if (timeFilter === 'WEEKLY') {
+        const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays <= 7;
+      } else if (timeFilter === 'MONTHLY') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }
+      return true;
+    });
+  }, [orders, timeFilter]);
+
+
   // ── Core Metrics ──
   const totalGMV = useMemo(() => {
     return orders.reduce((sum, o) => sum + (Number(o.total_amount || o.total) || 0), 0);
