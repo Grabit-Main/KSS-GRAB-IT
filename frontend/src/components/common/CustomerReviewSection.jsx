@@ -3,7 +3,7 @@ import { Star, CheckCircle2, MessageSquareHeart, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 export default function CustomerReviewSection({ storeName = 'GrabIt Supermarket' }) {
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -15,6 +15,10 @@ export default function CustomerReviewSection({ storeName = 'GrabIt Supermarket'
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (rating === 0) {
+      if (toast?.showToast) toast.showToast('Please select a star rating first! ⭐');
+      return;
+    }
     if (!reviewText.trim()) {
       if (toast?.showToast) toast.showToast('Please write a brief review before submitting!');
       return;

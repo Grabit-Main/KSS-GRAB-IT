@@ -246,6 +246,7 @@ export default function OrderTrackingPage() {
   }
 
   const currentStepIndex = order ? getStepIndex(order.status) : 0;
+  const isRiderAssigned = currentStepIndex >= 2;
   const isDelivered = order?.status === 'delivered';
   const isCancelled = order?.status === 'cancelled';
 
@@ -436,111 +437,147 @@ export default function OrderTrackingPage() {
 
             {/* 🛵 LIVE RIDER CARD */}
             {!isCancelled && (
-              <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Assigned Delivery Partner
-                  </div>
-                  <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
-                    🟢 Verified Partner
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{
-                      width: '54px', height: '54px', borderRadius: '50%', background: '#EFF6FF',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '2px solid #0071E3', fontSize: '24px', fontWeight: 900, color: '#0071E3'
-                    }}>
-                      🛵
+              isRiderAssigned ? (
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Assigned Delivery Partner
                     </div>
-                    <div>
-                      <h4 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
-                        Karthik Rider
-                      </h4>
-                      <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                        Speedy Express • Hero Electric (KA 01 EQ 4421)
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>
-                        ⭐ 4.9 Rating (420+ deliveries)
-                      </div>
-                    </div>
+                    <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                      🟢 Verified Partner
+                    </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <a
-                      href="tel:+919999900003"
-                      onClick={() => showToast('Calling rider Karthik (+91 9999900003)... 📞')}
-                      style={{
-                        background: '#10B981', color: '#FFFFFF', borderRadius: '14px',
-                        padding: '10px 16px', fontSize: '13px', fontWeight: 800,
-                        display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none'
-                      }}
-                    >
-                      <PhoneCall size={16} />
-                      Call
-                    </a>
-                    <button
-                      onClick={() => setChatModalOpen(true)}
-                      style={{
-                        background: '#0071E3', color: '#FFFFFF', borderRadius: '14px', border: 'none',
-                        padding: '10px 16px', fontSize: '13px', fontWeight: 800,
-                        display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
-                      }}
-                    >
-                      <MessageSquare size={16} />
-                      Chat
-                    </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '54px', height: '54px', borderRadius: '50%', background: '#EFF6FF',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '2px solid #0071E3', fontSize: '24px', fontWeight: 900, color: '#0071E3'
+                      }}>
+                        🛵
+                      </div>
+                      <div>
+                        <h4 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
+                          Karthik Rider
+                        </h4>
+                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+                          Speedy Express • Hero Electric (KA 01 EQ 4421)
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>
+                          ⭐ 4.9 Rating (420+ deliveries)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <a
+                        href="tel:+919999900003"
+                        onClick={() => showToast('Calling rider Karthik (+91 9999900003)... 📞')}
+                        style={{
+                          background: '#10B981', color: '#FFFFFF', borderRadius: '14px',
+                          padding: '10px 16px', fontSize: '13px', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none'
+                        }}
+                      >
+                        <PhoneCall size={16} />
+                        Call
+                      </a>
+                      <button
+                        onClick={() => setChatModalOpen(true)}
+                        style={{
+                          background: '#0071E3', color: '#FFFFFF', borderRadius: '14px', border: 'none',
+                          padding: '10px 16px', fontSize: '13px', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
+                        }}
+                      >
+                        <MessageSquare size={16} />
+                        Chat
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textAlign: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', color: '#64748B', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F59E0B' }} />
+                    Delivery Partner
+                  </div>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
+                    Assigning Delivery Partner...
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+                    A delivery rider will be assigned once the store prepares your items.
+                  </p>
+                </div>
+              )
             )}
 
             {/* 🗺️ LIVE SIMULATED ROUTE MAP */}
-            <div style={{
-              background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-              padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: 'relative'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>Live Route View</span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#0071E3' }}>1.2 km away</span>
-              </div>
-
+            {isRiderAssigned ? (
               <div style={{
-                height: '180px', borderRadius: '14px', background: '#EEF2FF',
-                position: 'relative', overflow: 'hidden', border: '1px solid #CBD5E1',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: 'relative'
               }}>
-                {/* SVG Route Visual */}
-                <svg width="100%" height="100%" viewBox="0 0 360 180" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
-                  <path d="M 36 140 Q 165 40 324 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
-                </svg>
-
-                {/* Store Pin */}
-                <div style={{ position: 'absolute', left: '10%', bottom: '22%', transform: 'translate(-50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-                  <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Store</div>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(59,130,246,0.5)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>Live Route View</span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#0071E3' }}>1.2 km away</span>
                 </div>
 
-                {/* Moving Rider Pin */}
-                <div style={{ position: 'absolute', left: '46%', top: '22%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 12 }}>
-                  <div style={{ background: '#0071E3', color: '#FFF', padding: '5px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                    🛵 Rider
+                <div style={{
+                  height: '180px', borderRadius: '14px', background: '#EEF2FF',
+                  position: 'relative', overflow: 'hidden', border: '1px solid #CBD5E1',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {/* SVG Route Visual */}
+                  <svg width="100%" height="100%" viewBox="0 0 360 180" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
+                    <path d="M 36 140 Q 165 40 324 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
+                  </svg>
+
+                  {/* Store Pin */}
+                  <div style={{ position: 'absolute', left: '10%', bottom: '22%', transform: 'translate(-50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
+                    <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Store</div>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(59,130,246,0.5)' }} />
                   </div>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#0071E3', border: '2px solid #FFF', marginTop: '2px' }} />
-                </div>
 
-                {/* Customer Pin */}
-                <div style={{ position: 'absolute', right: '10%', bottom: '33%', transform: 'translate(50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-                  <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Home</div>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(16,185,129,0.5)' }} />
+                  {/* Moving Rider Pin */}
+                  <div style={{ position: 'absolute', left: '46%', top: '22%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 12 }}>
+                    <div style={{ background: '#0071E3', color: '#FFF', padding: '5px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                      🛵 Rider
+                    </div>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#0071E3', border: '2px solid #FFF', marginTop: '2px' }} />
+                  </div>
+
+                  {/* Customer Pin */}
+                  <div style={{ position: 'absolute', right: '10%', bottom: '33%', transform: 'translate(50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
+                    <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Home</div>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(16,185,129,0.5)' }} />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textAlign: 'center'
+              }}>
+                <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', display: 'block', textAlign: 'left', marginBottom: '12px' }}>Live Route View</span>
+                <div style={{
+                  height: '180px', borderRadius: '14px', background: '#F8FAFC',
+                  border: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: '10px'
+                }}>
+                  <MapPin size={32} color="#94A3B8" />
+                  <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 700 }}>Map tracking will start shortly</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>Waiting for rider to accept and start route</div>
+                </div>
+              </div>
+            )}
 
             {/* 📦 ORDER ITEMS DETAILS */}
             <div style={{
