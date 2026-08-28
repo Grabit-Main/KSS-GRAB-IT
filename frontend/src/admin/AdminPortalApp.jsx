@@ -82,37 +82,30 @@ const isValidRealOrder = (o) => {
 };
 
 // ── Chart Data Series for Time Periods ──
+// Chart shape data (visual only — real numbers shown in stat cards)
 const CHART_PERIODS_DATA = {
   DAILY: {
     labels: ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM', '11 PM'],
     online: [12, 34, 89, 62, 145, 182, 94],
     store: [8, 21, 54, 48, 98, 121, 61],
-    earnings: '₹62,800',
-    salesCount: '194',
-    summaryLabel: 'Today Summary'
+    summaryLabel: 'Today'
   },
   WEEKLY: {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     online: [24, 31, 28, 42, 58, 84, 79],
     store: [18, 22, 21, 31, 41, 59, 54],
-    earnings: '₹3,46,000',
-    salesCount: '982',
     summaryLabel: 'This Week'
   },
   MONTHLY: {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
     online: [18, 38, 22, 45, 62],
     store: [10, 26, 18, 32, 46],
-    earnings: '₹6,468.96',
-    salesCount: '82',
-    summaryLabel: 'Last Month Summary'
+    summaryLabel: 'This Month'
   },
   YEARLY: {
     labels: ['2023', '2024', '2025', '2026'],
     online: [120, 240, 480, 890],
     store: [80, 160, 310, 540],
-    earnings: '₹48,92,400',
-    salesCount: '14,280',
     summaryLabel: 'Annual'
   }
 };
@@ -810,8 +803,8 @@ export function AdminPortalApp() {
             top: 0,
             zIndex: 90
           }}>
-            {/* Left: Mobile Hamburger OR Search Box */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, maxWidth: isMobile ? '240px' : '420px' }}>
+            {/* Left: Mobile Hamburger (search bar removed) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
               {isMobile && (
                 <button
                   type="button"
@@ -825,23 +818,6 @@ export function AdminPortalApp() {
                   <Menu size={18} />
                 </button>
               )}
-
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px',
-                padding: '6px 12px', width: '100%'
-              }}>
-                <Search size={15} color="#94A3B8" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isMobile ? "Search..." : "Search orders, customers, partners..."}
-                  style={{
-                    border: 'none', background: 'transparent', outline: 'none',
-                    fontSize: '13px', width: '100%', color: '#0F172A', fontWeight: 500
-                  }}
-                />
-              </div>
             </div>
 
             {/* Right: Notification Bell & Sign Out Button */}
@@ -1001,20 +977,20 @@ export function AdminPortalApp() {
                       </div>
                     </div>
 
-                    {/* Headline Numbers */}
+                    {/* Headline Numbers — real-time from orders state */}
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', gap: '20px', alignItems: 'baseline' }}>
                         <div>
                           <div style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.5px' }}>
-                            {currentChart.earnings}
+                            {(() => { const r = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
                           </div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Earnings</div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Earnings</div>
                         </div>
                         <div>
                           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0071E3', letterSpacing: '-0.5px' }}>
-                            {currentChart.salesCount}
+                            {orders.length}
                           </div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Orders</div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Orders</div>
                         </div>
                       </div>
 
@@ -1079,12 +1055,19 @@ export function AdminPortalApp() {
                       paddingTop: '12px',
                       borderTop: '1px solid #F1F5F9'
                     }}>
-                      {[
-                        { icon: Wallet, color: '#EC4899', label: 'Wallet Balance', value: '₹35,678' },
-                        { icon: Sparkles, color: '#8B5CF6', label: 'Referral Earning', value: '₹15,895' },
-                        { icon: TrendingUp, color: '#0071E3', label: 'Estimate Sales', value: '₹62,450' },
-                        { icon: DollarSign, color: '#10B981', label: 'Net Earnings', value: '₹5,38,760' },
-                      ].map((stat, i) => {
+                      {(() => {
+                        const totalOrders = orders.length;
+                        const deliveredToday = orders.filter(o => o.status === 'delivered').length;
+                        const pendingOrders = orders.filter(o => ['placed','confirmed','preparing'].includes(o.status)).length;
+                        const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (parseFloat(o.total_amount || o.totalAmount || o.total || 0)), 0);
+                        const avgOrderValue = totalOrders > 0 ? (totalRevenue / Math.max(deliveredToday, 1)) : 0;
+                        return [
+                          { icon: ShoppingBag, color: '#EC4899', label: 'Total Orders', value: totalOrders.toLocaleString('en-IN') },
+                          { icon: TrendingUp, color: '#8B5CF6', label: 'Delivered Today', value: deliveredToday.toLocaleString('en-IN') },
+                          { icon: Package, color: '#0071E3', label: 'Pending Orders', value: pendingOrders.toLocaleString('en-IN') },
+                          { icon: DollarSign, color: '#10B981', label: 'Total Revenue', value: totalRevenue > 0 ? `₹${totalRevenue.toLocaleString('en-IN')}` : '₹0' },
+                        ];
+                      })().map((stat, i) => {
                         const Icon = stat.icon;
                         return (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1179,7 +1162,7 @@ export function AdminPortalApp() {
                   gap: isMobile ? '12px' : '18px'
                 }}>
 
-                  {/* Card 1: Revenue */}
+                  {/* Card 1: Revenue — real-time from delivered orders */}
                   <div className="hover-card" style={{
                     background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
                     borderRadius: '16px', padding: isMobile ? '16px' : '20px',
@@ -1188,13 +1171,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Revenue Status
+                        Total Revenue
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        ₹48,432
+                        {(() => { const r = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        Jan 01 - Jan 28
+                        {orders.filter(o => o.status === 'delivered').length} delivered orders
                       </div>
                     </div>
                     {/* Wavy Ribbon Graphic */}
@@ -1216,13 +1199,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Live Orders
+                        Live / Active Orders
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {filteredOrders.length || 184} Live
+                        {orders.filter(o => ['placed','confirmed','preparing','out_for_delivery'].includes(o.status)).length} Active
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        +24% today
+                        {orders.length} total orders in system
                       </div>
                     </div>
                     {/* Dotted Sparkline Graphic */}
@@ -1243,13 +1226,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        On-Time SLA
+                        Catalogue Products
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        98.8%
+                        {products.length} SKUs
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        12 min fulfillment
+                        {products.filter(p => p.stock > 0 || p.in_stock).length} in stock
                       </div>
                     </div>
                     {/* Equalizer Soundwave Graphic */}
@@ -1273,13 +1256,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Active Riders
+                        Delivery Partners
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {activeRiderCount} Fleet
+                        {partners.length} Fleet
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        Express dispatch
+                        {activeRiderCount} currently active
                       </div>
                     </div>
                     {/* Stepped Equalizer Graphic */}
@@ -1316,12 +1299,17 @@ export function AdminPortalApp() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {[
-                        { time: 'Just now', color: '#EC4899', title: 'Order Dispatched', desc: 'Rider on the way to Koramangala' },
-                        { time: '40 Mins Ago', color: '#8B5CF6', title: 'Store Restocked', desc: 'Fresh Dairy & Bakery inventory added' },
-                        { time: '1 hr ago', color: '#06B6D4', title: 'Order Delivered', desc: 'Order confirmed with digital signature' },
-                        { time: '3 hrs ago', color: '#F59E0B', title: 'Catalog Updated', desc: 'Updated flash deals & prices' }
-                      ].map((act, i) => (
+                      {(orders.length > 0
+                        ? orders.slice(0, 4).map((o, i) => ({
+                            time: o.created_at ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Recent',
+                            color: o.status === 'delivered' ? '#10B981' : o.status === 'out_for_delivery' ? '#0071E3' : o.status === 'preparing' ? '#F59E0B' : '#EC4899',
+                            title: `Order #${(o.id || o.order_id || String(i+1)).toString().slice(-6)} — ${(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}`,
+                            desc: `${o.customer_name || o.user?.name || 'Customer'} · ₹${parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}`
+                          }))
+                        : [
+                            { time: 'No data', color: '#94A3B8', title: 'No orders yet', desc: 'Orders will appear here in real-time' }
+                          ]
+                      ).map((act, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                           <div style={{ width: '65px', fontSize: '10.5px', color: '#94A3B8', fontWeight: 700, paddingTop: '2px', flexShrink: 0 }}>
                             {act.time}
