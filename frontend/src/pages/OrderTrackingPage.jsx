@@ -31,6 +31,66 @@ const getStepIndex = (statusStr) => {
   return 0;
 };
 
+const DeliveryBannerIllustration = ({ status }) => {
+  const isCancelled = status === 'cancelled';
+  const isDelivered = status === 'delivered';
+
+  if (isCancelled) {
+    return (
+      <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.8, color: '#DC2626' }}>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    );
+  }
+  if (isDelivered) {
+    return (
+      <svg width="120" height="90" viewBox="0 0 120 100" fill="none" style={{ opacity: 0.9 }}>
+        <rect x="25" y="40" width="70" height="50" rx="10" fill="#DCFCE7" stroke="#16A34A" strokeWidth="3" />
+        <path d="M 25 40 L 60 15 L 95 40 Z" fill="#BBF7D0" stroke="#16A34A" strokeWidth="3" />
+        <circle cx="60" cy="65" r="12" fill="#16A34A" />
+        <path d="M 54 65 L 58 69 L 66 61" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="140" height="90" viewBox="0 0 160 110" fill="none" style={{ opacity: 0.95, flexShrink: 0 }}>
+      {/* Speed lines */}
+      <path d="M10 35 L40 35" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.3" />
+      <path d="M5 55 L30 55" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.6" />
+      <path d="M15 75 L45 75" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
+      
+      {/* Scooter Frame */}
+      <path d="M50 78 C50 68, 65 65, 80 65 L115 65 C122 65, 125 72, 128 78" stroke="#FFFFFF" strokeWidth="4" fill="none" />
+      
+      {/* Front shield & handle */}
+      <path d="M120 65 L135 38 C137 34, 142 34, 145 38" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <line x1="138" y1="38" x2="148" y2="38" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
+      
+      {/* Wheels */}
+      <circle cx="65" cy="85" r="14" fill="#1E293B" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="65" cy="85" r="5" fill="#FFFFFF" />
+      <circle cx="125" cy="85" r="14" fill="#1E293B" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="125" cy="85" r="5" fill="#FFFFFF" />
+      
+      {/* Delivery Box */}
+      <rect x="42" y="38" width="34" height="34" rx="8" fill="#10B981" stroke="#FFFFFF" strokeWidth="3" />
+      <path d="M 42 55 L 76 55" stroke="#FFFFFF" strokeWidth="2.5" />
+      {/* Lightning Bolt on Box */}
+      <path d="M56 44 L64 48 L58 52 L62 52 L54 62 L58 52 L54 52 Z" fill="#FEF08A" />
+      
+      {/* Rider Helmet */}
+      <circle cx="102" cy="30" r="11" fill="#FEF08A" stroke="#FFFFFF" strokeWidth="2" />
+      <path d="M96 30 C96 22, 108 22, 108 30 Z" fill="#0071E3" />
+      
+      {/* Rider Body */}
+      <path d="M94 41 L110 41 L106 65 L94 65 Z" fill="#1E293B" stroke="#FFFFFF" strokeWidth="2" />
+    </svg>
+  );
+};
+
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -62,6 +122,15 @@ export default function OrderTrackingPage() {
   const [chatInput, setChatInput] = useState('');
   const [issueSubmitted, setIssueSubmitted] = useState(false);
   const [selectedIssueType, setSelectedIssueType] = useState('');
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatModalOpen) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [chatMessages, chatModalOpen]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -131,16 +200,17 @@ export default function OrderTrackingPage() {
     return () => clearInterval(interval);
   }, [fetchOrder]);
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    const userMsg = { id: Date.now(), sender: 'user', text: chatInput.trim(), time: 'Just now' };
+  const handleSendMessage = (overrideText) => {
+    const textToSend = typeof overrideText === 'string' ? overrideText : chatInput;
+    if (!textToSend.trim()) return;
+    const userMsg = { id: Date.now(), sender: 'user', text: textToSend.trim(), time: 'Just now' };
     setChatMessages(prev => [...prev, userMsg]);
-    const inputClean = chatInput.toLowerCase();
-    setChatInput('');
+    const inputClean = textToSend.toLowerCase();
+    if (typeof overrideText !== 'string') setChatInput('');
 
     setTimeout(() => {
       let replyText = "Our customer support team has logged your query. An agent will contact you shortly if needed!";
-      if (inputClean.includes('rider') || inputClean.includes('driver') || inputClean.includes('location')) {
+      if (inputClean.includes('rider') || inputClean.includes('driver') || inputClean.includes('location') || inputClean.includes('where is')) {
         replyText = "🛵 Your rider Karthik is currently 1.2 km away and moving towards your delivery location. Estimated arrival in ~8 mins.";
       } else if (inputClean.includes('cancel')) {
         replyText = "⚠️ Orders currently out for delivery cannot be cancelled automatically. Please call our toll-free support at +91 1800-419-4722 for immediate cancellation help.";
@@ -244,8 +314,8 @@ export default function OrderTrackingPage() {
           {/* Subtle bg glow */}
           <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', pointerEvents: 'none' }} />
 
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px' }}>
-            <div>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '20px', position: 'relative', zIndex: 5 }}>
+            <div style={{ flex: 1 }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 background: isCancelled ? '#FEE2E2' : isDelivered ? '#DCFCE7' : 'rgba(255,255,255,0.2)',
@@ -263,36 +333,68 @@ export default function OrderTrackingPage() {
               </p>
             </div>
 
-            {!isCancelled && !isDelivered && (
-              <div style={{
-                background: 'rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                padding: '12px 20px',
-                border: '1px solid rgba(255,255,255,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <Clock size={28} />
-                <div>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>Estimated Arrival</div>
-                  <div style={{ fontSize: '18px', fontWeight: 900 }}>10:45 AM</div>
+            {/* banner images and estimated arrival clock */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+              {!isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <DeliveryBannerIllustration status={order?.status} />
                 </div>
-              </div>
-            )}
+              )}
+
+              {!isCancelled && !isDelivered && (
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  padding: '12px 20px',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#FFFFFF'
+                }}>
+                  <Clock size={28} />
+                  <div>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>Estimated Arrival</div>
+                    <div style={{ fontSize: '18px', fontWeight: 900 }}>10:45 AM</div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── LIVE STEPPER TIMELINE ── */}
           {!isCancelled && (
-            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: isDelivered ? '1px solid #DCFCE7' : '1px solid rgba(255,255,255,0.2)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ORDER_CYCLE_STAGES.length}, 1fr)`, gap: '8px', position: 'relative' }}>
+            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: isDelivered ? '1px solid #DCFCE7' : '1px solid rgba(255,255,255,0.2)', position: 'relative' }}>
+              
+              {/* Stepper background line */}
+              <div style={{
+                position: 'absolute',
+                top: '36px',
+                left: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
+                right: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
+                height: '4px',
+                background: 'rgba(255,255,255,0.2)',
+                zIndex: 1
+              }} />
+              <div style={{
+                position: 'absolute',
+                top: '36px',
+                left: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
+                width: `${(currentStepIndex / (ORDER_CYCLE_STAGES.length - 1)) * (100 - (100 / ORDER_CYCLE_STAGES.length))}%`,
+                height: '4px',
+                background: isDelivered ? '#16A34A' : '#FFFFFF',
+                zIndex: 2,
+                transition: 'width 0.4s ease'
+              }} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ORDER_CYCLE_STAGES.length}, 1fr)`, gap: '8px', position: 'relative', zIndex: 3 }}>
                 {ORDER_CYCLE_STAGES.map((stg, idx) => {
                   const isDone = currentStepIndex >= idx;
                   const isCurrent = currentStepIndex === idx;
 
                   return (
-                    <div key={stg.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <div key={stg.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
                       <div style={{
                         width: isCurrent ? '36px' : '28px',
                         height: isCurrent ? '36px' : '28px',
@@ -310,11 +412,13 @@ export default function OrderTrackingPage() {
                         fontSize: '13px',
                         marginBottom: '8px',
                         boxShadow: isCurrent ? '0 0 0 4px rgba(255,255,255,0.35)' : 'none',
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        zIndex: 4
                       }}>
                         {isDone ? <Check size={isCurrent ? 18 : 14} /> : idx + 1}
                       </div>
-                      <div style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: isCurrent ? 900 : 700, opacity: isDone ? 1 : 0.6 }}>
+                      <div style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: isCurrent ? 900 : 700, opacity: isDone ? 1 : 0.6, position: 'relative', zIndex: 4 }}>
                         {stg.label}
                       </div>
                     </div>
@@ -412,27 +516,28 @@ export default function OrderTrackingPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
                 {/* SVG Route Visual */}
-                <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
-                  <path d="M 40 140 Q 150 40 320 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
+                <svg width="100%" height="100%" viewBox="0 0 360 180" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
+                  <path d="M 36 140 Q 165 40 324 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
                 </svg>
 
                 {/* Store Pin */}
-                <div style={{ position: 'absolute', left: '30px', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>Store</div>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2px solid #FFF' }} />
+                <div style={{ position: 'absolute', left: '10%', bottom: '22%', transform: 'translate(-50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
+                  <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Store</div>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(59,130,246,0.5)' }} />
                 </div>
 
                 {/* Moving Rider Pin */}
-                <div style={{ position: 'absolute', left: '48%', top: '38%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ background: '#0071E3', color: '#FFF', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ position: 'absolute', left: '46%', top: '22%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 12 }}>
+                  <div style={{ background: '#0071E3', color: '#FFF', padding: '5px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
                     🛵 Rider
                   </div>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#0071E3', border: '2px solid #FFF', marginTop: '2px' }} />
                 </div>
 
                 {/* Customer Pin */}
-                <div style={{ position: 'absolute', right: '30px', bottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>Home</div>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2px solid #FFF' }} />
+                <div style={{ position: 'absolute', right: '10%', bottom: '33%', transform: 'translate(50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
+                  <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Home</div>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(16,185,129,0.5)' }} />
                 </div>
               </div>
             </div>
@@ -635,6 +740,7 @@ export default function OrderTrackingPage() {
                   {msg.text}
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Quick Actions Chips */}
@@ -642,7 +748,7 @@ export default function OrderTrackingPage() {
               {['Where is rider?', 'Missing item', 'Cancel order', 'Talk to human agent'].map((opt, i) => (
                 <button
                   key={i}
-                  onClick={() => { setChatInput(opt); }}
+                  onClick={() => handleSendMessage(opt)}
                   style={{
                     whiteSpace: 'nowrap', background: '#EFF6FF', border: '1px solid #BFDBFE',
                     color: '#0071E3', borderRadius: '16px', padding: '6px 12px', fontSize: '12px',
