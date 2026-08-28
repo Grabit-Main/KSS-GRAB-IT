@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -75,7 +75,7 @@ const isValidRealOrder = (o) => {
   const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
   if (!addr || addr === 'enter your delivery address' || addr.length < 4) return false;
   const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('fresh mart supermarket')) return false;
+  if (custName.includes('GrabIt Store')) return false;
   const itemsList = safeParseItems(o.items);
   if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
   return true;
@@ -2065,7 +2065,7 @@ export function AdminPortalApp() {
                 <SupermarketLocationMapPicker
                   initialLat={13.014333}
                   initialLng={77.646000}
-                  initialTitle="Fresh Mart Supermarket — Main Hub"
+                  initialTitle="GrabIt Store — Main Hub"
                   initialRadius={100}
                   onSaveLocation={(data) => {
                     setNotice(`✅ Supermarket Location Updated: ${data.address} (${data.radius}m radius)`);

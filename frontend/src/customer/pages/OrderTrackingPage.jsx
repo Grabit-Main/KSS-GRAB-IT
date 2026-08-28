@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, Phone, MessageSquare, ShieldCheck, CheckCircle2,
@@ -15,7 +15,7 @@ import CustomerReviewSection from '../../components/common/CustomerReviewSection
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & verified', icon: '🛒' },
-  { key: 'preparing', label: 'Preparing', fullLabel: 'Store Packing', desc: 'Fresh Mart is packing your items', icon: '🍳' },
+  { key: 'preparing', label: 'Preparing', fullLabel: 'Store Packing', desc: 'GrabIt is packing your items', icon: '🍳' },
   { key: 'ready', label: 'Ready', fullLabel: 'Ready for Pickup', desc: 'Packed & awaiting rider pickup', icon: '📦' },
   { key: 'out_for_delivery', label: 'On the Way', fullLabel: 'Out for Delivery', desc: 'Rider is on the way to your door', icon: '🛵' },
   { key: 'delivered', label: 'Delivered', fullLabel: 'Order Delivered', desc: 'Delivered safely to your doorstep', icon: '🎉' }
@@ -330,7 +330,7 @@ export default function OrderTrackingPage() {
                 {isCancelled ? 'Order Was Cancelled' : isDelivered ? 'Delivered To Your Door' : 'Arriving in 10 - 15 Mins'}
               </h2>
               <p style={{ margin: 0, opacity: 0.9, fontSize: '14px', fontWeight: 500 }}>
-                {isCancelled ? 'Refund issued to your payment account.' : isDelivered ? `Delivered on ${order?.date}` : 'Store partner Fresh Mart is fulfilling your order en-route.'}
+                {isCancelled ? 'Refund issued to your payment account.' : isDelivered ? `Delivered on ${order?.date}` : 'GrabIt Store is fulfilling your order en-route.'}
               </p>
             </div>
 
@@ -630,7 +630,7 @@ export default function OrderTrackingPage() {
             </div>
 
             {/* ⭐ SHARE YOUR EXPERIENCE REVIEW CARD */}
-            <CustomerReviewSection storeName="Fresh Mart Supermarket" />
+            <CustomerReviewSection storeName="GrabIt Store" />
 
           </div>
 

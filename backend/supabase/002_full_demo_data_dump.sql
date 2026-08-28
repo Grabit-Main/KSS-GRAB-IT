@@ -1,4 +1,4 @@
--- ==============================================================================
+﻿-- ==============================================================================
 -- GrabIt Complete Schema + Comprehensive Demo Data Dump
 -- Run this in the Supabase SQL Editor: https://supabase.com/dashboard/project/vhcmjwuhdcdxqmyjvqpz/sql
 -- ==============================================================================
@@ -121,7 +121,7 @@ alter table public.payments disable row level security;
 -- A. DEMO USERS
 insert into public.profiles (phone, full_name, email, role) values
   ('+919999900001', 'Admin Supervisor', 'admin@grabit.local', 'admin'),
-  ('+919999900002', 'Fresh Mart Supermarket', 'seller@grabit.local', 'seller'),
+  ('+919999900002', 'GrabIt Store', 'seller@grabit.local', 'seller'),
   ('+919999900003', 'Speedy Express Delivery', 'rider@grabit.local', 'delivery_agent'),
   ('+919999900004', 'Rahul Sharma', 'customer@grabit.local', 'customer')
 on conflict (phone) do update set full_name = excluded.full_name, role = excluded.role;

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import HTTPException, Header
 from .config import settings
@@ -18,7 +18,7 @@ def current_user(authorization: str | None = Header(default=None)) -> dict:
     if raw_token in ("demo-token", "demo-admin-token", "admin-token"):
         return {"sub": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d", "role": "admin", "name": "GrabIt Master Admin"}
     if raw_token in ("demo-seller-token", "seller-token"):
-        return {"sub": "c8d0412d-5c3d-489d-8e43-0dc5dcf90389", "role": "seller", "name": "Fresh Mart Supermarket"}
+        return {"sub": "c8d0412d-5c3d-489d-8e43-0dc5dcf90389", "role": "seller", "name": "GrabIt Store"}
     if raw_token in ("demo-delivery-token", "delivery-token"):
         return {"sub": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a", "role": "delivery_agent", "name": "Karthik Rider"}
     if raw_token in ("demo-customer-token", "customer-token"):

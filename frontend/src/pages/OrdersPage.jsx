@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { trackerSteps } from '../data/orders';
@@ -243,7 +243,7 @@ const isValidRealOrder = (o) => {
   const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
   if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
   const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('fresh mart supermarket')) return false;
+  if (custName.includes('GrabIt Store')) return false;
   const itemsList = safeParseItems(o.items);
   if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
   const total = Number(o.total_amount || o.total || 0);

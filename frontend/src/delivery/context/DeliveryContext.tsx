@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
+﻿import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import {
   AgentStatus,
   OrderStatus,
@@ -68,7 +68,7 @@ const isValidRealOrder = (o: any) => {
   const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
   if (!addr || addr === 'enter your delivery address' || addr.length < 4) return false;
   const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('fresh mart supermarket')) return false;
+  if (custName.includes('GrabIt Store')) return false;
   const itemsList = parseItems(o.items);
   if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
   return true;

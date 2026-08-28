@@ -1,4 +1,4 @@
-// ==========================================================================
+﻿// ==========================================================================
 // Grabit Quick Commerce - Mock Backend Database & LocalStorage Engine
 // Fully functional client-side store for offline/standalone execution
 // ==========================================================================
@@ -14,7 +14,7 @@ const STORAGE_KEYS = {
 const INITIAL_SELLER = {
   id: 1,
   email: 'seller@grabit.com',
-  store_name: 'Fresh Mart Supermarket',
+  store_name: 'GrabIt Store',
   phone: '+91 98765 43210',
   business_address: 'Shop 14, High Street Avenue, Indiranagar, Bangalore 560038',
   gstin: '29ABCDE1234F1Z5',
