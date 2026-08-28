@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import ProductSvg from '../components/common/ProductSvg';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../../utils/scrollToTop';
+import CustomerReviewSection from '../../components/common/CustomerReviewSection';
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & verified', icon: '🛒' },
@@ -485,6 +486,9 @@ export default function OrderTrackingPage() {
                 </button>
               </div>
             </div>
+
+            {/* ⭐ SHARE YOUR EXPERIENCE REVIEW CARD */}
+            <CustomerReviewSection storeName="Fresh Mart Supermarket" />
 
           </div>
 

@@ -10,6 +10,7 @@ import { useWishlist } from '../context/WishlistContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 import AnimatedCombosSection from '../components/home/AnimatedCombosSection';
+import CustomerReviewSection from '../../components/common/CustomerReviewSection';
 
 export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -1107,6 +1108,9 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        {/* 🌟 CUSTOMER REVIEW SECTION */}
+        <CustomerReviewSection storeName="GrabIt Supermarket" />
       </div>
 
     </div>
