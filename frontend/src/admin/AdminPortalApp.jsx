@@ -829,37 +829,23 @@ export function AdminPortalApp() {
             top: 0,
             zIndex: 90
           }}>
-            {/* Left: Mobile Hamburger OR Search Box */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, maxWidth: isMobile ? '240px' : '420px' }}>
-              {isMobile && (
-                <button
-                  type="button"
-                  onClick={() => setMobileDrawerOpen(true)}
-                  style={{
-                    background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px',
-                    width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: '#0F172A', flexShrink: 0
-                  }}
-                >
-                  <Menu size={18} />
-                </button>
-              )}
-
+            {/* Left: Clean Brand Section Title (Search Bar & Hamburger Button Removed) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px',
-                padding: '6px 12px', width: '100%'
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontWeight: 900, fontSize: '15px'
               }}>
-                <Search size={15} color="#94A3B8" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isMobile ? "Search..." : "Search orders, customers, partners..."}
-                  style={{
-                    border: 'none', background: 'transparent', outline: 'none',
-                    fontSize: '13px', width: '100%', color: '#0F172A', fontWeight: 500
-                  }}
-                />
+                G
+              </div>
+              <div>
+                <h1 style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.3px' }}>
+                  GrabIt Executive Console
+                </h1>
+                <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                  Real-time Supermarket & Express Logistics Control
+                </div>
               </div>
             </div>
 
@@ -2197,19 +2183,54 @@ export function AdminPortalApp() {
             })()}
 
             {/* ══════════════════════════════════════════════════════════════════ */}
-            {/* ── TAB 5: SUPERMARKET LOCATION & GEOFENCE SETTINGS ── */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* ── TAB 5: SUPERMARKET LOCATION & GEOFENCE SETTINGS (2 MAPS) ── */}
             {/* ══════════════════════════════════════════════════════════════════ */}
             {activeTab === 'security' && (
-              <div style={{ maxWidth: '820px', margin: '0 auto' }}>
-                <SupermarketLocationMapPicker
-                  initialLat={13.014333}
-                  initialLng={77.646000}
-                  initialTitle="Fresh Mart Supermarket — Main Hub"
-                  initialRadius={100}
-                  onSaveLocation={(data) => {
-                    setNotice(`✅ Supermarket Location Updated: ${data.address} (${data.radius}m radius)`);
-                  }}
-                />
+              <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                
+                {/* Header Banner */}
+                <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0' }}>
+                    🗺️ Store Location & Express Hub Geofencing
+                  </h2>
+                  <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                    Configure exact GPS coordinates and delivery geofence radiuses for both your Main Supermarket Hub and Secondary Express Dark Store.
+                  </p>
+                </div>
+
+                {/* 📍 MAP 1: MAIN SUPERMARKET HUB */}
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={16} /> 1. Main Supermarket Hub Location (Primary Hub)
+                  </div>
+                  <SupermarketLocationMapPicker
+                    initialLat={13.014333}
+                    initialLng={77.646000}
+                    initialTitle="GrabIt Supermarket — Main Hub (Banaswadi)"
+                    initialRadius={100}
+                    onSaveLocation={(data) => {
+                      setNotice(`✅ Primary Supermarket Location Saved: ${data.address} (${data.radius}m radius)`);
+                    }}
+                  />
+                </div>
+
+                {/* 📍 MAP 2: SECONDARY EXPRESS DARK STORE HUB */}
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={16} /> 2. Secondary Express Dark Store Location (Hub 2)
+                  </div>
+                  <SupermarketLocationMapPicker
+                    initialLat={12.971600}
+                    initialLng={77.641200}
+                    initialTitle="GrabIt Express Dark Store — Hub 2 (Indiranagar)"
+                    initialRadius={150}
+                    onSaveLocation={(data) => {
+                      setNotice(`✅ Secondary Express Hub 2 Location Saved: ${data.address} (${data.radius}m radius)`);
+                    }}
+                  />
+                </div>
+
               </div>
             )}
 

@@ -6,7 +6,7 @@ import { Navigation, LocateFixed, Check, MapPin } from 'lucide-react';
 export default function SupermarketLocationMapPicker({
   initialLat = 13.014333,
   initialLng = 77.646000,
-  initialTitle = 'Fresh Mart Supermarket — Main Hub',
+  initialTitle = 'GrabIt Supermarket — Main Hub',
   initialRadius = 100,
   onSaveLocation
 }) {
@@ -52,7 +52,7 @@ export default function SupermarketLocationMapPicker({
         const postcode = addr.postcode || '560043';
 
         const title = data.name || `${road}, ${area}`;
-        setStoreTitle(`Fresh Mart Supermarket — ${area}`);
+        setStoreTitle(`GrabIt Supermarket — ${area}`);
         setResolvedAddress(`${road}, ${area}, ${city} ${postcode}`);
       }
     } catch {
