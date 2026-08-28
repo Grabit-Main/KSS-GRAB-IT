@@ -25,7 +25,15 @@ export const SellerHeader = ({ onMenuClick, title = 'Seller Overview' }) => {
     <>
       <header className="seller-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: '56px', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexShrink: 1 }}>
-
+          {/* Mobile Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="seller-mobile-toggle-btn"
+            title="Toggle Navigation"
+          >
+            <Menu size={20} />
+          </button>
 
           {/* Grabit Logo */}
           <Link

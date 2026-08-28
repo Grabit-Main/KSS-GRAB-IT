@@ -62,8 +62,9 @@ export default function CheckoutPage() {
     }
   };
   const activeUser = getStoredUser();
-  const currentName = activeUser ? (activeUser.full_name || activeUser.name || 'Customer') : '';
-  const currentPhone = activeUser ? (activeUser.phone || '').replace('+91', '').trim() : '';
+  const isCustomerRole = activeUser?.role === 'customer' || !activeUser?.role;
+  const currentName = isCustomerRole ? (activeUser?.full_name || activeUser?.name || 'Rahul Sharma') : 'Rahul Sharma';
+  const currentPhone = (activeUser?.phone || '+919999900004').replace('+91', '').trim();
   const storeHubName = 'GrabIt Supermarket';
 
   const getAddressesKey = (phone) => getCustomerAddressKey(phone || activeUser?.phone);

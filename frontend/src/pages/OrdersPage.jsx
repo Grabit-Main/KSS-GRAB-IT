@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { trackerSteps } from '../data/orders';
@@ -243,7 +243,7 @@ const isValidRealOrder = (o) => {
   const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
   if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
   const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('GrabIt Store')) return false;
+  if (custName.includes('fresh mart supermarket')) return false;
   const itemsList = safeParseItems(o.items);
   if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
   const total = Number(o.total_amount || o.total || 0);
@@ -612,11 +612,34 @@ export default function OrdersPage() {
 
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr',
+                        gridTemplateColumns: '1fr 1fr',
                         gap: '10px',
                         width: isMobile ? '100%' : 'auto',
-                        minWidth: isMobile ? '100%' : '140px'
+                        minWidth: isMobile ? '100%' : '260px'
                       }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderModal(order)}
+                          style={{
+                            background: '#FFFFFF',
+                            border: '1.5px solid #CBD5E1',
+                            borderRadius: '12px',
+                            padding: '10px 16px',
+                            fontSize: '13px',
+                            fontWeight: 800,
+                            color: '#0F172A',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#0071E3'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                        >
+                          View Details
+                        </button>
                         <button
                           type="button"
                           onClick={() => {

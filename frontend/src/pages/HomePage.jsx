@@ -11,7 +11,6 @@ import useWindowWidth from '../hooks/useWindowWidth';
 
 import AnimatedCombosSection from '../components/home/AnimatedCombosSection';
 import CustomerReviewSection from '../components/common/CustomerReviewSection';
-import SuggestProductSection from '../components/common/SuggestProductSection';
 
 export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -61,9 +60,7 @@ export default function HomePage() {
     return allProducts.filter(p => (p.discount || 0) >= 15 || p.mrp > p.price).slice(0, isMobile ? 6 : 12);
   }, [allProducts, isMobile]);
 
-  const wishlistProducts = useMemo(() =>
-    allProducts.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category || p.category_slug)).slice(0, isMobile ? 6 : 12),
-  [allProducts, isMobile]);
+  const wishlistProducts = allProducts.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category || p.category_slug)).slice(0, isMobile ? 6 : 12);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
@@ -1134,9 +1131,6 @@ export default function HomePage() {
 
         {/* 🌟 CUSTOMER REVIEW SECTION */}
         <CustomerReviewSection storeName="GrabIt Supermarket" />
-
-        {/* 💡 PRODUCT SUGGESTION SECTION */}
-        <SuggestProductSection />
       </div>
 
     </div>

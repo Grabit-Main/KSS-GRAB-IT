@@ -355,17 +355,6 @@ async def create_category(body: CategoryRequest, user=Depends(require_roles("adm
             return existing[0]
         raise HTTPException(status_code=400, detail=f"Category '{cat_name}' already exists or could not be created.")
 
-@router.delete("/categories/{cat_id}")
-@router.delete("/categories/{cat_id}/")
-async def delete_category(cat_id: str, user=Depends(require_roles("admin", "seller"))):
-    try:
-        await store.delete("categories", cat_id)
-    except Exception:
-        pass
-    await cache_del("cache:categories")
-    return {"message": "Category deleted successfully"}
-
-
 # ==============================================================================
 # /products/ (Redis Cached)
 # ==============================================================================

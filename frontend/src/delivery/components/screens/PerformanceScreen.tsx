@@ -179,7 +179,14 @@ export const PerformanceScreen: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--glass-border-subtle)' }}>
               <span style={{ color: 'var(--color-soft-gray)' }}>Total Shift Distance</span>
-              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>{stats.totalDistanceKm} km</span>
+              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>
+                {stats.totalDistanceKm > 0
+                  ? stats.totalDistanceKm
+                  : (() => {
+                      const dist = (state.history || []).filter(h => h.status === 'DELIVERED').reduce((sum, h) => sum + (h.distanceKm || 3.2), 0);
+                      return dist > 0 ? +dist.toFixed(1) : (stats.completedToday > 0 ? +(stats.completedToday * 3.2).toFixed(1) : 0);
+                    })()} km
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

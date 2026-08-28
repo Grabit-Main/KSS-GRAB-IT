@@ -11,7 +11,6 @@ import useWindowWidth from '../hooks/useWindowWidth';
 
 import AnimatedCombosSection from '../components/home/AnimatedCombosSection';
 import CustomerReviewSection from '../../components/common/CustomerReviewSection';
-import SuggestProductSection from '../../components/common/SuggestProductSection';
 
 export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -1112,9 +1111,6 @@ export default function HomePage() {
 
         {/* 🌟 CUSTOMER REVIEW SECTION */}
         <CustomerReviewSection storeName="GrabIt Supermarket" />
-
-        {/* 💡 PRODUCT SUGGESTION SECTION */}
-        <SuggestProductSection />
       </div>
 
     </div>

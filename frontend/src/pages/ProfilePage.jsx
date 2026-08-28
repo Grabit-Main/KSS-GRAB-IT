@@ -28,45 +28,37 @@ export default function ProfilePage() {
 
   const getStoredUser = () => {
     try {
-      const session = localStorage.getItem('grabit_session');
       const u = localStorage.getItem('grabit_user');
-      if (!session || !u) return null;
-      return JSON.parse(u);
+      return u ? JSON.parse(u) : null;
     } catch {
       return null;
     }
   };
 
   const initialUser = getStoredUser();
-  const isLoggedIn = Boolean(initialUser);
-
   // ── USER STATE & WALLET ──
-  const [userName, setUserName] = useState(isLoggedIn ? (initialUser?.full_name || initialUser?.name || 'Customer') : 'Guest Account');
-  const [userPhone, setUserPhone] = useState(isLoggedIn ? (initialUser?.phone || '') : 'Not Logged In');
-  const [userEmail, setUserEmail] = useState(isLoggedIn ? (initialUser?.email || '') : 'Not Logged In');
+  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || 'Customer');
+  const [userPhone, setUserPhone] = useState(initialUser?.phone || '');
+  const [userEmail, setUserEmail] = useState(initialUser?.email || '');
   const [walletBalance, setWalletBalance] = useState(0);
   const [addAmount, setAddAmount] = useState('100');
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
 
   // Sync profile when auth state updates
-  useEffect(() => {
+  useState(() => {
     const syncUser = () => {
       const u = getStoredUser();
       if (u) {
         setUserName(u.full_name || u.name || 'Customer');
         setUserPhone(u.phone || '');
         setUserEmail(u.email || '');
-      } else {
-        setUserName('Guest Account');
-        setUserPhone('Not Logged In');
-        setUserEmail('Not Logged In');
       }
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('grabit_auth_updated', syncUser);
       window.addEventListener('storage', syncUser);
     }
-  }, []);
+  });
 
   // ── MODAL VISIBILITY STATES ──
   const [activeModal, setActiveModal] = useState(null); // 'add-balance' | 'refunds' | 'gift-cards' | 'addresses' | 'edit-profile' | 'rewards' | 'payments' | 'app-icon' | 'suggest' | 'notifications' | 'info'
@@ -247,35 +239,6 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
-
-        {!isLoggedIn && (
-          <div style={{
-            background: 'linear-gradient(135deg, #0071E3 0%, #0056B3 100%)',
-            borderRadius: '20px', padding: '18px 20px', color: '#FFFFFF',
-            marginBottom: '20px', boxShadow: '0 8px 24px rgba(0,113,227,0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px'
-          }}>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 900, marginBottom: '4px' }}>
-                You are in Guest Mode 🛍️
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.9, fontWeight: 500, lineHeight: 1.35 }}>
-                Log in or create an account to save delivery addresses, view past orders, and claim rewards.
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                background: '#FFFFFF', color: '#0071E3', border: 'none',
-                borderRadius: '12px', padding: '10px 16px', fontSize: '12.5px',
-                fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-              }}
-            >
-              Log In / Sign Up
-            </button>
-          </div>
-        )}
 
         {/* ── 3. TOP 3 QUICK ACTION CARDS ── */}
         <div style={{

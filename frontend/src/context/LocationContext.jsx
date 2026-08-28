@@ -59,22 +59,7 @@ export function LocationProvider({ children }) {
     };
   }, []);
 
-  const guestLocationFallback = {
-    id: 'guest',
-    title: 'Select Location',
-    tag: 'Select Location',
-    area: 'Select Location',
-    city: 'Bengaluru 560034',
-    state: 'Karnataka',
-    pincode: '560034',
-    address: 'Bengaluru 560034',
-    time: '15-25 min delivery',
-    radius: '5 km'
-  };
-
-  const activeLoc = (locations && locations.length > 0)
-    ? (locations.find(l => l.id === selectedId) || locations[0])
-    : guestLocationFallback;
+  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
 
   const selectLocation = (loc) => {
     setSelectedId(loc.id);

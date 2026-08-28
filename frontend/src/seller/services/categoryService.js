@@ -1,8 +1,7 @@
-import { get, post, del, uploadImage } from '../../api';
+import { get, post, uploadImage } from '../../api';
 import { categories as defaultCategories, subCategories } from '../../data/categories';
 import { products as defaultProducts } from '../../data/products';
 import { resolveMediaUrl, DEFAULT_CATEGORY_FALLBACK } from '../utils/mediaResolver';
-
 
 function getStatusOverrides() {
   try {
@@ -12,29 +11,7 @@ function getStatusOverrides() {
   }
 }
 
-function getDeletedCategories() {
-  try {
-    return JSON.parse(localStorage.getItem('grabit_deleted_categories') || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function saveDeletedCategory(id, name, slug) {
-  try {
-    const list = getDeletedCategories();
-    const idStr = String(id);
-    const nameNorm = name ? name.toLowerCase().trim() : '';
-    const slugNorm = slug ? slug.toLowerCase().trim() : '';
-    if (!list.some(item => String(item.id) === idStr || (nameNorm && item.name === nameNorm) || (slugNorm && item.slug === slugNorm))) {
-      list.push({ id: idStr, name: nameNorm, slug: slugNorm });
-      localStorage.setItem('grabit_deleted_categories', JSON.stringify(list));
-    }
-  } catch {}
-}
-
 function saveStatusOverride(id, isActive) {
-
   try {
     const map = getStatusOverrides();
     map[String(id)] = isActive;
@@ -52,44 +29,21 @@ function emitCategoryEvent() {
   } catch {}
 }
 
-function getStandardSlug(name, slug) {
-  const n = name ? name.toLowerCase().trim() : '';
-  const s = slug ? slug.toLowerCase().trim() : '';
-
-  if (n === 'cold drinks & juices' || n === 'cold drinks' || n === 'beverages' || s === 'beverages' || n.includes('cold drinks') || n.includes('beverage')) return 'beverages';
-  if (n === 'atta, rice & dal' || n === 'atta' || n === 'staples' || s === 'staples' || n.includes('atta') || n.includes('staple')) return 'staples';
-  if (n === 'snacks & munchies' || n === 'snacks' || s === 'snacks-munchies' || n.includes('snack') || n.includes('munchies')) return 'snacks-munchies';
-  if (n === 'dairy & bakery' || n === 'dairy' || s === 'dairy-bakery' || n.includes('dairy') || n.includes('bakery')) return 'dairy-bakery';
-  if (n === 'chocolates & sweets' || n === 'chocolates' || s === 'chocolates' || n.includes('chocolate') || n.includes('sweet')) return 'chocolates';
-  if (n === 'personal care' || s === 'personal-care' || n.includes('personal care')) return 'personal-care';
-  if (n === 'household essentials' || n === 'household' || s === 'household' || n.includes('household')) return 'household';
-  if (n === 'fresh fruits & veggies' || n === 'fruits & vegetables' || n === 'produce' || s === 'produce' || n.includes('fruit') || n.includes('veggie') || n.includes('vegetable')) return 'produce';
-  if (n === 'tea, coffee & drinks' || n === 'tea & coffee' || s === 'tea-coffee' || n.includes('tea') || n.includes('coffee')) return 'tea-coffee';
-  if (n === 'biscuits & cookies' || n === 'biscuits' || s === 'biscuits' || n.includes('biscuit') || n.includes('cookie')) return 'biscuits';
-  if (n === 'instant & frozen food' || n === 'instant food' || s === 'instant-food' || n.includes('instant') || n.includes('frozen')) return 'instant-food';
-  if (n === 'edible oils & ghee' || n === 'oil' || s === 'oil' || n.includes('oil') || n.includes('ghee')) return 'oil';
-  if (n === 'electronics & gadgets' || n === 'electronics' || s === 'electronics' || n.includes('electronic') || n.includes('gadget')) return 'electronics';
-  if (n === 'fashion & accessories' || n === 'fashion' || s === 'fashion' || n.includes('fashion') || n.includes('accessories') || n.includes('shoe') || n.includes('clothing')) return 'fashion';
-
-  return s || n.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
 export const categoryService = {
   async getCategories(params = {}) {
     try {
       // 1. Base Customer Portal Categories (14 Categories)
       const safeProducts = (typeof defaultProducts !== 'undefined' && Array.isArray(defaultProducts)) ? defaultProducts : [];
       let results = (Array.isArray(defaultCategories) ? defaultCategories : []).map((c) => {
-        const resolvedSlug = getStandardSlug(c.name, c.slug);
-        const subList = (typeof subCategories !== 'undefined' && subCategories && subCategories[resolvedSlug]) ? subCategories[resolvedSlug] : [];
+        const subList = (typeof subCategories !== 'undefined' && subCategories && subCategories[c.slug]) ? subCategories[c.slug] : [];
         const prodsInCat = safeProducts.filter((p) => {
-          if (p.category === resolvedSlug) return true;
-          if (resolvedSlug === 'beverages' && (p.category === 'beverages' || p.category === 3 || p.category === 9)) return true;
-          if (resolvedSlug === 'staples' && (p.category === 'staples' || p.category === 4 || p.category === 11)) return true;
-          if (resolvedSlug === 'chocolates' && (p.category === 'chocolates' || p.category === 5)) return true;
-          if (resolvedSlug === 'produce' && (p.category === 'produce' || p.category === 8)) return true;
-          if (resolvedSlug === 'biscuits' && (p.category === 'biscuits' || p.category === 10)) return true;
-          if (resolvedSlug === 'oil' && (p.category === 'oil' || p.category === 12)) return true;
+          if (p.category === c.slug) return true;
+          if (c.slug === 'beverages' && (p.category === 'beverages' || p.category === 3 || p.category === 9)) return true;
+          if (c.slug === 'staples' && (p.category === 'staples' || p.category === 4 || p.category === 11)) return true;
+          if (c.slug === 'chocolates' && (p.category === 'chocolates' || p.category === 5)) return true;
+          if (c.slug === 'produce' && (p.category === 'produce' || p.category === 8)) return true;
+          if (c.slug === 'biscuits' && (p.category === 'biscuits' || p.category === 10)) return true;
+          if (c.slug === 'oil' && (p.category === 'oil' || p.category === 12)) return true;
           if (String(p.category) === String(c.id)) return true;
           return false;
         });
@@ -97,10 +51,10 @@ export const categoryService = {
         return {
           id: String(c.id),
           name: c.name,
-          slug: resolvedSlug,
+          slug: c.slug,
           icon: c.icon,
-          image: resolveMediaUrl(c.icon || resolvedSlug, DEFAULT_CATEGORY_FALLBACK),
-          image_url: resolveMediaUrl(c.icon || resolvedSlug, DEFAULT_CATEGORY_FALLBACK),
+          image: resolveMediaUrl(c.icon || c.slug, DEFAULT_CATEGORY_FALLBACK),
+          image_url: resolveMediaUrl(c.icon || c.slug, DEFAULT_CATEGORY_FALLBACK),
           is_active: true,
           subcategory_count: subList.length > 0 ? subList.length : 4,
           product_count: prodsInCat.length > 0 ? prodsInCat.length : 23,
@@ -113,12 +67,11 @@ export const categoryService = {
         const dbCats = await get('/categories/').catch(() => []);
         if (Array.isArray(dbCats) && dbCats.length > 0) {
           const mappedDb = dbCats.map((c) => {
-            const resolvedSlug = getStandardSlug(c.name, c.slug);
-            const resolvedImg = resolveMediaUrl(c.image_url || c.name || resolvedSlug, DEFAULT_CATEGORY_FALLBACK);
+            const resolvedImg = resolveMediaUrl(c.image_url || c.name || c.slug, DEFAULT_CATEGORY_FALLBACK);
             return {
               id: String(c.id),
               name: c.name,
-              slug: resolvedSlug,
+              slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
               icon: resolvedImg,
               image: resolvedImg,
               image_url: resolvedImg,
@@ -138,14 +91,7 @@ export const categoryService = {
       try {
         const customCats = JSON.parse(localStorage.getItem('grabit_seller_custom_categories') || '[]');
         if (Array.isArray(customCats) && customCats.length > 0) {
-          const mappedCustom = customCats.map((c) => {
-            const resolvedSlug = getStandardSlug(c.name, c.slug);
-            return {
-              ...c,
-              slug: resolvedSlug
-            };
-          });
-          results = [...mappedCustom, ...results];
+          results = [...customCats, ...results];
         }
       } catch {}
 
@@ -170,25 +116,6 @@ export const categoryService = {
         if (nameNorm) seenNames.add(nameNorm);
         return true;
       });
-
-      // Filter out any categories marked as deleted
-      const deletedList = getDeletedCategories();
-      if (deletedList.length > 0) {
-        const deletedIds = new Set(deletedList.map((d) => String(d.id)));
-        const deletedNames = new Set(deletedList.map((d) => d.name).filter(Boolean));
-        const deletedSlugs = new Set(deletedList.map((d) => d.slug).filter(Boolean));
-
-        results = results.filter((c) => {
-          const idStr = String(c.id);
-          const nameNorm = c.name ? c.name.toLowerCase().trim() : '';
-          const slugNorm = c.slug ? c.slug.toLowerCase().trim() : '';
-          if (deletedIds.has(idStr)) return false;
-          if (nameNorm && deletedNames.has(nameNorm)) return false;
-          if (slugNorm && deletedSlugs.has(slugNorm)) return false;
-          return true;
-        });
-      }
-
 
       // Apply persistent status overrides
       const statusMap = getStatusOverrides();
@@ -380,42 +307,14 @@ export const categoryService = {
   },
 
   async deleteCategory(id) {
-    const idStr = String(id);
-    let targetName = '';
-    let targetSlug = '';
-
-    try {
-      const allCats = await categoryService.getCategories();
-      const cat = allCats.results?.find((c) => String(c.id) === idStr);
-      if (cat) {
-        targetName = cat.name || '';
-        targetSlug = cat.slug || '';
-      }
-    } catch {}
-
-    saveDeletedCategory(idStr, targetName, targetSlug);
-
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_seller_custom_categories') || '[]');
-      const up = stored.filter((c) => {
-        const cId = String(c.id);
-        const cName = c.name ? c.name.toLowerCase().trim() : '';
-        const tName = targetName ? targetName.toLowerCase().trim() : '';
-        if (cId === idStr) return false;
-        if (tName && cName === tName) return false;
-        return true;
-      });
+      const up = stored.filter((c) => String(c.id) !== String(id));
       localStorage.setItem('grabit_seller_custom_categories', JSON.stringify(up));
     } catch {}
-
-    try {
-      await del(`/categories/${id}`);
-    } catch (e) {}
-
     emitCategoryEvent();
     return true;
   },
-
 };
 
 export default categoryService;

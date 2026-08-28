@@ -25,13 +25,11 @@ import {
   Sparkles,
   Loader2,
   MapPin,
-  LogIn,
-  Lightbulb
+  LogIn
 } from 'lucide-react';
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
-import DeliveryRadiusMapPicker from './DeliveryRadiusMapPicker';
 import { forceScrollToTop } from '../utils/scrollToTop';
 
 // ── Window Width Hook ──
@@ -75,37 +73,44 @@ const isValidRealOrder = (o) => {
   const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
   if (!addr || addr === 'enter your delivery address' || addr.length < 4) return false;
   const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('GrabIt Store')) return false;
+  if (custName.includes('fresh mart supermarket')) return false;
   const itemsList = safeParseItems(o.items);
   if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
   return true;
 };
 
 // ── Chart Data Series for Time Periods ──
-// Chart shape data (visual only — real numbers shown in stat cards)
 const CHART_PERIODS_DATA = {
   DAILY: {
     labels: ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM', '11 PM'],
     online: [12, 34, 89, 62, 145, 182, 94],
     store: [8, 21, 54, 48, 98, 121, 61],
-    summaryLabel: 'Today'
+    earnings: '₹62,800',
+    salesCount: '194',
+    summaryLabel: 'Today Summary'
   },
   WEEKLY: {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     online: [24, 31, 28, 42, 58, 84, 79],
     store: [18, 22, 21, 31, 41, 59, 54],
+    earnings: '₹3,46,000',
+    salesCount: '982',
     summaryLabel: 'This Week'
   },
   MONTHLY: {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
     online: [18, 38, 22, 45, 62],
     store: [10, 26, 18, 32, 46],
-    summaryLabel: 'This Month'
+    earnings: '₹6,468.96',
+    salesCount: '82',
+    summaryLabel: 'Last Month Summary'
   },
   YEARLY: {
     labels: ['2023', '2024', '2025', '2026'],
     online: [120, 240, 480, 890],
     store: [80, 160, 310, 540],
+    earnings: '₹48,92,400',
+    salesCount: '14,280',
     summaryLabel: 'Annual'
   }
 };
@@ -154,7 +159,6 @@ export function AdminPortalApp() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [productSortBy, setProductSortBy] = useState('default');
   const [notice, setNotice] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
 
   // ── Filtering & Modals ──
   const [searchQuery, setSearchQuery] = useState('');
@@ -197,22 +201,14 @@ export function AdminPortalApp() {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const [ordersRes, partnersRes, productsRes, suggestionsRes] = await Promise.all([
+      const [ordersRes, partnersRes, productsRes] = await Promise.all([
         get('/orders/').catch(() => []),
         get('/users/').catch(() => []),
-        get('/products/').catch(() => []),
-        get('/admin/product-suggestions').catch(() => [])
+        get('/products/').catch(() => [])
       ]);
 
       if (Array.isArray(ordersRes)) setOrders(ordersRes);
       if (Array.isArray(partnersRes)) setPartners(partnersRes);
-      if (Array.isArray(suggestionsRes)) {
-        setSuggestions(suggestionsRes);
-      } else {
-        const local = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
-        setSuggestions(local);
-      }
-
       if (Array.isArray(productsRes) && productsRes.length > 0) {
         const merged = [...baseProducts];
         const existingNames = new Set(baseProducts.map(p => (p.name || '').toLowerCase()));
@@ -364,46 +360,6 @@ export function AdminPortalApp() {
     setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
     setNotice(`✅ Deleted SKU "${name}".`);
   };
-  const handleDeleteSuggestion = async (sugId) => {
-    try {
-      await del(`/admin/product-suggestions/${sugId}`).catch(() => {});
-    } catch {}
-    setSuggestions(prev => prev.filter(s => s.id !== sugId));
-    try {
-      const local = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
-      const filtered = local.filter(s => s.id !== sugId);
-      localStorage.setItem('grabit_product_suggestions', JSON.stringify(filtered));
-    } catch {}
-    setNotice('✅ Product suggestion dismissed.');
-  };
-
-  const handleAddToStoreFromSuggestion = (sug) => {
-    setNewProdName(sug.product_name || '');
-    const standardCategories = [
-      'Snacks & Munchies',
-      'Dairy & Bakery',
-      'Cold Drinks & Juices',
-      'Atta, Rice & Dal',
-      'Chocolates & Sweets',
-      'Personal Care',
-      'Household Essentials',
-      'Fresh Fruits & Veggies',
-      'Tea, Coffee & Drinks',
-      'Biscuits & Cookies',
-      'Instant & Frozen Food',
-      'Edible Oils & Ghee',
-      'Electronics & Gadgets',
-      'Fashion & Accessories'
-    ];
-    const matched = standardCategories.find(c => c.toLowerCase() === (sug.category || '').toLowerCase().trim());
-    setNewProdCategory(matched || 'Snacks & Munchies');
-    setNewProdPrice('99');
-    setNewProdStock('50');
-    setNewProdImage('');
-    
-    setShowAddProductModal(true);
-    handleDeleteSuggestion(sug.id);
-  };
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -459,46 +415,6 @@ export function AdminPortalApp() {
   const currentChart = CHART_PERIODS_DATA[timeFilter] || CHART_PERIODS_DATA.MONTHLY;
   const maxChartVal = Math.max(...currentChart.online, ...currentChart.store, 70);
 
-  // ── Period-filtered orders for real-time dashboard stats ──
-  const periodOrders = (() => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // midnight today
-    if (timeFilter === 'DAILY') {
-      // Only orders placed today
-      return orders.filter(o => {
-        const d = new Date(o.created_at || o.createdAt || 0);
-        return d >= todayStart;
-      });
-    }
-    if (timeFilter === 'WEEKLY') {
-      // Last 7 days including today AND yesterday
-      const weekAgo = new Date(todayStart);
-      weekAgo.setDate(weekAgo.getDate() - 6); // 6 days back = 7 day window
-      return orders.filter(o => {
-        const d = new Date(o.created_at || o.createdAt || 0);
-        return d >= weekAgo;
-      });
-    }
-    if (timeFilter === 'MONTHLY') {
-      // Current calendar month
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      return orders.filter(o => {
-        const d = new Date(o.created_at || o.createdAt || 0);
-        return d >= monthStart;
-      });
-    }
-    if (timeFilter === 'YEARLY') {
-      // Current calendar year
-      const yearStart = new Date(now.getFullYear(), 0, 1);
-      return orders.filter(o => {
-        const d = new Date(o.created_at || o.createdAt || 0);
-        return d >= yearStart;
-      });
-    }
-    return orders; // fallback
-  })();
-
-
   const getSvgCoordinates = (dataArr, width = 600, height = 160) => {
     const stepX = width / (dataArr.length - 1);
     return dataArr.map((val, idx) => {
@@ -533,8 +449,7 @@ export function AdminPortalApp() {
     { id: 'orders', label: 'Live Orders', icon: ShoppingBag, count: filteredOrders.length },
     { id: 'partners', label: 'Partners', icon: Users, count: partners.length || 60 },
     { id: 'products', label: 'Catalog', icon: Package, count: products.length || 48 },
-    { id: 'security', label: 'Store Map', icon: MapPin },
-    { id: 'suggestions', label: 'Suggestions', icon: Lightbulb, count: suggestions.length }
+    { id: 'security', label: 'Store Map', icon: MapPin }
   ];
 
   return (
@@ -843,14 +758,37 @@ export function AdminPortalApp() {
             top: 0,
             zIndex: 90
           }}>
-            {/* Left: GrabIt Admin Branding (hamburger removed — mobile uses bottom nav) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>G</div>
-                <div>
-                  <div style={{ fontSize: isMobile ? '13px' : '15px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>GrabIt Admin</div>
-                  <div style={{ fontSize: '9px', fontWeight: 800, color: '#0071E3', letterSpacing: '0.5px' }}>EXECUTIVE CONSOLE</div>
-                </div>
+            {/* Left: Mobile Hamburger OR Search Box */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, maxWidth: isMobile ? '240px' : '420px' }}>
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerOpen(true)}
+                  style={{
+                    background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px',
+                    width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#0F172A', flexShrink: 0
+                  }}
+                >
+                  <Menu size={18} />
+                </button>
+              )}
+
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px',
+                padding: '6px 12px', width: '100%'
+              }}>
+                <Search size={15} color="#94A3B8" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={isMobile ? "Search..." : "Search orders, customers, partners..."}
+                  style={{
+                    border: 'none', background: 'transparent', outline: 'none',
+                    fontSize: '13px', width: '100%', color: '#0F172A', fontWeight: 500
+                  }}
+                />
               </div>
             </div>
 
@@ -1080,20 +1018,20 @@ export function AdminPortalApp() {
                       </div>
                     </div>
 
-                    {/* Headline Numbers — real-time from orders state */}
+                    {/* Headline Numbers */}
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', gap: '20px', alignItems: 'baseline' }}>
                         <div>
                           <div style={{ fontSize: isMobile ? '22px' : '26px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.5px' }}>
-                            {(() => { const r = periodOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
+                            {currentChart.earnings}
                           </div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Earnings</div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Earnings</div>
                         </div>
                         <div>
                           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0071E3', letterSpacing: '-0.5px' }}>
-                            {periodOrders.length}
+                            {currentChart.salesCount}
                           </div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Total Orders</div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Orders</div>
                         </div>
                       </div>
 
@@ -1158,19 +1096,12 @@ export function AdminPortalApp() {
                       paddingTop: '12px',
                       borderTop: '1px solid #F1F5F9'
                     }}>
-                      {(() => {
-                        const totalOrders = periodOrders.length;
-                        const deliveredToday = periodOrders.filter(o => o.status === 'delivered').length;
-                        const pendingOrders = periodOrders.filter(o => ['placed','confirmed','preparing'].includes(o.status)).length;
-                        const totalRevenue = periodOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (parseFloat(o.total_amount || o.totalAmount || o.total || 0)), 0);
-                        const avgOrderValue = totalOrders > 0 ? (totalRevenue / Math.max(deliveredToday, 1)) : 0;
-                        return [
-                          { icon: ShoppingBag, color: '#EC4899', label: `Orders (${currentChart.summaryLabel})`, value: totalOrders.toLocaleString('en-IN') },
-                          { icon: TrendingUp, color: '#8B5CF6', label: 'Delivered', value: deliveredToday.toLocaleString('en-IN') },
-                          { icon: Package, color: '#0071E3', label: 'Pending', value: pendingOrders.toLocaleString('en-IN') },
-                          { icon: DollarSign, color: '#10B981', label: 'Revenue', value: totalRevenue > 0 ? `₹${totalRevenue.toLocaleString('en-IN')}` : '₹0' },
-                        ];
-                      })().map((stat, i) => {
+                      {[
+                        { icon: Wallet, color: '#EC4899', label: 'Wallet Balance', value: '₹35,678' },
+                        { icon: Sparkles, color: '#8B5CF6', label: 'Referral Earning', value: '₹15,895' },
+                        { icon: TrendingUp, color: '#0071E3', label: 'Estimate Sales', value: '₹62,450' },
+                        { icon: DollarSign, color: '#10B981', label: 'Net Earnings', value: '₹5,38,760' },
+                      ].map((stat, i) => {
                         const Icon = stat.icon;
                         return (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1191,58 +1122,69 @@ export function AdminPortalApp() {
                     </div>
                   </div>
 
-                  {/* RIGHT: Live Order Status Breakdown */}
+                  {/* RIGHT: Traffic & Channel Donut Card */}
                   <div className="hover-card" style={{
-                    background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
-                    padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                    display: 'flex', flexDirection: 'column', gap: '12px'
+                    background: '#FFFFFF',
+                    borderRadius: '18px',
+                    border: '1px solid #E2E8F0',
+                    padding: isMobile ? '16px' : '22px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px' }}>Order Status Breakdown</h3>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>Live pipeline for {currentChart.summaryLabel}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <h3 style={{ fontSize: isMobile ? '14px' : '15.5px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                          Traffic &amp; Channel Share
+                        </h3>
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', padding: '2px 7px', borderRadius: '5px' }}>
+                          Live
+                        </span>
                       </div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', padding: '2px 7px', borderRadius: '5px' }}>Live</span>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>Real-time acquisition distribution</div>
                     </div>
 
-                    {/* Status rows */}
-                    {(() => {
-                      const statuses = [
-                        { key: 'placed',           label: 'New Orders',     icon: '🛒', color: '#8B5CF6' },
-                        { key: 'confirmed',         label: 'Confirmed',      icon: '✅', color: '#0071E3' },
-                        { key: 'preparing',         label: 'Preparing',      icon: '👨‍🍳', color: '#F59E0B' },
-                        { key: 'out_for_delivery',  label: 'Out for Delivery',icon: '🚴', color: '#06B6D4' },
-                        { key: 'delivered',         label: 'Delivered',      icon: '📦', color: '#10B981' },
-                        { key: 'cancelled',         label: 'Cancelled',      icon: '❌', color: '#EF4444' },
-                      ];
-                      const total = Math.max(periodOrders.length, 1);
-                      return statuses.map(s => {
-                        const count = periodOrders.filter(o => o.status === s.key).length;
-                        const pct = Math.round((count / total) * 100);
-                        return (
-                          <div key={s.key}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '13px' }}>{s.icon}</span>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>{s.label}</span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 900, color: s.color }}>{count}</span>
-                                <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600, minWidth: '28px', textAlign: 'right' }}>{pct}%</span>
-                              </div>
-                            </div>
-                            <div style={{ height: '5px', borderRadius: '4px', background: '#F1F5F9', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${pct}%`, background: s.color, borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
+                    {/* Donut Graphic */}
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '14px 0' }}>
+                      <svg width="150" height="150" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx="90" cy="90" r="65" stroke="#F1F5F9" strokeWidth="18" fill="none" />
+                        {/* 55% Mobile App */}
+                        <circle cx="90" cy="90" r="65" stroke="#E11D48" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="183.8" strokeLinecap="round" />
+                        {/* 33% Web */}
+                        <circle cx="90" cy="90" r="65" stroke="#8B5CF6" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="273.6" style={{ transform: 'rotate(198deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
+                        {/* 12% Search */}
+                        <circle cx="90" cy="90" r="65" stroke="#06B6D4" strokeWidth="18" fill="none" strokeDasharray="408.4" strokeDashoffset="359.4" style={{ transform: 'rotate(317deg)', transformOrigin: '90px 90px' }} strokeLinecap="round" />
+                      </svg>
+                      <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{
+                          width: '36px', height: '36px', borderRadius: '50%',
+                          background: '#F59E0B', color: '#FFFFFF',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <ShoppingBag size={18} />
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>100%</div>
+                      </div>
+                    </div>
 
-                    {/* Summary total */}
-                    <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>Total ({currentChart.summaryLabel})</span>
-                      <span style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>{periodOrders.length} orders</span>
+                    {/* Donut Legend */}
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px',
+                      paddingTop: '12px', borderTop: '1px solid #F1F5F9', textAlign: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#8B5CF6' }}>33%</div>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Web</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#E11D48' }}>55%</div>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Mobile</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: 900, color: '#06B6D4' }}>12%</div>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>Search</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1254,7 +1196,7 @@ export function AdminPortalApp() {
                   gap: isMobile ? '12px' : '18px'
                 }}>
 
-                  {/* Card 1: Revenue — real-time from delivered orders */}
+                  {/* Card 1: Revenue */}
                   <div className="hover-card" style={{
                     background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
                     borderRadius: '16px', padding: isMobile ? '16px' : '20px',
@@ -1263,13 +1205,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Total Revenue
+                        Revenue Status
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {(() => { const r = periodOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || o.totalAmount || o.total || 0), 0); return r > 0 ? `₹${r.toLocaleString('en-IN')}` : '₹0'; })()}
+                        ₹48,432
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {periodOrders.filter(o => o.status === 'delivered').length} delivered ({currentChart.summaryLabel})
+                        Jan 01 - Jan 28
                       </div>
                     </div>
                     {/* Wavy Ribbon Graphic */}
@@ -1291,13 +1233,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Live / Active Orders
+                        Live Orders
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {periodOrders.filter(o => ['placed','confirmed','preparing','out_for_delivery'].includes(o.status)).length} Active
+                        {filteredOrders.length || 184} Live
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {periodOrders.length} orders ({currentChart.summaryLabel})
+                        +24% today
                       </div>
                     </div>
                     {/* Dotted Sparkline Graphic */}
@@ -1318,13 +1260,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Catalogue Products
+                        On-Time SLA
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {products.length} SKUs
+                        98.8%
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {products.filter(p => p.stock > 0 || p.in_stock).length} in stock
+                        12 min fulfillment
                       </div>
                     </div>
                     {/* Equalizer Soundwave Graphic */}
@@ -1348,13 +1290,13 @@ export function AdminPortalApp() {
                   }}>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                        Delivery Partners
+                        Active Riders
                       </div>
                       <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '4px 0', letterSpacing: '-0.5px' }}>
-                        {partners.length} Fleet
+                        {activeRiderCount} Fleet
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
-                        {activeRiderCount} currently active
+                        Express dispatch
                       </div>
                     </div>
                     {/* Stepped Equalizer Graphic */}
@@ -1391,17 +1333,12 @@ export function AdminPortalApp() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {(periodOrders.length > 0
-                        ? periodOrders.slice(0, 4).map((o, i) => ({
-                            time: o.created_at ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Recent',
-                            color: o.status === 'delivered' ? '#10B981' : o.status === 'out_for_delivery' ? '#0071E3' : o.status === 'preparing' ? '#F59E0B' : '#EC4899',
-                            title: `Order #${(o.id || o.order_id || String(i+1)).toString().slice(-6)} — ${(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}`,
-                            desc: `${o.customer_name || o.user?.name || 'Customer'} · ₹${parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}`
-                          }))
-                        : [
-                            { time: 'No data', color: '#94A3B8', title: `No orders this ${currentChart.summaryLabel.toLowerCase()}`, desc: 'Orders will appear here in real-time' }
-                          ]
-                      ).map((act, i) => (
+                      {[
+                        { time: 'Just now', color: '#EC4899', title: 'Order Dispatched', desc: 'Rider on the way to Koramangala' },
+                        { time: '40 Mins Ago', color: '#8B5CF6', title: 'Store Restocked', desc: 'Fresh Dairy & Bakery inventory added' },
+                        { time: '1 hr ago', color: '#06B6D4', title: 'Order Delivered', desc: 'Order confirmed with digital signature' },
+                        { time: '3 hrs ago', color: '#F59E0B', title: 'Catalog Updated', desc: 'Updated flash deals & prices' }
+                      ].map((act, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                           <div style={{ width: '65px', fontSize: '10.5px', color: '#94A3B8', fontWeight: 700, paddingTop: '2px', flexShrink: 0 }}>
                             {act.time}
@@ -2157,188 +2094,32 @@ export function AdminPortalApp() {
                 <SupermarketLocationMapPicker
                   initialLat={13.014333}
                   initialLng={77.646000}
-                  initialTitle="GrabIt Store — Main Hub"
+                  initialTitle="Fresh Mart Supermarket — Main Hub"
                   initialRadius={100}
                   onSaveLocation={(data) => {
                     setNotice(`✅ Supermarket Location Updated: ${data.address} (${data.radius}m radius)`);
                   }}
                 />
-                <DeliveryRadiusMapPicker
-                  storeLat={13.014333}
-                  storeLng={77.646000}
-                  onSave={(data) => {
-                    const km = (data.radius / 1000).toFixed(0);
-                    setNotice(`✅ Delivery Coverage Zone Updated: ${km} km radius`);
-                  }}
-                />
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════════ */}
-            {/* ── TAB 6: CUSTOMER PRODUCT SUGGESTIONS REVIEW PANEL ── */}
-            {/* ══════════════════════════════════════════════════════════════════ */}
-            {activeTab === 'suggestions' && (
-              <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-                {/* Header */}
-                <div style={{
-                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                  padding: '24px', marginBottom: '20px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-                  position: 'relative', overflow: 'hidden'
-                }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #0071E3 0%, #38BDF8 50%, #10B981 100%)' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ background: '#EFF6FF', borderRadius: '12px', padding: '10px', display: 'flex' }}>
-                        <Lightbulb size={22} color="#0071E3" />
-                      </div>
-                      <div>
-                        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#0F172A' }}>
-                          Customer Product Suggestions
-                        </h2>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
-                          Review missing products requested by customers and quickly add them to your catalog.
-                        </p>
-                      </div>
-                    </div>
-                    <span style={{
-                      background: suggestions.length > 0 ? '#FFF7ED' : '#F1F5F9',
-                      color: suggestions.length > 0 ? '#C2410C' : '#64748B',
-                      border: suggestions.length > 0 ? '1px solid #FFEDD5' : '1px solid #E2E8F0',
-                      padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800
-                    }}>
-                      {suggestions.length} {suggestions.length === 1 ? 'Request' : 'Requests'} Pending
-                    </span>
-                  </div>
-                </div>
-
-                {/* Empty state */}
-                {suggestions.length === 0 ? (
-                  <div style={{
-                    background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                    padding: '60px 24px', textAlign: 'center',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
-                  }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>💡</div>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 800, color: '#475569' }}>
-                      No Product Suggestions Yet
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8', maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
-                      When customers suggest products from their home page, they will appear here for your review.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {suggestions.map((sug) => (
-                      <div
-                        key={sug.id}
-                        style={{
-                          background: '#FFFFFF',
-                          borderRadius: '16px',
-                          border: '1px solid #E2E8F0',
-                          padding: '20px',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          flexWrap: 'wrap',
-                          gap: '16px'
-                        }}
-                      >
-                        {/* Left: Details */}
-                        <div style={{ flex: 1, minWidth: '220px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
-                              {sug.product_name}
-                            </span>
-                            <span style={{
-                              background: '#EFF6FF', color: '#0071E3', fontSize: '11px',
-                              fontWeight: 800, padding: '3px 9px', borderRadius: '8px', border: '1px solid #BFDBFE'
-                            }}>
-                              {sug.category}
-                            </span>
-                            {sug.brand && (
-                              <span style={{
-                                background: '#FFF7ED', color: '#C2410C', fontSize: '11px',
-                                fontWeight: 800, padding: '3px 9px', borderRadius: '8px', border: '1px solid #FFEDD5'
-                              }}>
-                                {sug.brand}
-                              </span>
-                            )}
-                          </div>
-
-                          {sug.notes && (
-                            <p style={{
-                              margin: '0 0 10px 0', fontSize: '12px', color: '#64748B',
-                              fontStyle: 'italic', background: '#F8FAFC', borderRadius: '8px',
-                              padding: '8px 12px', border: '1px solid #F1F5F9'
-                            }}>
-                              &ldquo;{sug.notes}&rdquo;
-                            </p>
-                          )}
-
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
-                            <span>📞 {sug.customer_phone || 'Anonymous'}</span>
-                            <span>📅 {sug.created_at ? new Date(sug.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown date'}</span>
-                          </div>
-                        </div>
-
-                        {/* Right: Actions */}
-                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                          <button
-                            onClick={() => handleAddToStoreFromSuggestion(sug)}
-                            style={{
-                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                              color: '#FFFFFF', border: 'none',
-                              borderRadius: '10px', padding: '9px 14px', fontSize: '12px',
-                              fontWeight: 800, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: '6px',
-                              boxShadow: '0 3px 8px rgba(16,185,129,0.2)',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            <Plus size={13} /> Add to Store
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSuggestion(sug.id)}
-                            style={{
-                              background: '#FFFFFF', color: '#EF4444',
-                              border: '1px solid #FCA5A5',
-                              borderRadius: '10px', padding: '9px 14px', fontSize: '12px',
-                              fontWeight: 800, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: '6px',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            <Trash2 size={13} /> Dismiss
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
 
           </main>
 
-          {/* ── MOBILE BOTTOM NAVIGATION BAR (FIXED, NO SCROLL) ── */}
+          {/* ── MOBILE BOTTOM NAVIGATION BAR (FIXED AT BOTTOM FOR PHONES) ── */}
           {isMobile && (
             <nav style={{
               position: 'fixed',
               bottom: 0,
               left: 0,
               right: 0,
-              height: '62px',
+              height: '60px',
               background: '#FFFFFF',
-              borderTop: '1.5px solid #E2E8F0',
+              borderTop: '1px solid #E2E8F0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-around',
               zIndex: 900,
-              boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
-              overscrollBehavior: 'none',
-              touchAction: 'none',
+              boxShadow: '0 -2px 10px rgba(0,0,0,0.03)'
             }}>
               {NAV_ITEMS.map((tab) => {
                 const Icon = tab.icon;
@@ -2347,24 +2128,22 @@ export function AdminPortalApp() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => { setActiveTab(tab.id); forceScrollToTop(); }}
+                    onClick={() => setActiveTab(tab.id)}
                     style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      background: 'none', border: 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'none',
+                      border: 'none',
                       color: active ? '#0071E3' : '#94A3B8',
-                      cursor: 'pointer', padding: '4px 6px', flex: 1,
-                      minWidth: 0,
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      flex: 1
                     }}
                   >
-                    <div style={{
-                      width: active ? '36px' : '28px', height: '28px', borderRadius: '8px',
-                      background: active ? '#EFF6FF' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease', marginBottom: '1px'
-                    }}>
-                      <Icon size={18} color={active ? '#0071E3' : '#94A3B8'} strokeWidth={active ? 2.5 : 2} />
-                    </div>
-                    <span style={{ fontSize: '9.5px', fontWeight: active ? 800 : 600, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '52px', textAlign: 'center' }}>
+                    <Icon size={20} color={active ? '#0071E3' : '#94A3B8'} strokeWidth={active ? 2.5 : 2} />
+                    <span style={{ fontSize: '10px', fontWeight: active ? 800 : 600, marginTop: '2px' }}>
                       {tab.label}
                     </span>
                   </button>

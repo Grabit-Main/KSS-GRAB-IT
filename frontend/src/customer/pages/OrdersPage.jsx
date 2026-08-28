@@ -562,11 +562,34 @@ export default function OrdersPage() {
 
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr',
+                      gridTemplateColumns: '1fr 1fr',
                       gap: '10px',
                       width: isMobile ? '100%' : 'auto',
-                      minWidth: isMobile ? '100%' : '140px'
+                      minWidth: isMobile ? '100%' : '260px'
                     }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderModal(order)}
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1.5px solid #CBD5E1',
+                          borderRadius: '12px',
+                          padding: '10px 16px',
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#0071E3'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                      >
+                        View Details
+                      </button>
                       <button
                         type="button"
                         onClick={() => {

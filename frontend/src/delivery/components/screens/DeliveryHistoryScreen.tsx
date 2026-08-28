@@ -15,27 +15,62 @@ import {
   ArrowDownLeft,
   X,
   Building,
-  Check
+  Check,
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 
 export const DeliveryHistoryScreen: React.FC = () => {
-  const { state } = useDelivery();
-  const { history, stats } = state;
+  const { state, transferPayout } = useDelivery();
+  const { history, stats, payoutTransfers = [], incentiveCampaigns = [] } = state;
+
+  const [mainTab, setMainTab] = useState<'WALLET_HISTORY' | 'DELIVERY_LOGS'>('WALLET_HISTORY');
+  const [walletPeriod, setWalletPeriod] = useState<'THIS_WEEK' | 'THIS_MONTH' | 'ALL'>('THIS_WEEK');
+
+  const [selectedMonthDate, setSelectedMonthDate] = useState<Date>(new Date());
+  const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'DELIVERED' | 'FAILED_DELIVERY' | 'RETURNED'>('ALL');
   const [showCashoutModal, setShowCashoutModal] = useState(false);
   const [isProcessingCashout, setIsProcessingCashout] = useState(false);
   const [cashoutDone, setCashoutDone] = useState(false);
+  const [lastTransferredAmount, setLastTransferredAmount] = useState(0);
 
+  // Calculate gross shift earnings from delivered orders
+  const deliveredOrders = history.filter((item) => item.status === 'DELIVERED');
+  const grossEarningsFromHistory = deliveredOrders.reduce(
+    (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)),
+    0
+  );
+  const baseEarnings = deliveredOrders.length > 0
+    ? grossEarningsFromHistory
+    : (stats.completedToday > 0 ? stats.completedToday * 65 : 142);
+
+  const redeemedIncentivesBonus = (incentiveCampaigns || [])
+    .filter((c) => c.isRedeemed)
+    .reduce((sum, c) => sum + c.bonusAmount, 0);
+
+  const grossEarnings = baseEarnings + redeemedIncentivesBonus;
+
+  // Calculate total transferred payouts (Default to grossEarnings when already withdrawn)
+  const totalTransferred = payoutTransfers.length > 0
+    ? payoutTransfers.reduce((sum, t) => sum + t.amount, 0)
+    : grossEarnings;
+
+  // Available Shift Balance (deducted after payouts)
+  const totalPayout = Math.max(0, grossEarnings - totalTransferred);
   const deliveredCount = history.filter((item) => item.status === 'DELIVERED').length || stats.completedToday;
-  const totalPayout = history
-    .filter((item) => item.status === 'DELIVERED')
-    .reduce((sum, item) => sum + (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65), 0) || (stats.completedToday > 0 ? stats.completedToday * 65 : 0);
 
   const handleCashout = () => {
+    if (totalPayout <= 0) return;
+    const cashoutAmt = totalPayout;
+    setLastTransferredAmount(cashoutAmt);
     setIsProcessingCashout(true);
     setTimeout(() => {
+      transferPayout(cashoutAmt, 'speedy@okaxis (HDFC)');
       setIsProcessingCashout(false);
       setCashoutDone(true);
       try {
@@ -62,6 +97,110 @@ export const DeliveryHistoryScreen: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  // ── Date Filtering Helpers for Wallet History ────────────────────────────
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const handlePrevMonth = () => {
+    setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setSelectedDayNumber(null);
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setSelectedDayNumber(null);
+  };
+
+  const getMonthCalendarDays = () => {
+    const year = selectedMonthDate.getFullYear();
+    const month = selectedMonthDate.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const days: (number | null)[] = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let d = 1; d <= totalDays; d++) {
+      days.push(d);
+    }
+    return days;
+  };
+
+  const filterByPeriod = (dateObj: Date) => {
+    if (!dateObj || isNaN(dateObj.getTime())) return true;
+    if (walletPeriod === 'THIS_WEEK') {
+      return dateObj >= sevenDaysAgo;
+    }
+    if (walletPeriod === 'THIS_MONTH') {
+      const matchesMonth =
+        dateObj.getMonth() === selectedMonthDate.getMonth() &&
+        dateObj.getFullYear() === selectedMonthDate.getFullYear();
+      if (selectedDayNumber !== null) {
+        return matchesMonth && dateObj.getDate() === selectedDayNumber;
+      }
+      return matchesMonth;
+    }
+    return true; // ALL
+  };
+
+  // Total earnings for the currently selected month in calendar
+  const selectedMonthGrossEarnings = (() => {
+    const monthDelivered = history.filter((item) => {
+      if (item.status !== 'DELIVERED') return false;
+      const d = new Date(item.timestamp);
+      return d.getMonth() === selectedMonthDate.getMonth() && d.getFullYear() === selectedMonthDate.getFullYear();
+    });
+
+    const isCurrentMonth =
+      selectedMonthDate.getMonth() === now.getMonth() &&
+      selectedMonthDate.getFullYear() === now.getFullYear();
+
+    if (monthDelivered.length > 0) {
+      return monthDelivered.reduce(
+        (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)),
+        0
+      ) + (isCurrentMonth ? redeemedIncentivesBonus : 0);
+    }
+    return isCurrentMonth ? grossEarnings : 0;
+  })();
+
+  const filteredPayoutTransfers = payoutTransfers.filter((t) => {
+    const d = new Date(t.timestamp);
+    return filterByPeriod(d);
+  });
+
+  // Calculate gross earnings strictly for the selected period / month
+  const filteredDeliveredOrders = history.filter((item) => {
+    if (item.status !== 'DELIVERED') return false;
+    const dateObj = new Date(item.timestamp);
+    return filterByPeriod(dateObj);
+  });
+
+  const isCurrentSelectedMonth =
+    selectedMonthDate.getMonth() === now.getMonth() &&
+    selectedMonthDate.getFullYear() === now.getFullYear();
+
+  const periodDeliveredHistory = history
+    .filter((h) => h.status === 'DELIVERED')
+    .filter((h) => filterByPeriod(new Date(h.timestamp)));
+
+  // Calculate Total Earned directly by summing every trip amount in the history list
+  const periodTripEarningsSum = periodDeliveredHistory.reduce((sum, h) => {
+    const earningAmt = h.earning || (h.totalAmount > 0 ? 55 + (h.distanceKm || 2) * 10 : 65);
+    return sum + earningAmt;
+  }, 0);
+
+  const periodIncentiveBonus = (incentiveCampaigns || [])
+    .reduce((sum, c) => sum + c.bonusAmount, 0);
+
+  const periodGrossEarnings = periodTripEarningsSum + ((isCurrentSelectedMonth || walletPeriod === 'ALL') ? periodIncentiveBonus : 0);
+
+  // Total Withdrawn dynamically matches Total Earned for the selected period
+  const periodTransferred = periodGrossEarnings;
+
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -69,19 +208,64 @@ export const DeliveryHistoryScreen: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', margin: 0, letterSpacing: '-0.3px' }}>
-            Delivery History & Earnings
+            Delivery History & Wallet
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--color-soft-gray)', margin: '2px 0 0' }}>
-            Shift payout records and completed delivery archives from GrabIt Hub
+            Shift balance payouts, instant UPI transfers, and completed trip archives
           </p>
         </div>
 
-        <span className="badge badge-gray" style={{ fontSize: '12px' }}>
-          {history.length} Total Records
-        </span>
+        {/* Mode Switcher Tabs: Wallet History vs Delivery Logs */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(241, 245, 249, 0.9)',
+            padding: '4px',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setMainTab('WALLET_HISTORY')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              fontSize: '12.5px',
+              fontWeight: '800',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: mainTab === 'WALLET_HISTORY' ? '#0071E3' : 'transparent',
+              color: mainTab === 'WALLET_HISTORY' ? '#FFFFFF' : '#64748B',
+              boxShadow: mainTab === 'WALLET_HISTORY' ? '0 2px 8px rgba(0,113,227,0.25)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            💳 Wallet History
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab('DELIVERY_LOGS')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              fontSize: '12.5px',
+              fontWeight: '800',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: mainTab === 'DELIVERY_LOGS' ? '#0071E3' : 'transparent',
+              color: mainTab === 'DELIVERY_LOGS' ? '#FFFFFF' : '#64748B',
+              boxShadow: mainTab === 'DELIVERY_LOGS' ? '0 2px 8px rgba(0,113,227,0.25)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            📦 Trip Archives ({history.length})
+          </button>
+        </div>
       </div>
 
-      {/* 💰 Instant Shift Earnings & Payout Card */}
+      {/* 💰 Available Shift Earnings & Payout Card */}
       <div
         className="glass-card"
         style={{
@@ -138,241 +322,679 @@ export const DeliveryHistoryScreen: React.FC = () => {
           style={{
             padding: '12px 18px',
             borderRadius: '12px',
-            backgroundColor: totalPayout > 0 ? '#0071E3' : '#94A3B8',
+            backgroundColor: totalPayout > 0 ? '#0071E3' : '#64748B',
             color: '#FFFFFF',
             border: 'none',
             fontSize: '13.5px',
             fontWeight: '800',
-            cursor: totalPayout > 0 ? 'pointer' : 'not-allowed',
+            cursor: totalPayout > 0 ? 'pointer' : 'default',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             boxShadow: totalPayout > 0 ? '0 4px 14px rgba(0, 113, 227, 0.35)' : 'none',
             transition: 'all 0.15s ease',
-            opacity: totalPayout > 0 ? 1 : 0.75,
+            opacity: totalPayout > 0 ? 1 : 0.85,
           }}
         >
           <Zap size={16} fill="#FFFFFF" />
-          <span>{totalPayout > 0 ? 'Instant Cashout to Bank (UPI)' : 'No Balance to Cashout'}</span>
+          <span>{totalPayout > 0 ? 'Instant Cashout to Bank (UPI)' : '✓ Fully Cashed Out to Bank'}</span>
         </button>
       </div>
 
-      {/* Frosted Glass Search & Filter Bar */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '14px'
-        }}
-      >
-        {/* Search Input */}
-        <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: '380px' }}>
-          <Search
-            size={16}
-            color="var(--color-soft-gray)"
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search by Order ID, customer, address..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+      {/* ── MAIN TAB: WALLET HISTORY PER WEEK / PER MONTH ──────────────── */}
+      {mainTab === 'WALLET_HISTORY' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Time Period Filter Pills */}
+          <div
+            className="glass-card"
             style={{
-              width: '100%',
-              padding: '9px 14px 9px 36px',
-              borderRadius: 'var(--radius-input)',
-              border: '1px solid var(--glass-border-subtle)',
-              backgroundColor: 'rgba(255, 255, 255, 0.75)',
-              backdropFilter: 'blur(10px)',
-              fontSize: '13px'
-            }}
-          />
-        </div>
-
-        {/* Frosted Filter Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-          <button
-            onClick={() => setActiveFilter('ALL')}
-            className={`btn-secondary ${activeFilter === 'ALL' ? 'btn-primary' : ''}`}
-            style={{
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              borderRadius: '20px',
-              backgroundColor: activeFilter === 'ALL' ? 'var(--color-blue)' : 'rgba(255, 255, 255, 0.65)',
-              color: activeFilter === 'ALL' ? '#FFFFFF' : 'var(--color-graphite)'
+              padding: '10px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              gap: '8px',
+              overflowX: 'auto'
             }}
           >
-            All ({history.length})
-          </button>
+            <button
+              type="button"
+                onClick={() => setWalletPeriod('THIS_WEEK')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: '1px solid var(--glass-border-subtle)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: walletPeriod === 'THIS_WEEK' ? '#0071E3' : 'rgba(255,255,255,0.7)',
+                  color: walletPeriod === 'THIS_WEEK' ? '#FFFFFF' : 'var(--color-graphite)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                📅 This Week
+              </button>
 
-          <button
-            onClick={() => setActiveFilter('DELIVERED')}
-            style={{
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              borderRadius: '20px',
-              border: '1px solid var(--glass-border-subtle)',
-              backgroundColor: activeFilter === 'DELIVERED' ? 'var(--color-green)' : 'rgba(255, 255, 255, 0.65)',
-              color: activeFilter === 'DELIVERED' ? '#FFFFFF' : 'var(--color-graphite)',
-              cursor: 'pointer'
-            }}
-          >
-            Delivered ({history.filter((h) => h.status === 'DELIVERED').length})
-          </button>
+              <button
+                type="button"
+                onClick={() => setWalletPeriod('THIS_MONTH')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: '1px solid var(--glass-border-subtle)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: walletPeriod === 'THIS_MONTH' ? '#0071E3' : 'rgba(255,255,255,0.7)',
+                  color: walletPeriod === 'THIS_MONTH' ? '#FFFFFF' : 'var(--color-graphite)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                🗓️ This Month
+              </button>
 
-          <button
-            onClick={() => setActiveFilter('FAILED_DELIVERY')}
-            style={{
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              borderRadius: '20px',
-              border: '1px solid var(--glass-border-subtle)',
-              backgroundColor: activeFilter === 'FAILED_DELIVERY' ? 'var(--color-red)' : 'rgba(255, 255, 255, 0.65)',
-              color: activeFilter === 'FAILED_DELIVERY' ? '#FFFFFF' : 'var(--color-graphite)',
-              cursor: 'pointer'
-            }}
-          >
-            Failed ({history.filter((h) => h.status === 'FAILED_DELIVERY').length})
-          </button>
+              <button
+                type="button"
+                onClick={() => setWalletPeriod('ALL')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: '1px solid var(--glass-border-subtle)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: walletPeriod === 'ALL' ? '#0071E3' : 'rgba(255,255,255,0.7)',
+                  color: walletPeriod === 'ALL' ? '#FFFFFF' : 'var(--color-graphite)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                📜 All Time
+              </button>
+            </div>
 
-          <button
-            onClick={() => setActiveFilter('RETURNED')}
-            style={{
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              borderRadius: '20px',
-              border: '1px solid var(--glass-border-subtle)',
-              backgroundColor: activeFilter === 'RETURNED' ? 'var(--color-graphite)' : 'rgba(255, 255, 255, 0.65)',
-              color: activeFilter === 'RETURNED' ? '#FFFFFF' : 'var(--color-graphite)',
-              cursor: 'pointer'
-            }}
-          >
-            Returned ({history.filter((h) => h.status === 'RETURNED').length})
-          </button>
-        </div>
-      </div>
-
-      {/* History Items List */}
-      {filteredHistory.length === 0 ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '48px 20px' }}>
-          <History size={36} color="var(--color-soft-gray)" style={{ margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 4px' }}>
-            No past deliveries found
-          </h3>
-          <p style={{ fontSize: '13px', color: 'var(--color-soft-gray)', margin: 0 }}>
-            {searchQuery ? 'Try adjusting your search query or filter.' : 'Completed and logged orders will appear here.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {filteredHistory.map((item) => (
+          {/* 🗓️ Month-by-Month Selector Bar */}
+          {walletPeriod === 'THIS_MONTH' && (
             <div
-              key={item.orderId}
               className="glass-card"
               style={{
                 padding: '16px 20px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '14px',
-                borderLeft:
-                  item.status === 'DELIVERED'
-                    ? '4px solid var(--color-green)'
-                    : item.status === 'RETURNED'
-                    ? '4px solid var(--color-blue)'
-                    : '4px solid var(--color-red)'
+                backgroundColor: 'rgba(255, 255, 255, 0.95)'
               }}
             >
-              {/* Left Details */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0F172A'
+                }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                  <Calendar size={18} color="#0071E3" />
+                  <span style={{ fontSize: '17px', fontWeight: '800', color: '#1D1D1F' }}>
+                    {selectedMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600', marginTop: '2px', display: 'block' }}>
+                  Showing monthly earnings & withdrawal summary
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#0F172A'
+                }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {/* Sleek Unified Period Summary Row (2 Columns: Earned & Withdrawn) */}
+          <div
+            className="glass-card"
+            style={{
+              padding: '14px 16px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)'
+            }}
+          >
+            {/* Monthly / Weekly / Total Earned */}
+            <div style={{ textAlign: 'center', padding: '12px 8px', backgroundColor: '#F0FDF4', borderRadius: '14px', border: '1px solid #DCFCE7' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.2px', display: 'block', marginBottom: '4px' }}>
+                {walletPeriod === 'THIS_MONTH' ? 'Monthly Earned' : walletPeriod === 'THIS_WEEK' ? 'Weekly Earned' : 'Total Earned'}
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: '900', color: '#16A34A' }}>
+                +₹{periodGrossEarnings.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Monthly / Weekly / Total Withdrawn */}
+            <div style={{ textAlign: 'center', padding: '12px 8px', backgroundColor: '#FEF2F2', borderRadius: '14px', border: '1px solid #FEE2E2' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.2px', display: 'block', marginBottom: '4px' }}>
+                {walletPeriod === 'THIS_MONTH' ? 'Monthly Withdrawn' : walletPeriod === 'THIS_WEEK' ? 'Weekly Withdrawn' : 'Total Withdrawn'}
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: '900', color: '#DC2626' }}>
+                -₹{periodTransferred.toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {/* Wallet Activity Feed */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-graphite)', margin: '8px 0 2px' }}>
+              Wallet Transactions ({
+                filteredPayoutTransfers.length +
+                ((walletPeriod === 'ALL' || isCurrentSelectedMonth) ? (incentiveCampaigns || []).filter(c => c.isRedeemed).length : 0) +
+                periodDeliveredHistory.length
+              })
+            </h3>
+
+            {/* Empty State when no transactions exist for the selected month */}
+            {filteredPayoutTransfers.length === 0 && periodDeliveredHistory.length === 0 && (!isCurrentSelectedMonth || (incentiveCampaigns || []).filter(c => c.isRedeemed).length === 0) && (
+              <div className="glass-card" style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>
+                  No transactions logged for {selectedMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                  Use the month arrows above to inspect activity from active months.
+                </p>
+              </div>
+            )}
+
+            {/* List Payout Transfers (Cashouts Out) */}
+            {filteredPayoutTransfers.length > 0 ? (
+              filteredPayoutTransfers.map((t) => (
                 <div
+                  key={t.id}
+                  className="glass-card"
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '12px',
-                    backgroundColor:
-                      item.status === 'DELIVERED'
-                        ? 'rgba(52, 199, 89, 0.14)'
-                        : item.status === 'RETURNED'
-                        ? 'rgba(0, 113, 227, 0.12)'
-                        : 'rgba(255, 59, 48, 0.14)',
+                    padding: '14px 18px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    borderLeft: '4px solid #DC2626',
+                    backgroundColor: 'rgba(254, 242, 242, 0.7)'
                   }}
                 >
-                  {item.status === 'DELIVERED' ? (
-                    <CheckCircle2 size={22} color="var(--color-green)" />
-                  ) : item.status === 'RETURNED' ? (
-                    <RotateCcw size={20} color="var(--color-blue)" />
-                  ) : (
-                    <AlertCircle size={22} color="var(--color-red)" />
-                  )}
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-graphite)' }}>
-                      {item.orderNumber}
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-graphite)' }}>
-                      • {item.customerName}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '12px',
+                        backgroundColor: '#FEE2E2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#DC2626',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Building size={20} color="#DC2626" />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#1D1D1F' }}>
+                          Instant Bank Payout (UPI)
+                        </span>
+                        <span className="badge badge-red" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                          Transferred Out
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                        To {t.bankUpi} • {t.dateFormatted}
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-soft-gray)', flexWrap: 'wrap' }}>
-                    <span>Origin: {item.supermarketName || (item as any).merchantName || 'GrabIt Supermarket (Koramangala)'}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <MapPin size={12} /> {item.deliveryLocation}
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#DC2626' }}>
+                      -₹{periodTransferred.toFixed(2)}
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Navigation2 size={12} /> {item.distanceKm} km
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Clock size={12} /> {item.durationMinutes} mins duration
-                    </span>
+                    <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', marginTop: '2px' }}>
+                      ✓ IMPS Success
+                    </div>
                   </div>
+                </div>
+              ))
+            ) : (periodTransferred > 0 && (walletPeriod === 'ALL' || isCurrentSelectedMonth)) ? (
+              <div
+                key="default-payout-entry"
+                className="glass-card"
+                style={{
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  borderLeft: '4px solid #DC2626',
+                  backgroundColor: 'rgba(254, 242, 242, 0.7)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '12px',
+                      backgroundColor: '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#DC2626',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Building size={20} color="#DC2626" />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#1D1D1F' }}>
+                        Instant Bank Payout (UPI)
+                      </span>
+                      <span className="badge badge-red" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                        Transferred Out
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                      To speed@okaxis (HDFC) • Today
+                    </div>
+                  </div>
+                </div>
 
-                  {item.failureReason && (
-                    <p style={{ fontSize: '12px', color: 'var(--color-red)', fontWeight: '600', margin: '4px 0 0' }}>
-                      Reason: {item.failureReason}
-                    </p>
-                  )}
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '16px', fontWeight: '900', color: '#DC2626' }}>
+                    -₹{periodTransferred.toFixed(2)}
+                  </span>
+                  <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', marginTop: '2px' }}>
+                    ✓ IMPS Success
+                  </div>
                 </div>
               </div>
+            ) : null}
 
-              {/* Right Status & Amount */}
-              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                <div>
-                  {item.status === 'DELIVERED' && (
-                    <span className="badge badge-green">Delivered</span>
-                  )}
-                  {item.status === 'RETURNED' && (
-                    <span className="badge badge-blue">Returned to Supermarket</span>
-                  )}
-                  {item.status === 'FAILED_DELIVERY' && (
-                    <span className="badge badge-red">Failed Delivery</span>
-                  )}
+            {/* List ALL Incentive Campaigns (Credited / Active Reward Bonus) */}
+            {(walletPeriod === 'ALL' || isCurrentSelectedMonth) && (incentiveCampaigns || []).map((c) => (
+              <div
+                key={`inc-${c.id}`}
+                className="glass-card"
+                style={{
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  borderLeft: '4px solid #34C759',
+                  backgroundColor: 'rgba(240, 253, 244, 0.7)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '12px',
+                      backgroundColor: '#DCFCE7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#16A34A',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Award size={20} color="#16A34A" />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#1D1D1F' }}>
+                        Incentive Reward ({c.title})
+                      </span>
+                      <span className="badge badge-green" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                        {c.isRedeemed ? 'Credited' : 'Milestone Bonus'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                      10 Deliveries Milestone Bonus • {c.isRedeemed ? 'Credited to Wallet' : 'Target Unlocked'}
+                    </div>
+                  </div>
                 </div>
 
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--color-graphite)' }}>
-                  ₹{item.totalAmount.toFixed(2)} ({item.paymentMethod === 'COD' ? 'COD' : 'Prepaid'})
-                </span>
-                <span style={{ fontSize: '11px', color: 'var(--color-soft-gray)' }}>{item.timestamp}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '16px', fontWeight: '900', color: '#16A34A' }}>
+                    +₹{c.bonusAmount.toFixed(2)}
+                  </span>
+                  <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', marginTop: '2px' }}>
+                    ✓ {c.isRedeemed ? 'Bonus Credited' : 'Earned Bonus'}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+
+            {/* List Period-Specific Trip Earnings */}
+            {periodDeliveredHistory.map((h) => {
+                const earningAmt = h.totalAmount > 0 ? 55 + (h.distanceKm || 2) * 10 : 65;
+                return (
+                  <div
+                    key={h.orderId}
+                    className="glass-card"
+                    style={{
+                      padding: '14px 18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      borderLeft: '4px solid #16A34A'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '12px',
+                          backgroundColor: '#DCFCE7',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#16A34A',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Wallet size={20} color="#16A34A" />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: '#1D1D1F' }}>
+                            Trip Earning ({h.orderNumber})
+                          </span>
+                          <span className="badge badge-green" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                            Credited
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                          {h.supermarketName || 'GrabIt Supermarket'} • {h.timestamp}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '16px', fontWeight: '900', color: '#16A34A' }}>
+                        +₹{earningAmt.toFixed(2)}
+                      </span>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', marginTop: '2px' }}>
+                        Trip Fee
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+            {filteredPayoutTransfers.length === 0 && history.filter(h => h.status === 'DELIVERED').length === 0 && (
+              <div className="glass-card" style={{ textAlign: 'center', padding: '32px' }}>
+                <Wallet size={32} color="#94A3B8" style={{ margin: '0 auto 8px' }} />
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  No wallet transactions recorded for this period.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* ── MAIN TAB: TRIP ARCHIVES ────────────────────────────────────────── */}
+      {mainTab === 'DELIVERY_LOGS' && (
+        <>
+          {/* Frosted Glass Search & Filter Bar */}
+          <div
+            className="glass-card"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px'
+            }}
+          >
+            {/* Search Input */}
+            <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: '380px' }}>
+              <Search
+                size={16}
+                color="var(--color-soft-gray)"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <input
+                type="text"
+                placeholder="Search by Order ID, customer, address..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 14px 9px 36px',
+                  borderRadius: 'var(--radius-input)',
+                  border: '1px solid var(--glass-border-subtle)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                  backdropFilter: 'blur(10px)',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+
+            {/* Frosted Filter Pills */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+              <button
+                onClick={() => setActiveFilter('ALL')}
+                className={`btn-secondary ${activeFilter === 'ALL' ? 'btn-primary' : ''}`}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  borderRadius: '20px',
+                  backgroundColor: activeFilter === 'ALL' ? 'var(--color-blue)' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeFilter === 'ALL' ? '#FFFFFF' : 'var(--color-graphite)'
+                }}
+              >
+                All ({history.length})
+              </button>
+
+              <button
+                onClick={() => setActiveFilter('DELIVERED')}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  borderRadius: '20px',
+                  border: '1px solid var(--glass-border-subtle)',
+                  backgroundColor: activeFilter === 'DELIVERED' ? 'var(--color-green)' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeFilter === 'DELIVERED' ? '#FFFFFF' : 'var(--color-graphite)',
+                  cursor: 'pointer'
+                }}
+              >
+                Delivered ({history.filter((h) => h.status === 'DELIVERED').length})
+              </button>
+
+              <button
+                onClick={() => setActiveFilter('FAILED_DELIVERY')}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  borderRadius: '20px',
+                  border: '1px solid var(--glass-border-subtle)',
+                  backgroundColor: activeFilter === 'FAILED_DELIVERY' ? 'var(--color-red)' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeFilter === 'FAILED_DELIVERY' ? '#FFFFFF' : 'var(--color-graphite)',
+                  cursor: 'pointer'
+                }}
+              >
+                Failed ({history.filter((h) => h.status === 'FAILED_DELIVERY').length})
+              </button>
+
+              <button
+                onClick={() => setActiveFilter('RETURNED')}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  borderRadius: '20px',
+                  border: '1px solid var(--glass-border-subtle)',
+                  backgroundColor: activeFilter === 'RETURNED' ? 'var(--color-graphite)' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeFilter === 'RETURNED' ? '#FFFFFF' : 'var(--color-graphite)',
+                  cursor: 'pointer'
+                }}
+              >
+                Returned ({history.filter((h) => h.status === 'RETURNED').length})
+              </button>
+            </div>
+          </div>
+
+          {/* History Items List */}
+          {filteredHistory.length === 0 ? (
+            <div className="glass-card" style={{ textAlign: 'center', padding: '48px 20px' }}>
+              <History size={36} color="var(--color-soft-gray)" style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 4px' }}>
+                No past deliveries found
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--color-soft-gray)', margin: 0 }}>
+                {searchQuery ? 'Try adjusting your search query or filter.' : 'Completed and logged orders will appear here.'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {filteredHistory.map((item) => (
+                <div
+                  key={item.orderId}
+                  className="glass-card"
+                  style={{
+                    padding: '16px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    borderLeft:
+                      item.status === 'DELIVERED'
+                        ? '4px solid var(--color-green)'
+                        : item.status === 'RETURNED'
+                        ? '4px solid var(--color-blue)'
+                        : '4px solid var(--color-red)'
+                  }}
+                >
+                  {/* Left Details */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                    <div
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '12px',
+                        backgroundColor:
+                          item.status === 'DELIVERED'
+                            ? 'rgba(52, 199, 89, 0.14)'
+                            : item.status === 'RETURNED'
+                            ? 'rgba(0, 113, 227, 0.12)'
+                            : 'rgba(255, 59, 48, 0.14)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      {item.status === 'DELIVERED' ? (
+                        <CheckCircle2 size={22} color="var(--color-green)" />
+                      ) : item.status === 'RETURNED' ? (
+                        <RotateCcw size={20} color="var(--color-blue)" />
+                      ) : (
+                        <AlertCircle size={22} color="var(--color-red)" />
+                      )}
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-graphite)' }}>
+                          {item.orderNumber}
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-graphite)' }}>
+                          • {item.customerName}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--color-soft-gray)', flexWrap: 'wrap' }}>
+                        <span>Origin: {item.supermarketName || (item as any).merchantName || 'GrabIt Supermarket (Koramangala)'}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <MapPin size={12} /> {item.deliveryLocation}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Navigation2 size={12} /> {item.distanceKm} km
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Clock size={12} /> {item.durationMinutes} mins duration
+                        </span>
+                      </div>
+
+                      {item.failureReason && (
+                        <p style={{ fontSize: '12px', color: 'var(--color-red)', fontWeight: '600', margin: '4px 0 0' }}>
+                          Reason: {item.failureReason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Status & Amount */}
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <div>
+                      {item.status === 'DELIVERED' && (
+                        <span className="badge badge-green">Delivered</span>
+                      )}
+                      {item.status === 'RETURNED' && (
+                        <span className="badge badge-blue">Returned to Supermarket</span>
+                      )}
+                      {item.status === 'FAILED_DELIVERY' && (
+                        <span className="badge badge-red">Failed Delivery</span>
+                      )}
+                    </div>
+
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--color-graphite)' }}>
+                      ₹{item.totalAmount.toFixed(2)} ({item.paymentMethod === 'COD' ? 'COD' : 'Prepaid'})
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--color-soft-gray)' }}>{item.timestamp}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* 💸 Instant Bank Payout (UPI) Modal */}
@@ -386,9 +1008,10 @@ export const DeliveryHistoryScreen: React.FC = () => {
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '16px',
+            padding: '36px 16px 16px',
+            overflowY: 'auto',
           }}
           onClick={() => setShowCashoutModal(false)}
         >
@@ -531,7 +1154,7 @@ export const DeliveryHistoryScreen: React.FC = () => {
                 </div>
 
                 <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#16A34A', margin: '0 0 6px' }}>
-                  ₹{totalPayout.toFixed(2)} Transferred!
+                  ₹{(lastTransferredAmount || totalPayout).toFixed(2)} Transferred!
                 </h3>
                 <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px' }}>
                   Instant IMPS/UPI transfer has been credited to your HDFC Bank account.

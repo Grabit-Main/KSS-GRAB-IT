@@ -133,7 +133,7 @@ export const NotificationsScreen: React.FC = () => {
                 </div>
               </div>
 
-              {!notif.isRead && (
+              {!notif.isRead ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -152,6 +152,22 @@ export const NotificationsScreen: React.FC = () => {
                 >
                   Mark read
                 </button>
+              ) : (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: '#64748B',
+                    fontWeight: '700',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  ✓ Read
+                </span>
               )}
             </div>
           ))}

@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import {
   AgentStatus,
   OrderStatus,
@@ -65,12 +65,8 @@ const isDeliveryOrder = (statusStr: string) => {
 
 const isValidRealOrder = (o: any) => {
   if (!o) return false;
-  const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
-  if (!addr || addr === 'enter your delivery address' || addr.length < 4) return false;
-  const custName = (o.customer_name || '').trim().toLowerCase();
-  if (custName.includes('GrabIt Store')) return false;
-  const itemsList = parseItems(o.items);
-  if (!Array.isArray(itemsList) || itemsList.length === 0) return false;
+  const custName = (o.customer_name || o.customerName || '').trim().toLowerCase();
+  if (custName.includes('fresh mart supermarket')) return false;
   return true;
 };
 
@@ -88,6 +84,19 @@ const mapApiOrderToOrder = (o: any, idx: number): Order => {
       }))
     : [{ id: 'item-0', name: 'Express Grocery Item', quantity: 1, price: Number(o.total_amount || o.total || 199), category: 'Snacks' as const }];
 
+// Helper to generate deterministic distance strictly within 5km hub radius (1.1 km – 4.7 km)
+const getDistanceWithin5Km = (idStr: string | number): number => {
+  let hash = 0;
+  const str = String(idStr || 'order');
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const positiveHash = Math.abs(hash);
+  const dist = 1.1 + (positiveHash % 37) * 0.1;
+  return +dist.toFixed(1);
+};
+
   const orderNum = formatOrderId(o.id || o.orderNumber || o.rawId);
   const st = String(o.status || '').toLowerCase();
   let orderStatus: OrderStatus = 'ASSIGNED';
@@ -95,6 +104,8 @@ const mapApiOrderToOrder = (o: any, idx: number): Order => {
   else if (st === 'delivered') orderStatus = 'DELIVERED';
   else if (st === 'failed_delivery') orderStatus = 'FAILED_DELIVERY';
   else if (st === 'returned') orderStatus = 'RETURNED';
+
+  const orderDist = o.distance_km || o.distanceKm || getDistanceWithin5Km(o.id || o.orderNumber || idx);
 
   return {
     id: o.rawId || o.id || `live-ord-${idx}`,
@@ -114,26 +125,38 @@ const mapApiOrderToOrder = (o: any, idx: number): Order => {
     items: itemObjs,
     paymentMethod: (o.payment_method === 'COD' || String(o.payment_method || '').toUpperCase().includes('COD') ? 'COD' : 'PREPAID') as any,
     totalAmount: Number(o.total_amount || o.total || 0) || 199,
-    distanceKm: 2.2,
-    estimatedMinutes: 12
+    distanceKm: orderDist,
+    estimatedMinutes: Math.min(15, Math.round(orderDist * 3 + 4))
   };
 };
 
 // Map a raw delivered Supabase order to a DeliveryHistoryEntry
-const mapApiOrderToHistoryEntry = (o: any): DeliveryHistoryEntry => ({
-  orderId: o.id || o.rawId || '',
-  orderNumber: formatOrderId(o.id || o.orderNumber || o.rawId),
-  supermarketName: 'GrabIt Supermarket',
-  customerName: o.customer_name || 'Customer',
-  deliveryLocation: o.delivery_address || o.address || 'Delivery Address',
-  status: 'DELIVERED',
-  timestamp: o.created_at ? new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Delivered',
-  totalAmount: Number(o.total_amount || o.total || 0),
-  paymentMethod: (o.payment_method === 'COD' || String(o.payment_method || '').toUpperCase().includes('COD') ? 'COD' : 'PREPAID') as any,
-  distanceKm: 2.2,
-  durationMinutes: 18
-});
+const mapApiOrderToHistoryEntry = (o: any): DeliveryHistoryEntry => {
+  const dist = o.distance_km || o.distanceKm || getDistanceWithin5Km(o.id || o.orderNumber || o.created_at || 'hist');
+  return {
+    orderId: o.id || o.rawId || '',
+    orderNumber: formatOrderId(o.id || o.orderNumber || o.rawId),
+    supermarketName: 'GrabIt Supermarket',
+    customerName: o.customer_name || 'Customer',
+    deliveryLocation: o.delivery_address || o.address || 'Delivery Address',
+    status: 'DELIVERED',
+    timestamp: o.created_at ? new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Delivered',
+    totalAmount: Number(o.total_amount || o.total || 0),
+    paymentMethod: (o.payment_method === 'COD' || String(o.payment_method || '').toUpperCase().includes('COD') ? 'COD' : 'PREPAID') as any,
+    distanceKm: dist,
+    durationMinutes: Math.min(18, Math.round(dist * 3 + 5))
+  };
+};
 // ─────────────────────────────────────────────────────────────────────────────
+
+export interface PayoutTransfer {
+  id: string;
+  amount: number;
+  bankUpi: string;
+  timestamp: string;
+  dateFormatted: string;
+  status: 'SUCCESS';
+}
 
 interface DeliveryState {
   agentStatus: AgentStatus;
@@ -143,6 +166,7 @@ interface DeliveryState {
   incomingCountdown: number;
   orderPool: Order[];
   history: DeliveryHistoryEntry[];
+  payoutTransfers: PayoutTransfer[];
   stats: DeliveryStats;
   notifications: AppNotification[];
   supportTickets: SupportTicket[];
@@ -166,10 +190,84 @@ type DeliveryAction =
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'CREATE_SUPPORT_TICKET'; payload: { category: SupportTicket['category']; subject: string; description: string } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppSettings> }
+  | { type: 'TRANSFER_PAYOUT'; payload: { amount: number; bankUpi: string } }
+  | { type: 'REDEEM_INCENTIVE'; payload: { campaignId: string; amount: number } }
   | { type: 'RESET_DEMO' }
   | { type: 'SYNC_ORDERS_POOL'; payload: Order[] }
   | { type: 'SYNC_DELIVERY_ORDERS'; payload: { activeOrder?: Order | null; queuedOrders: Order[]; poolOrders: Order[] } }
   | { type: 'SYNC_CLOUD_HISTORY'; payload: DeliveryHistoryEntry[] };
+
+const getSavedPayouts = (): PayoutTransfer[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_payout_transfers') : null;
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const getSavedNotifications = (): AppNotification[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_delivery_notifications') : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const existingIds = new Set(parsed.map((n: any) => n.id));
+        const missingDefaults = initialNotifications.filter((n) => !existingIds.has(n.id));
+        return [...parsed, ...missingDefaults];
+      }
+    }
+    return initialNotifications;
+  } catch {
+    return initialNotifications;
+  }
+};
+
+const getSavedRedeemedCampaigns = (): string[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_redeemed_incentives') : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+    const defaultRedeemed = ['INC-2026-SURGE'];
+    try {
+      localStorage.setItem('grabit_redeemed_incentives', JSON.stringify(defaultRedeemed));
+    } catch {}
+    return defaultRedeemed;
+  } catch {
+    return ['INC-2026-SURGE'];
+  }
+};
+
+const getSavedSupportTickets = (): SupportTicket[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_delivery_support_tickets') : null;
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const getSavedHistory = (): DeliveryHistoryEntry[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_delivery_history') : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length >= 24) {
+        return parsed;
+      }
+    }
+    try {
+      localStorage.setItem('grabit_delivery_history', JSON.stringify(initialHistory));
+    } catch {}
+    return initialHistory;
+  } catch {
+    return initialHistory;
+  }
+};
 
 const initialDeliveryState: DeliveryState = {
   agentStatus: 'AVAILABLE',
@@ -177,8 +275,9 @@ const initialDeliveryState: DeliveryState = {
   queuedOrders: [],
   incomingOrder: null,
   incomingCountdown: 0,
-  orderPool: [],  // Loaded from cloud on mount
-  history: [],    // Loaded from cloud on mount
+  orderPool: initialOrdersPool,
+  history: getSavedHistory(),
+  payoutTransfers: getSavedPayouts(),
   stats: {
     completedToday: 0,
     totalDeliveries: 0,
@@ -190,10 +289,13 @@ const initialDeliveryState: DeliveryState = {
     totalDistanceKm: 0,
     activeShiftMinutes: 0
   },
-  notifications: [],
-  supportTickets: [],
+  notifications: getSavedNotifications(),
+  supportTickets: getSavedSupportTickets(),
   settings: { ...initialSettings },
-  incentiveCampaigns: [...initialIncentiveCampaigns],
+  incentiveCampaigns: initialIncentiveCampaigns.map((c) => ({
+    ...c,
+    isRedeemed: getSavedRedeemedCampaigns().includes(c.id)
+  })),
   activeModal: null,
   successOrderSummary: null
 };
@@ -495,18 +597,26 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
     }
 
     case 'MARK_NOTIFICATION_READ': {
+      const nextNotifs = state.notifications.map((n) =>
+        n.id === action.payload ? { ...n, isRead: true } : n
+      );
+      try {
+        localStorage.setItem('grabit_delivery_notifications', JSON.stringify(nextNotifs));
+      } catch {}
       return {
         ...state,
-        notifications: state.notifications.map((n) =>
-          n.id === action.payload ? { ...n, isRead: true } : n
-        )
+        notifications: nextNotifs
       };
     }
 
     case 'MARK_ALL_NOTIFICATIONS_READ': {
+      const nextNotifs = state.notifications.map((n) => ({ ...n, isRead: true }));
+      try {
+        localStorage.setItem('grabit_delivery_notifications', JSON.stringify(nextNotifs));
+      } catch {}
       return {
         ...state,
-        notifications: state.notifications.map((n) => ({ ...n, isRead: true }))
+        notifications: nextNotifs
       };
     }
 
@@ -531,10 +641,18 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         isRead: false
       };
 
+      const nextTickets = [newTicket, ...state.supportTickets];
+      const nextNotifs = [ticketNotif, ...state.notifications];
+
+      try {
+        localStorage.setItem('grabit_delivery_support_tickets', JSON.stringify(nextTickets));
+        localStorage.setItem('grabit_delivery_notifications', JSON.stringify(nextNotifs));
+      } catch {}
+
       return {
         ...state,
-        supportTickets: [newTicket, ...state.supportTickets],
-        notifications: [ticketNotif, ...state.notifications]
+        supportTickets: nextTickets,
+        notifications: nextNotifs
       };
     }
 
@@ -544,6 +662,40 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       return {
         ...state,
         settings: nextSettings
+      };
+    }
+
+    case 'REDEEM_INCENTIVE': {
+      const { campaignId, amount } = action.payload;
+      const redeemedIds = getSavedRedeemedCampaigns();
+      if (!redeemedIds.includes(campaignId)) {
+        redeemedIds.push(campaignId);
+        try {
+          localStorage.setItem('grabit_redeemed_incentives', JSON.stringify(redeemedIds));
+        } catch {}
+      }
+
+      const notifId = `NOTIF-${Date.now()}`;
+      const newNotif: AppNotification = {
+        id: notifId,
+        type: 'ADMIN',
+        title: '🎉 Incentive Bonus Redeemed!',
+        description: `Successfully claimed ₹${amount.toFixed(2)} bonus reward directly to your wallet balance!`,
+        timestamp: 'Just now',
+        isRead: false
+      };
+
+      const updatedNotifs = [newNotif, ...state.notifications];
+      try {
+        localStorage.setItem('grabit_delivery_notifications', JSON.stringify(updatedNotifs));
+      } catch {}
+
+      return {
+        ...state,
+        incentiveCampaigns: state.incentiveCampaigns.map((c) =>
+          c.id === campaignId ? { ...c, isRedeemed: true } : c
+        ),
+        notifications: updatedNotifs
       };
     }
 
@@ -582,25 +734,70 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
     }
 
     case 'SYNC_CLOUD_HISTORY': {
-      // Replace in-memory history with fresh data from cloud API
+      // Replace in-memory history with fresh data from cloud API & persist locally
       const cloudEntries = action.payload;
-      const deliveredCount = cloudEntries.filter(e => e.status === 'DELIVERED').length;
+      try {
+        localStorage.setItem('grabit_delivery_history', JSON.stringify(cloudEntries));
+      } catch {}
+
+      const deliveredEntries = cloudEntries.filter(e => e.status === 'DELIVERED');
+      const deliveredCount = deliveredEntries.length;
+      const sumDistance = deliveredEntries.reduce((sum, e) => sum + (e.distanceKm || 3.2), 0);
+      const totalDistanceKm = +(sumDistance > 0 ? sumDistance : (deliveredCount > 0 ? deliveredCount * 3.2 : 0)).toFixed(1);
+
       return {
         ...state,
         history: cloudEntries,
         stats: {
           ...state.stats,
           completedToday: deliveredCount,
-          totalDeliveries: cloudEntries.length
+          totalDeliveries: cloudEntries.length,
+          totalDistanceKm
         }
       };
     }
 
+    case 'TRANSFER_PAYOUT': {
+      const now = new Date();
+      const newTransfer: PayoutTransfer = {
+        id: `TXN-UPI-${Date.now()}`,
+        amount: action.payload.amount,
+        bankUpi: action.payload.bankUpi,
+        timestamp: now.toISOString(),
+        dateFormatted: `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        status: 'SUCCESS'
+      };
+
+      const transferNotif: AppNotification = {
+        id: `n-${Date.now()}`,
+        type: 'STATUS',
+        title: `💸 Instant Payout Transferred: ₹${action.payload.amount.toFixed(2)}`,
+        description: `Successfully transferred ₹${action.payload.amount.toFixed(2)} to ${action.payload.bankUpi} via UPI.`,
+        timestamp: 'Just now',
+        isRead: false
+      };
+
+      const nextTransfers = [newTransfer, ...(state.payoutTransfers || [])];
+      try {
+        localStorage.setItem('grabit_payout_transfers', JSON.stringify(nextTransfers));
+      } catch {}
+
+      return {
+        ...state,
+        payoutTransfers: nextTransfers,
+        notifications: [transferNotif, ...state.notifications]
+      };
+    }
+
     case 'RESET_DEMO': {
+      try {
+        localStorage.removeItem('grabit_payout_transfers');
+      } catch {}
       return {
         ...initialDeliveryState,
         orderPool: [],
         history: [],
+        payoutTransfers: [],
         stats: { ...initialStats },
         notifications: [],
         supportTickets: [],
@@ -629,6 +826,7 @@ interface DeliveryContextValue {
   markAllNotificationsRead: () => void;
   createSupportTicket: (ticket: { category: SupportTicket['category']; subject: string; description: string }) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  transferPayout: (amount: number, bankUpi: string) => void;
   resetDemo: () => void;
   unreadCount: number;
 }
@@ -773,8 +971,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (!Array.isArray(localOrders)) localOrders = [];
         } catch {}
 
-        // Combine unique orders
-        const allRaw = [...localOrders, ...apiOrders];
+        // Combine unique orders, ensuring initial seller orders pool is always available
+        const allRaw = [...localOrders, ...apiOrders, ...initialOrdersPool];
         const seenKeys = new Set();
         const uniqueOrders = [];
 
@@ -863,10 +1061,17 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const fetchHistory = async () => {
       try {
         const res = await get('/delivery/history');
-        if (!isMounted || !Array.isArray(res)) return;
-        const entries = res.map(mapApiOrderToHistoryEntry);
-        dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: entries });
-      } catch {}
+        if (!isMounted) return;
+        const cloudEntries = Array.isArray(res) ? res.map(mapApiOrderToHistoryEntry) : [];
+        const existingIds = new Set(cloudEntries.map((e: any) => e.orderId));
+        const savedLocal = getSavedHistory();
+        const merged = [...cloudEntries, ...savedLocal.filter((l) => !existingIds.has(l.orderId))];
+        dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: merged });
+      } catch {
+        if (isMounted) {
+          dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: getSavedHistory() });
+        }
+      }
     };
 
     // Initial load
@@ -890,6 +1095,20 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [state.currentOrder]);
 
+  const transferPayout = useCallback((amount: number, bankUpi: string) => {
+    try {
+      soundEngine.playSuccessChime();
+    } catch {}
+    dispatch({ type: 'TRANSFER_PAYOUT', payload: { amount, bankUpi } });
+  }, []);
+
+  const redeemIncentive = useCallback((campaignId: string, amount: number) => {
+    try {
+      soundEngine.playSuccessChime();
+    } catch {}
+    dispatch({ type: 'REDEEM_INCENTIVE', payload: { campaignId, amount } });
+  }, []);
+
   return (
     <DeliveryContext.Provider
       value={{
@@ -908,6 +1127,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         markAllNotificationsRead,
         createSupportTicket,
         updateSettings,
+        transferPayout,
+        redeemIncentive,
         resetDemo,
         unreadCount
       }}

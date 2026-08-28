@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -276,7 +276,7 @@ export const SellerProfilePage = () => {
               required
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
-              placeholder="e.g. GrabIt Store"
+              placeholder="e.g. Koramangala Fresh Mart"
               icon={Store}
             />
 
