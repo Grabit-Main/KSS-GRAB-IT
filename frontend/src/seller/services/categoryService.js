@@ -1,7 +1,25 @@
-import { get, post, uploadImage } from '../../api';
+import { get, post, del, uploadImage } from '../../api';
 import { categories as defaultCategories, subCategories } from '../../data/categories';
 import { products as defaultProducts } from '../../data/products';
 import { resolveMediaUrl, DEFAULT_CATEGORY_FALLBACK } from '../utils/mediaResolver';
+
+export function getDeletedCategories() {
+  try {
+    const raw = localStorage.getItem('grabit_deleted_categories');
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveDeletedCategory(catIdentifier) {
+  if (!catIdentifier) return;
+  try {
+    const set = getDeletedCategories();
+    set.add(String(catIdentifier).toLowerCase().trim());
+    localStorage.setItem('grabit_deleted_categories', JSON.stringify(Array.from(set)));
+  } catch {}
+}
 
 function getStatusOverrides() {
   try {
@@ -103,6 +121,19 @@ export const categoryService = {
         'gourmet organic sweets',
         'gourmet organic...'
       ]);
+
+      // 4. Filter out any deleted categories across all sources
+      const deletedSet = getDeletedCategories();
+      results = results.filter((c) => {
+        const idStr = String(c.id).toLowerCase().trim();
+        const nameNorm = c.name ? c.name.toLowerCase().trim() : '';
+        const slugNorm = c.slug ? c.slug.toLowerCase().trim() : '';
+
+        if (deletedSet.has(idStr) || (nameNorm && deletedSet.has(nameNorm)) || (slugNorm && deletedSet.has(slugNorm))) {
+          return false;
+        }
+        return true;
+      });
 
       // Deduplicate categories by ID and normalized Name
       const seenIds = new Set();
@@ -307,11 +338,46 @@ export const categoryService = {
   },
 
   async deleteCategory(id) {
+    const targetIdStr = String(id).toLowerCase().trim();
+    let targetName = '';
+    let targetSlug = '';
+
+    try {
+      const all = await categoryService.getCategories();
+      const cat = (all.results || []).find((c) => 
+        String(c.id).toLowerCase().trim() === targetIdStr || 
+        String(c.slug).toLowerCase().trim() === targetIdStr
+      );
+      if (cat) {
+        if (cat.name) targetName = cat.name.toLowerCase().trim();
+        if (cat.slug) targetSlug = cat.slug.toLowerCase().trim();
+      }
+    } catch {}
+
+    // Track in deleted categories blacklist in localStorage
+    saveDeletedCategory(targetIdStr);
+    if (targetName) saveDeletedCategory(targetName);
+    if (targetSlug) saveDeletedCategory(targetSlug);
+
+    // Remove from custom categories list
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_seller_custom_categories') || '[]');
-      const up = stored.filter((c) => String(c.id) !== String(id));
+      const up = stored.filter((c) => {
+        const cId = String(c.id).toLowerCase().trim();
+        const cName = String(c.name || '').toLowerCase().trim();
+        const cSlug = String(c.slug || '').toLowerCase().trim();
+        return cId !== targetIdStr && cName !== targetName && cSlug !== targetSlug;
+      });
       localStorage.setItem('grabit_seller_custom_categories', JSON.stringify(up));
     } catch {}
+
+    // Invoke Backend DELETE API
+    try {
+      await del(`/categories/${encodeURIComponent(id)}`);
+    } catch (e) {
+      console.warn('Backend category delete API call:', e);
+    }
+
     emitCategoryEvent();
     return true;
   },
