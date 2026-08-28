@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useDelivery } from '../context/DeliveryContext';
 import { AgentStatusPill } from './AgentStatusPill';
 import {
@@ -10,16 +10,12 @@ import {
   Bell,
   HelpCircle,
   User,
-  Settings,
-  LogOut
+  Settings
 } from 'lucide-react';
-import { logoutUser } from '../../api';
 
 export const Sidebar: React.FC = () => {
-  const { state, resetDemo, unreadCount } = useDelivery();
+  const { state, unreadCount } = useDelivery();
   const { agentStatus } = state;
-  const navigate = useNavigate();
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const navItems = [
     { to: '/delivery/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,13 +37,6 @@ export const Sidebar: React.FC = () => {
     { to: '/delivery/settings', label: 'Settings', icon: Settings },
     { to: '/delivery/profile', label: 'Profile', icon: User }
   ];
-
-  const handleSignOut = () => {
-    resetDemo();
-    setShowSignOutConfirm(false);
-    logoutUser();
-    navigate('/login', { replace: true });
-  };
 
   return (
     <>
@@ -135,73 +124,7 @@ export const Sidebar: React.FC = () => {
             );
           })}
         </nav>
-
-        {/* Bottom Sign Out Bar */}
-        <div style={{ padding: '14px', borderTop: '1px solid var(--glass-border-subtle)' }}>
-          <button
-            onClick={() => setShowSignOutConfirm(true)}
-            className="sidebar-signout-btn"
-          >
-            <LogOut size={16} color="var(--color-red)" />
-            <span>Sign Out</span>
-          </button>
-        </div>
       </aside>
-
-      {/* Sign Out Confirmation Modal (Level 3 Glass) */}
-      {showSignOutConfirm && (
-        <div className="modal-overlay" style={{ padding: '16px' }}>
-          <div
-            className="modal-content glass-strong"
-            style={{
-              maxWidth: '400px',
-              padding: '26px',
-              borderRadius: '24px',
-              textAlign: 'center'
-            }}
-          >
-            <div
-              style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 59, 48, 0.10)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
-                border: '1px solid rgba(255, 59, 48, 0.25)'
-              }}
-            >
-              <LogOut size={24} color="var(--color-red)" />
-            </div>
-
-            <h3 style={{ fontSize: '19px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 8px' }}>
-              Sign Out from Portal?
-            </h3>
-            <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', margin: '0 0 22px', lineHeight: '1.4' }}>
-              Signing out will end your active session and return you to the login screen.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                onClick={() => setShowSignOutConfirm(false)}
-                className="btn-secondary"
-                style={{ padding: '12px' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="btn-danger-solid"
-                style={{ padding: '12px' }}
-              >
-                Confirm Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

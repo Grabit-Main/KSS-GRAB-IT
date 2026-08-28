@@ -46,14 +46,14 @@ function DeliveryAppLayout() {
     try {
       const userStr = localStorage.getItem('grabit_user');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || (user.role !== 'delivery_agent' && user.role !== 'admin')) {
+      if (!user || user.name === 'Speedy Express Delivery' || (user.role !== 'delivery_agent' && user.role !== 'admin')) {
         const riderUser = {
           id: 3,
           role: 'delivery_agent',
-          name: 'Speedy Express Delivery',
-          full_name: 'Speedy Express Delivery',
-          phone: '+919999900003',
-          email: 'rider@grabit.local'
+          name: 'Alex Mercer',
+          full_name: 'Alex Mercer',
+          phone: '+91 98801 24492',
+          email: 'alex.partner@grabit.com'
         };
         localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
         localStorage.setItem('grabit_user', JSON.stringify(riderUser));

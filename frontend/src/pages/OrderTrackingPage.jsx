@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, Phone, MessageSquare, ShieldCheck, CheckCircle2,
@@ -15,7 +15,7 @@ import CustomerReviewSection from '../components/common/CustomerReviewSection';
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & verified', icon: '🛒' },
-  { key: 'preparing', label: 'Preparing', fullLabel: 'Store Packing', desc: 'GrabIt is packing your items', icon: '🍳' },
+  { key: 'preparing', label: 'Preparing', fullLabel: 'Store Packing', desc: 'Fresh Mart is packing your items', icon: '🍳' },
   { key: 'ready', label: 'Ready', fullLabel: 'Ready for Pickup', desc: 'Packed & awaiting rider pickup', icon: '📦' },
   { key: 'out_for_delivery', label: 'On the Way', fullLabel: 'Out for Delivery', desc: 'Rider is on the way to your door', icon: '🛵' },
   { key: 'delivered', label: 'Delivered', fullLabel: 'Order Delivered', desc: 'Delivered safely to your doorstep', icon: '🎉' }
@@ -29,66 +29,6 @@ const getStepIndex = (statusStr) => {
   if (st === 'preparing' || st === 'confirmed') return 1;
   if (st === 'cancelled') return -1;
   return 0;
-};
-
-const DeliveryBannerIllustration = ({ status }) => {
-  const isCancelled = status === 'cancelled';
-  const isDelivered = status === 'delivered';
-
-  if (isCancelled) {
-    return (
-      <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.8, color: '#DC2626' }}>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-      </svg>
-    );
-  }
-  if (isDelivered) {
-    return (
-      <svg width="120" height="90" viewBox="0 0 120 100" fill="none" style={{ opacity: 0.9 }}>
-        <rect x="25" y="40" width="70" height="50" rx="10" fill="#DCFCE7" stroke="#16A34A" strokeWidth="3" />
-        <path d="M 25 40 L 60 15 L 95 40 Z" fill="#BBF7D0" stroke="#16A34A" strokeWidth="3" />
-        <circle cx="60" cy="65" r="12" fill="#16A34A" />
-        <path d="M 54 65 L 58 69 L 66 61" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg width="140" height="90" viewBox="0 0 160 110" fill="none" style={{ opacity: 0.95, flexShrink: 0 }}>
-      {/* Speed lines */}
-      <path d="M10 35 L40 35" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.3" />
-      <path d="M5 55 L30 55" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.6" />
-      <path d="M15 75 L45 75" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
-      
-      {/* Scooter Frame */}
-      <path d="M50 78 C50 68, 65 65, 80 65 L115 65 C122 65, 125 72, 128 78" stroke="#FFFFFF" strokeWidth="4" fill="none" />
-      
-      {/* Front shield & handle */}
-      <path d="M120 65 L135 38 C137 34, 142 34, 145 38" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <line x1="138" y1="38" x2="148" y2="38" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
-      
-      {/* Wheels */}
-      <circle cx="65" cy="85" r="14" fill="#1E293B" stroke="#FFFFFF" strokeWidth="3" />
-      <circle cx="65" cy="85" r="5" fill="#FFFFFF" />
-      <circle cx="125" cy="85" r="14" fill="#1E293B" stroke="#FFFFFF" strokeWidth="3" />
-      <circle cx="125" cy="85" r="5" fill="#FFFFFF" />
-      
-      {/* Delivery Box */}
-      <rect x="42" y="38" width="34" height="34" rx="8" fill="#10B981" stroke="#FFFFFF" strokeWidth="3" />
-      <path d="M 42 55 L 76 55" stroke="#FFFFFF" strokeWidth="2.5" />
-      {/* Lightning Bolt on Box */}
-      <path d="M56 44 L64 48 L58 52 L62 52 L54 62 L58 52 L54 52 Z" fill="#FEF08A" />
-      
-      {/* Rider Helmet */}
-      <circle cx="102" cy="30" r="11" fill="#FEF08A" stroke="#FFFFFF" strokeWidth="2" />
-      <path d="M96 30 C96 22, 108 22, 108 30 Z" fill="#0071E3" />
-      
-      {/* Rider Body */}
-      <path d="M94 41 L110 41 L106 65 L94 65 Z" fill="#1E293B" stroke="#FFFFFF" strokeWidth="2" />
-    </svg>
-  );
 };
 
 export default function OrderTrackingPage() {
@@ -122,15 +62,6 @@ export default function OrderTrackingPage() {
   const [chatInput, setChatInput] = useState('');
   const [issueSubmitted, setIssueSubmitted] = useState(false);
   const [selectedIssueType, setSelectedIssueType] = useState('');
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    if (chatModalOpen) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
-  }, [chatMessages, chatModalOpen]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -200,17 +131,16 @@ export default function OrderTrackingPage() {
     return () => clearInterval(interval);
   }, [fetchOrder]);
 
-  const handleSendMessage = (overrideText) => {
-    const textToSend = typeof overrideText === 'string' ? overrideText : chatInput;
-    if (!textToSend.trim()) return;
-    const userMsg = { id: Date.now(), sender: 'user', text: textToSend.trim(), time: 'Just now' };
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    const userMsg = { id: Date.now(), sender: 'user', text: chatInput.trim(), time: 'Just now' };
     setChatMessages(prev => [...prev, userMsg]);
-    const inputClean = textToSend.toLowerCase();
-    if (typeof overrideText !== 'string') setChatInput('');
+    const inputClean = chatInput.toLowerCase();
+    setChatInput('');
 
     setTimeout(() => {
       let replyText = "Our customer support team has logged your query. An agent will contact you shortly if needed!";
-      if (inputClean.includes('rider') || inputClean.includes('driver') || inputClean.includes('location') || inputClean.includes('where is')) {
+      if (inputClean.includes('rider') || inputClean.includes('driver') || inputClean.includes('location')) {
         replyText = "🛵 Your rider Karthik is currently 1.2 km away and moving towards your delivery location. Estimated arrival in ~8 mins.";
       } else if (inputClean.includes('cancel')) {
         replyText = "⚠️ Orders currently out for delivery cannot be cancelled automatically. Please call our toll-free support at +91 1800-419-4722 for immediate cancellation help.";
@@ -246,7 +176,6 @@ export default function OrderTrackingPage() {
   }
 
   const currentStepIndex = order ? getStepIndex(order.status) : 0;
-  const isRiderAssigned = currentStepIndex >= 2;
   const isDelivered = order?.status === 'delivered';
   const isCancelled = order?.status === 'cancelled';
 
@@ -263,23 +192,23 @@ export default function OrderTrackingPage() {
         zIndex: 40,
         boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', minWidth: 0 }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => navigate('/orders')}
               style={{
                 background: '#F1F5F9', border: 'none', borderRadius: '50%',
-                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', cursor: 'pointer', color: '#0F172A', flexShrink: 0
+                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', color: '#0F172A'
               }}
             >
-              <ArrowLeft size={isMobile ? 18 : 20} />
+              <ArrowLeft size={20} />
             </button>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: isMobile ? '9px' : '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Order Tracking
               </div>
-              <h1 style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <h1 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                 {order?.displayId || `Order #${orderId}`}
               </h1>
             </div>
@@ -289,11 +218,11 @@ export default function OrderTrackingPage() {
             onClick={() => setSupportModalOpen(true)}
             style={{
               background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#0071E3',
-              borderRadius: '20px', padding: isMobile ? '6px 10px' : '8px 14px', fontSize: isMobile ? '11px' : '13px', fontWeight: 800,
-              display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+              borderRadius: '20px', padding: '8px 14px', fontSize: '13px', fontWeight: 800,
+              display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
             }}
           >
-            <HelpCircle size={isMobile ? 14 : 16} />
+            <HelpCircle size={16} />
             Need Help?
           </button>
         </div>
@@ -315,8 +244,8 @@ export default function OrderTrackingPage() {
           {/* Subtle bg glow */}
           <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', pointerEvents: 'none' }} />
 
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '20px', position: 'relative', zIndex: 5 }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px' }}>
+            <div>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 background: isCancelled ? '#FEE2E2' : isDelivered ? '#DCFCE7' : 'rgba(255,255,255,0.2)',
@@ -330,72 +259,40 @@ export default function OrderTrackingPage() {
                 {isCancelled ? 'Order Was Cancelled' : isDelivered ? 'Delivered To Your Door' : 'Arriving in 10 - 15 Mins'}
               </h2>
               <p style={{ margin: 0, opacity: 0.9, fontSize: '14px', fontWeight: 500 }}>
-                {isCancelled ? 'Refund issued to your payment account.' : isDelivered ? `Delivered on ${order?.date}` : 'GrabIt Store is fulfilling your order en-route.'}
+                {isCancelled ? 'Refund issued to your payment account.' : isDelivered ? `Delivered on ${order?.date}` : 'Store partner Fresh Mart is fulfilling your order en-route.'}
               </p>
             </div>
 
-            {/* banner images and estimated arrival clock */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
-              {!isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <DeliveryBannerIllustration status={order?.status} />
+            {!isCancelled && !isDelivered && (
+              <div style={{
+                background: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '12px 20px',
+                border: '1px solid rgba(255,255,255,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <Clock size={28} />
+                <div>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>Estimated Arrival</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900 }}>10:45 AM</div>
                 </div>
-              )}
-
-              {!isCancelled && !isDelivered && (
-                <div style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '12px 20px',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  color: '#FFFFFF'
-                }}>
-                  <Clock size={28} />
-                  <div>
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>Estimated Arrival</div>
-                    <div style={{ fontSize: '18px', fontWeight: 900 }}>10:45 AM</div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* ── LIVE STEPPER TIMELINE ── */}
           {!isCancelled && (
-            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: isDelivered ? '1px solid #DCFCE7' : '1px solid rgba(255,255,255,0.2)', position: 'relative' }}>
-              
-              {/* Stepper background line */}
-              <div style={{
-                position: 'absolute',
-                top: '36px',
-                left: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
-                right: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
-                height: '4px',
-                background: 'rgba(255,255,255,0.2)',
-                zIndex: 1
-              }} />
-              <div style={{
-                position: 'absolute',
-                top: '36px',
-                left: `${100 / (ORDER_CYCLE_STAGES.length * 2)}%`,
-                width: `${(currentStepIndex / (ORDER_CYCLE_STAGES.length - 1)) * (100 - (100 / ORDER_CYCLE_STAGES.length))}%`,
-                height: '4px',
-                background: isDelivered ? '#16A34A' : '#FFFFFF',
-                zIndex: 2,
-                transition: 'width 0.4s ease'
-              }} />
-
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ORDER_CYCLE_STAGES.length}, 1fr)`, gap: '8px', position: 'relative', zIndex: 3 }}>
+            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: isDelivered ? '1px solid #DCFCE7' : '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ORDER_CYCLE_STAGES.length}, 1fr)`, gap: '8px', position: 'relative' }}>
                 {ORDER_CYCLE_STAGES.map((stg, idx) => {
                   const isDone = currentStepIndex >= idx;
                   const isCurrent = currentStepIndex === idx;
 
                   return (
-                    <div key={stg.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
+                    <div key={stg.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                       <div style={{
                         width: isCurrent ? '36px' : '28px',
                         height: isCurrent ? '36px' : '28px',
@@ -413,13 +310,11 @@ export default function OrderTrackingPage() {
                         fontSize: '13px',
                         marginBottom: '8px',
                         boxShadow: isCurrent ? '0 0 0 4px rgba(255,255,255,0.35)' : 'none',
-                        transition: 'all 0.3s ease',
-                        position: 'relative',
-                        zIndex: 4
+                        transition: 'all 0.3s ease'
                       }}>
                         {isDone ? <Check size={isCurrent ? 18 : 14} /> : idx + 1}
                       </div>
-                      <div style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: isCurrent ? 900 : 700, opacity: isDone ? 1 : 0.6, position: 'relative', zIndex: 4 }}>
+                      <div style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: isCurrent ? 900 : 700, opacity: isDone ? 1 : 0.6 }}>
                         {stg.label}
                       </div>
                     </div>
@@ -437,147 +332,110 @@ export default function OrderTrackingPage() {
 
             {/* 🛵 LIVE RIDER CARD */}
             {!isCancelled && (
-              isRiderAssigned ? (
-                <div style={{
-                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                  padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Assigned Delivery Partner
-                    </div>
-                    <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
-                      🟢 Verified Partner
-                    </span>
+              <div style={{
+                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Assigned Delivery Partner
                   </div>
+                  <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                    🟢 Verified Partner
+                  </span>
+                </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{
-                        width: '54px', height: '54px', borderRadius: '50%', background: '#EFF6FF',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '2px solid #0071E3', fontSize: '24px', fontWeight: 900, color: '#0071E3'
-                      }}>
-                        🛵
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{
+                      width: '54px', height: '54px', borderRadius: '50%', background: '#EFF6FF',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '2px solid #0071E3', fontSize: '24px', fontWeight: 900, color: '#0071E3'
+                    }}>
+                      🛵
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
+                        Karthik Rider
+                      </h4>
+                      <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+                        Speedy Express • Hero Electric (KA 01 EQ 4421)
                       </div>
-                      <div>
-                        <h4 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
-                          Karthik Rider
-                        </h4>
-                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                          Speedy Express • Hero Electric (KA 01 EQ 4421)
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>
-                          ⭐ 4.9 Rating (420+ deliveries)
-                        </div>
+                      <div style={{ fontSize: '12px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>
+                        ⭐ 4.9 Rating (420+ deliveries)
                       </div>
                     </div>
+                  </div>
 
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <a
-                        href="tel:+919999900003"
-                        onClick={() => showToast('Calling rider Karthik (+91 9999900003)... 📞')}
-                        style={{
-                          background: '#10B981', color: '#FFFFFF', borderRadius: '14px',
-                          padding: '10px 16px', fontSize: '13px', fontWeight: 800,
-                          display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none'
-                        }}
-                      >
-                        <PhoneCall size={16} />
-                        Call
-                      </a>
-                      <button
-                        onClick={() => setChatModalOpen(true)}
-                        style={{
-                          background: '#0071E3', color: '#FFFFFF', borderRadius: '14px', border: 'none',
-                          padding: '10px 16px', fontSize: '13px', fontWeight: 800,
-                          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
-                        }}
-                      >
-                        <MessageSquare size={16} />
-                        Chat
-                      </button>
-                    </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <a
+                      href="tel:+919999900003"
+                      onClick={() => showToast('Calling rider Karthik (+91 9999900003)... 📞')}
+                      style={{
+                        background: '#10B981', color: '#FFFFFF', borderRadius: '14px',
+                        padding: '10px 16px', fontSize: '13px', fontWeight: 800,
+                        display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none'
+                      }}
+                    >
+                      <PhoneCall size={16} />
+                      Call
+                    </a>
+                    <button
+                      onClick={() => setChatModalOpen(true)}
+                      style={{
+                        background: '#0071E3', color: '#FFFFFF', borderRadius: '14px', border: 'none',
+                        padding: '10px 16px', fontSize: '13px', fontWeight: 800,
+                        display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
+                      }}
+                    >
+                      <MessageSquare size={16} />
+                      Chat
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div style={{
-                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                  padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textAlign: 'center'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', color: '#64748B', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                    <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F59E0B' }} />
-                    Delivery Partner
-                  </div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>
-                    Assigning Delivery Partner...
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                    A delivery rider will be assigned once the store prepares your items.
-                  </p>
-                </div>
-              )
+              </div>
             )}
 
             {/* 🗺️ LIVE SIMULATED ROUTE MAP */}
-            {isRiderAssigned ? (
+            <div style={{
+              background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+              padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: 'relative'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>Live Route View</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#0071E3' }}>1.2 km away</span>
+              </div>
+
               <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: 'relative'
+                height: '180px', borderRadius: '14px', background: '#EEF2FF',
+                position: 'relative', overflow: 'hidden', border: '1px solid #CBD5E1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>Live Route View</span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#0071E3' }}>1.2 km away</span>
+                {/* SVG Route Visual */}
+                <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
+                  <path d="M 40 140 Q 150 40 320 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
+                </svg>
+
+                {/* Store Pin */}
+                <div style={{ position: 'absolute', left: '30px', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>Store</div>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2px solid #FFF' }} />
                 </div>
 
-                <div style={{
-                  height: '180px', borderRadius: '14px', background: '#EEF2FF',
-                  position: 'relative', overflow: 'hidden', border: '1px solid #CBD5E1',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {/* SVG Route Visual */}
-                  <svg width="100%" height="100%" viewBox="0 0 360 180" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
-                    <path d="M 36 140 Q 165 40 324 120" stroke="#0071E3" strokeWidth="4" fill="none" strokeDasharray="6 6" />
-                  </svg>
-
-                  {/* Store Pin */}
-                  <div style={{ position: 'absolute', left: '10%', bottom: '22%', transform: 'translate(-50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-                    <div style={{ background: '#1E293B', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Store</div>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#3B82F6', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(59,130,246,0.5)' }} />
+                {/* Moving Rider Pin */}
+                <div style={{ position: 'absolute', left: '48%', top: '38%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ background: '#0071E3', color: '#FFF', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    🛵 Rider
                   </div>
+                </div>
 
-                  {/* Moving Rider Pin */}
-                  <div style={{ position: 'absolute', left: '46%', top: '22%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 12 }}>
-                    <div style={{ background: '#0071E3', color: '#FFF', padding: '5px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(0,113,227,0.3)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                      🛵 Rider
-                    </div>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#0071E3', border: '2px solid #FFF', marginTop: '2px' }} />
-                  </div>
-
-                  {/* Customer Pin */}
-                  <div style={{ position: 'absolute', right: '10%', bottom: '33%', transform: 'translate(50%, 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-                    <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap' }}>Home</div>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2.5px solid #FFF', boxShadow: '0 2px 8px rgba(16,185,129,0.5)' }} />
-                  </div>
+                {/* Customer Pin */}
+                <div style={{ position: 'absolute', right: '30px', bottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ background: '#10B981', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>Home</div>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#10B981', border: '2px solid #FFF' }} />
                 </div>
               </div>
-            ) : (
-              <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', textAlign: 'center'
-              }}>
-                <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', display: 'block', textAlign: 'left', marginBottom: '12px' }}>Live Route View</span>
-                <div style={{
-                  height: '180px', borderRadius: '14px', background: '#F8FAFC',
-                  border: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: '10px'
-                }}>
-                  <MapPin size={32} color="#94A3B8" />
-                  <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 700 }}>Map tracking will start shortly</div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>Waiting for rider to accept and start route</div>
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* 📦 ORDER ITEMS DETAILS */}
             <div style={{
@@ -630,7 +488,7 @@ export default function OrderTrackingPage() {
             </div>
 
             {/* ⭐ SHARE YOUR EXPERIENCE REVIEW CARD */}
-            <CustomerReviewSection storeName="GrabIt Store" />
+            <CustomerReviewSection storeName="Fresh Mart Supermarket" />
 
           </div>
 
@@ -777,7 +635,6 @@ export default function OrderTrackingPage() {
                   {msg.text}
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Quick Actions Chips */}
@@ -785,7 +642,7 @@ export default function OrderTrackingPage() {
               {['Where is rider?', 'Missing item', 'Cancel order', 'Talk to human agent'].map((opt, i) => (
                 <button
                   key={i}
-                  onClick={() => handleSendMessage(opt)}
+                  onClick={() => { setChatInput(opt); }}
                   style={{
                     whiteSpace: 'nowrap', background: '#EFF6FF', border: '1px solid #BFDBFE',
                     color: '#0071E3', borderRadius: '16px', padding: '6px 12px', fontSize: '12px',

@@ -185,6 +185,7 @@ export interface IncentiveCampaign {
   completedCount?: number;
   expiresAt: string;
   isActive: boolean;
+  isRedeemed?: boolean;
   tierBreakdown?: IncentiveTier[];
   terms: string[];
 }

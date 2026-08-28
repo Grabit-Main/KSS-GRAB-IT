@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDelivery } from '../../context/DeliveryContext';
 import { agentProfile } from '../../data/mockData';
@@ -13,7 +13,6 @@ import {
   MapPin,
   Calendar,
   FileCheck,
-  LogOut,
   CheckCircle2,
   Award,
   ChevronRight,
@@ -116,13 +115,10 @@ const VerifiedBadge = () => (
 );
 
 /* ─── Main Screen ─────────────────────────────────────────── */
-import { logoutUser } from '../../../api';
-
 export const ProfileScreen: React.FC = () => {
-  const { state, resetDemo } = useDelivery();
+  const { state } = useDelivery();
   const { stats } = state;
   const navigate = useNavigate();
-  const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const loggedInUser = (() => {
     try {
@@ -131,21 +127,15 @@ export const ProfileScreen: React.FC = () => {
       return {};
     }
   })();
-  const displayName = loggedInUser.name || loggedInUser.full_name || 'Delivery Partner';
+  const displayName = (loggedInUser.name && loggedInUser.name !== 'Speedy Express Delivery' && loggedInUser.name !== 'Delivery Partner')
+    ? loggedInUser.name
+    : agentProfile.name;
   const displayPhone = loggedInUser.phone || agentProfile.phone;
   const displayEmail = loggedInUser.email || agentProfile.email;
 
-  const handleSignOut = () => {
-    resetDemo();
-    setShowSignOutModal(false);
-    logoutUser();
-    navigate('/login', { replace: true });
-  };
-
   const navCards = [
-    { to: '/delivery/delivery-history', label: 'Delivery\nHistory', Icon: Clock, color: C.green, bg: `${C.green}18` },
-    { to: '/delivery/performance',      label: 'Performance', Icon: BarChart2, color: C.green, bg: `${C.green}18` },
-    { to: '/delivery/support',          label: 'Support',     Icon: Headphones, color: C.purple, bg: `${C.purple}18` },
+    { to: '/delivery/performance', label: 'Performance Analytics', Icon: BarChart2, color: C.blue, bg: 'rgba(0, 113, 227, 0.1)' },
+    { to: '/delivery/support',     label: 'Partner Support & Help', Icon: Headphones, color: C.purple, bg: 'rgba(175, 82, 222, 0.1)' },
   ];
 
   return (
@@ -192,21 +182,30 @@ export const ProfileScreen: React.FC = () => {
 
           {/* Name & badges */}
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', color: C.graphite, margin: '0 0 8px', letterSpacing: '-0.5px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: C.graphite, margin: '0 0 2px', letterSpacing: '-0.5px' }}>
               {displayName}
             </h1>
+            <span style={{ fontSize: '13px', color: C.gray, fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+              {displayPhone} • {displayEmail}
+            </span>
 
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: `${C.blue}12`, border: `1px solid ${C.blue}28`, borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px', fontWeight: '700', color: C.blue, marginBottom: '10px' }}>
               <CheckCircle2 size={13} /> Partner Verified
             </div>
 
-            <p style={{ fontSize: '12.5px', color: C.gray, margin: '3px 0', fontWeight: '600' }}>
-              Partner ID: <span style={{ color: C.graphite, fontWeight: '800' }}>{agentProfile.agentId}</span>
-            </p>
-            <p style={{ fontSize: '12px', color: C.gray, margin: '3px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              <MapPin size={12} color={C.gray} />
-              {agentProfile.hub}
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'center' }}>
+              <p style={{ fontSize: '12.5px', color: C.gray, margin: 0, fontWeight: '600' }}>
+                Partner ID: <span style={{ color: C.graphite, fontWeight: '800' }}>{agentProfile.agentId}</span>
+              </p>
+              <p style={{ fontSize: '12px', color: C.gray, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <MapPin size={12} color={C.gray} />
+                {agentProfile.hub}
+              </p>
+              <p style={{ fontSize: '12px', color: C.gray, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Bike size={12} color={C.gray} />
+                {agentProfile.vehicle} • {agentProfile.plate}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -350,127 +349,53 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Quick Shortcuts Grid ──────────────────────────────── */}
+      {/* ── Quick Action Shortcuts ──────────────────────────────── */}
       <div style={{
-        backgroundColor: C.card, borderRadius: '22px', padding: '16px',
+        backgroundColor: C.card, borderRadius: '22px', padding: '6px 18px',
         boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
-        justifyContent: 'center'
+        display: 'flex', flexDirection: 'column'
       }}>
-        {navCards.map(({ to, label, Icon, color, bg }) => (
+        {navCards.map(({ to, label, Icon, color, bg }, idx) => (
           <button
             key={to}
             id={`shortcut-${to.replace('/', '')}`}
             onClick={() => navigate(to)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: '8px', padding: '14px 6px',
-              borderRadius: '16px', border: `1px solid ${color}20`,
-              backgroundColor: bg, cursor: 'pointer',
-              minHeight: '82px',
-              transition: 'transform 0.12s, box-shadow 0.12s',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 0',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: idx < navCards.length - 1 ? `1px solid ${C.border}` : 'none',
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left'
             }}
-            onTouchStart={e => (e.currentTarget.style.transform = 'scale(0.95)')}
-            onTouchEnd={e => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            <Icon size={26} color={color} />
-            <span style={{ fontSize: '11px', fontWeight: '700', color: C.graphite, textAlign: 'center', lineHeight: '1.25', whiteSpace: 'pre-line' }}>
-              {label}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
+                  backgroundColor: bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <Icon size={20} color={color} />
+              </div>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: C.graphite }}>
+                {label}
+              </span>
+            </div>
+
+            <ChevronRight size={18} color={C.gray} />
           </button>
         ))}
       </div>
 
-      {/* ── Sign Out Account Card ────────────────────────────── */}
-      <div style={{ backgroundColor: C.card, borderRadius: '22px', padding: '16px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-        <button
-          id="profile-signout-btn"
-          onClick={() => setShowSignOutModal(true)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            borderRadius: '14px',
-            border: `1.5px solid ${C.red}30`,
-            backgroundColor: `${C.red}08`,
-            color: C.red,
-            fontSize: '14.5px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = `${C.red}15`;
-            e.currentTarget.style.borderColor = C.red;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = `${C.red}08`;
-            e.currentTarget.style.borderColor = `${C.red}30`;
-          }}
-        >
-          <LogOut size={16} />
-          <span>Sign Out of Delivery Session</span>
-        </button>
-      </div>
-
-      {/* ── Sign Out Confirmation Modal ───────────────────────── */}
-      {showSignOutModal && (
-        <div className="modal-overlay" style={{ padding: '20px' }}>
-          <div
-            className="modal-content"
-            style={{
-              maxWidth: '360px', width: '100%',
-              padding: '28px 24px', textAlign: 'center',
-              borderRadius: '28px',
-              backgroundColor: C.card,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-            }}
-          >
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '50%',
-              backgroundColor: `${C.red}14`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 18px', border: `1.5px solid ${C.red}30`,
-            }}>
-              <LogOut size={28} color={C.red} />
-            </div>
-
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: C.graphite, margin: '0 0 8px' }}>
-              Sign Out from Portal?
-            </h3>
-            <p style={{ fontSize: '14px', color: C.gray, margin: '0 0 26px', lineHeight: '1.55' }}>
-              Are you sure you want to sign out from your active delivery partner session? You will be returned to the login screen.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                onClick={() => setShowSignOutModal(false)}
-                style={{
-                  padding: '14px', borderRadius: '14px',
-                  backgroundColor: '#F2F2F7', border: `1px solid ${C.border}`,
-                  fontSize: '15px', fontWeight: '700', color: C.graphite, cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                id="signout-confirm-btn"
-                onClick={handleSignOut}
-                style={{
-                  padding: '14px', borderRadius: '14px',
-                  backgroundColor: C.red, border: 'none',
-                  fontSize: '15px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer',
-                }}
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

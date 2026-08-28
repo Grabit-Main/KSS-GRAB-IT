@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ShoppingBag,
   Clock,
@@ -39,7 +39,7 @@ export const SellerOrdersPage = () => {
     const addr = (o.delivery_address || o.address || '').trim().toLowerCase();
     if (!addr || addr === 'enter your delivery address' || addr.length < 5) return false;
     const custName = (o.customer_name || '').trim().toLowerCase();
-    if (custName.includes('GrabIt Store')) return false;
+    if (custName.includes('fresh mart supermarket')) return false;
     let itemsList = [];
     if (Array.isArray(o.items)) itemsList = o.items;
     else if (typeof o.items === 'string') {

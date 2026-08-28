@@ -783,10 +783,11 @@ a {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
+  padding: 36px 16px 16px;
+  overflow-y: auto;
   animation: backdrop-fade-in 0.22s ease-out forwards;
 }
 
