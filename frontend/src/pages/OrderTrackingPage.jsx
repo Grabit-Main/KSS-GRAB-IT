@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, Phone, MessageSquare, ShieldCheck, CheckCircle2,
   Package, ShoppingBag, Truck, AlertCircle, RefreshCw, ChevronRight, HelpCircle,
-  X, Send, PhoneCall, Check, ExternalLink, Sparkles
+  X, Send, PhoneCall, Check, ExternalLink, Sparkles, Zap
 } from 'lucide-react';
 import { get } from '../api';
 import { useCart } from '../context/CartContext';
