@@ -31,6 +31,7 @@ import {
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
+import DeliveryRadiusMapPicker from './DeliveryRadiusMapPicker';
 import { forceScrollToTop } from '../utils/scrollToTop';
 
 // ── Window Width Hook ──
@@ -2080,6 +2081,14 @@ export function AdminPortalApp() {
                   initialRadius={100}
                   onSaveLocation={(data) => {
                     setNotice(`✅ Supermarket Location Updated: ${data.address} (${data.radius}m radius)`);
+                  }}
+                />
+                <DeliveryRadiusMapPicker
+                  storeLat={13.014333}
+                  storeLng={77.646000}
+                  onSave={(data) => {
+                    const km = (data.radius / 1000).toFixed(0);
+                    setNotice(`✅ Delivery Coverage Zone Updated: ${km} km radius`);
                   }}
                 />
               </div>
