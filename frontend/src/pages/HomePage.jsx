@@ -61,7 +61,9 @@ export default function HomePage() {
     return allProducts.filter(p => (p.discount || 0) >= 15 || p.mrp > p.price).slice(0, isMobile ? 6 : 12);
   }, [allProducts, isMobile]);
 
-  const wishlistProducts = allProducts.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category || p.category_slug)).slice(0, isMobile ? 6 : 12);
+  const wishlistProducts = useMemo(() =>
+    allProducts.filter(p => ['dairy','beverages','staples','personal-care'].includes(p.category || p.category_slug)).slice(0, isMobile ? 6 : 12),
+  [allProducts, isMobile]);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
