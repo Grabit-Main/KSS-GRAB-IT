@@ -1,7 +1,8 @@
-import { get, post, uploadImage } from '../../api';
+import { get, post, del, uploadImage } from '../../api';
 import { categories as defaultCategories, subCategories } from '../../data/categories';
 import { products as defaultProducts } from '../../data/products';
 import { resolveMediaUrl, DEFAULT_CATEGORY_FALLBACK } from '../utils/mediaResolver';
+
 
 function getStatusOverrides() {
   try {
@@ -11,7 +12,29 @@ function getStatusOverrides() {
   }
 }
 
+function getDeletedCategories() {
+  try {
+    return JSON.parse(localStorage.getItem('grabit_deleted_categories') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveDeletedCategory(id, name, slug) {
+  try {
+    const list = getDeletedCategories();
+    const idStr = String(id);
+    const nameNorm = name ? name.toLowerCase().trim() : '';
+    const slugNorm = slug ? slug.toLowerCase().trim() : '';
+    if (!list.some(item => String(item.id) === idStr || (nameNorm && item.name === nameNorm) || (slugNorm && item.slug === slugNorm))) {
+      list.push({ id: idStr, name: nameNorm, slug: slugNorm });
+      localStorage.setItem('grabit_deleted_categories', JSON.stringify(list));
+    }
+  } catch {}
+}
+
 function saveStatusOverride(id, isActive) {
+
   try {
     const map = getStatusOverrides();
     map[String(id)] = isActive;
@@ -147,6 +170,25 @@ export const categoryService = {
         if (nameNorm) seenNames.add(nameNorm);
         return true;
       });
+
+      // Filter out any categories marked as deleted
+      const deletedList = getDeletedCategories();
+      if (deletedList.length > 0) {
+        const deletedIds = new Set(deletedList.map((d) => String(d.id)));
+        const deletedNames = new Set(deletedList.map((d) => d.name).filter(Boolean));
+        const deletedSlugs = new Set(deletedList.map((d) => d.slug).filter(Boolean));
+
+        results = results.filter((c) => {
+          const idStr = String(c.id);
+          const nameNorm = c.name ? c.name.toLowerCase().trim() : '';
+          const slugNorm = c.slug ? c.slug.toLowerCase().trim() : '';
+          if (deletedIds.has(idStr)) return false;
+          if (nameNorm && deletedNames.has(nameNorm)) return false;
+          if (slugNorm && deletedSlugs.has(slugNorm)) return false;
+          return true;
+        });
+      }
+
 
       // Apply persistent status overrides
       const statusMap = getStatusOverrides();
@@ -338,14 +380,42 @@ export const categoryService = {
   },
 
   async deleteCategory(id) {
+    const idStr = String(id);
+    let targetName = '';
+    let targetSlug = '';
+
+    try {
+      const allCats = await categoryService.getCategories();
+      const cat = allCats.results?.find((c) => String(c.id) === idStr);
+      if (cat) {
+        targetName = cat.name || '';
+        targetSlug = cat.slug || '';
+      }
+    } catch {}
+
+    saveDeletedCategory(idStr, targetName, targetSlug);
+
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_seller_custom_categories') || '[]');
-      const up = stored.filter((c) => String(c.id) !== String(id));
+      const up = stored.filter((c) => {
+        const cId = String(c.id);
+        const cName = c.name ? c.name.toLowerCase().trim() : '';
+        const tName = targetName ? targetName.toLowerCase().trim() : '';
+        if (cId === idStr) return false;
+        if (tName && cName === tName) return false;
+        return true;
+      });
       localStorage.setItem('grabit_seller_custom_categories', JSON.stringify(up));
     } catch {}
+
+    try {
+      await del(`/categories/${id}`);
+    } catch (e) {}
+
     emitCategoryEvent();
     return true;
   },
+
 };
 
 export default categoryService;
