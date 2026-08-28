@@ -26,6 +26,8 @@ export const DashboardAvailable: React.FC = () => {
   const { stats, history, agentStatus, orderPool, currentOrder, queuedOrders } = state;
   const navigate = useNavigate();
 
+  const [visibleCount, setVisibleCount] = React.useState(6);
+
   const loggedInUser = (() => {
     try {
       return JSON.parse(localStorage.getItem('grabit_user') || '{}');
@@ -375,7 +377,7 @@ export const DashboardAvailable: React.FC = () => {
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {orderPool.map((ord) => (
+                    {orderPool.slice(0, visibleCount).map((ord) => (
                       <div
                         key={ord.id}
                         style={{
@@ -441,6 +443,30 @@ export const DashboardAvailable: React.FC = () => {
                         </div>
                       </div>
                     ))}
+
+                    {orderPool.length > visibleCount && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount(prev => prev + 10)}
+                        style={{
+                          background: '#EFF6FF',
+                          color: '#0071E3',
+                          border: '1.5px solid #BFDBFE',
+                          borderRadius: '14px',
+                          padding: '12px',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          marginTop: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        ⚡ Show More Available Orders ({orderPool.length - visibleCount} remaining)
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

@@ -1035,6 +1035,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'RESET_DEMO' });
   }, []);
 
+  const prevSyncSigRef = useRef<string>('');
+
   // ── Cloud real-time sync: fetch active orders, queue & history ──
   useEffect(() => {
     let isMounted = true;
@@ -1147,6 +1149,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             queuePosition: idx + 1
           }));
         }
+
+        // Check if data signature changed before dispatching
+        const newSig = `act:${activeOrder?.id || 'none'}_q:${queuedOrders.map(q => q.id).join(',')}_p:${poolOrders.map(p => p.id).join(',')}`;
+        if (prevSyncSigRef.current === newSig) {
+          return;
+        }
+        prevSyncSigRef.current = newSig;
 
         dispatch({
           type: 'SYNC_DELIVERY_ORDERS',
