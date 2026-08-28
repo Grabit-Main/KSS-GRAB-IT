@@ -2203,7 +2203,7 @@ export function AdminPortalApp() {
 
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ══════════════════════════════════════════════════════════════════ */}
-            {/* ── TAB 5: SUPERMARKET LOCATION & GEOFENCE SETTINGS (2 MAPS) ── */}
+            {/* ── TAB 5: DELIVERY FLEET & 5KM SUPERMARKET GEOFENCE (2 MAPS) ── */}
             {/* ══════════════════════════════════════════════════════════════════ */}
             {activeTab === 'security' && (
               <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -2211,41 +2211,41 @@ export function AdminPortalApp() {
                 {/* Header Banner */}
                 <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                   <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0' }}>
-                    🗺️ Store Location & Express Hub Geofencing
+                    🗺️ Delivery Partner Fleet &amp; 5km Supermarket Geofence
                   </h2>
                   <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
-                    Configure exact GPS coordinates and delivery geofence radiuses for both your Main Supermarket Hub and Secondary Express Dark Store.
+                    Map 1 manages real-time delivery agent dispatch &amp; pickup location. Map 2 configures the official 5km express delivery coverage boundary for the supermarket.
                   </p>
                 </div>
 
-                {/* 📍 MAP 1: MAIN SUPERMARKET HUB */}
+                {/* 🛵 MAP 1: DELIVERY PARTNER LIVE FLEET & DISPATCH CENTER */}
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 900, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={16} /> 1. Main Supermarket Hub Location (Primary Hub)
+                    <Truck size={16} color="#0071E3" /> 1. Delivery Partner Live Fleet &amp; Dispatch Center Map
                   </div>
                   <SupermarketLocationMapPicker
                     initialLat={13.014333}
                     initialLng={77.646000}
-                    initialTitle="GrabIt Supermarket — Main Hub (Banaswadi)"
-                    initialRadius={100}
+                    initialTitle="Delivery Partner Fleet GPS Center (Live Rider Dispatch)"
+                    initialRadius={250}
                     onSaveLocation={(data) => {
-                      setNotice(`✅ Primary Supermarket Location Saved: ${data.address} (${data.radius}m radius)`);
+                      setNotice(`✅ Delivery Partner Dispatch Center Saved: ${data.address} (${data.radius}m pickup radius)`);
                     }}
                   />
                 </div>
 
-                {/* 📍 MAP 2: SECONDARY EXPRESS DARK STORE HUB */}
+                {/* 🏪 MAP 2: 5KM SUPERMARKET DELIVERY COVERAGE ZONE */}
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={16} /> 2. Secondary Express Dark Store Location (Hub 2)
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={16} color="#10B981" /> 2. Supermarket 5km Delivery Coverage Geofence Zone
                   </div>
                   <SupermarketLocationMapPicker
-                    initialLat={12.971600}
-                    initialLng={77.641200}
-                    initialTitle="GrabIt Express Dark Store — Hub 2 (Indiranagar)"
-                    initialRadius={150}
+                    initialLat={13.014333}
+                    initialLng={77.646000}
+                    initialTitle="GrabIt Supermarket — 5km Express Delivery Coverage Zone"
+                    initialRadius={5000}
                     onSaveLocation={(data) => {
-                      setNotice(`✅ Secondary Express Hub 2 Location Saved: ${data.address} (${data.radius}m radius)`);
+                      setNotice(`✅ 5km Supermarket Delivery Geofence Saved: ${data.address} (${(data.radius/1000).toFixed(1)}km zone)`);
                     }}
                   />
                 </div>

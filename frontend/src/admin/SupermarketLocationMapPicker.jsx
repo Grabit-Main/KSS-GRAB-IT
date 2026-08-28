@@ -412,7 +412,11 @@ export default function SupermarketLocationMapPicker({
               <option value={100}>100 Meters Radius</option>
               <option value={250}>250 Meters Radius</option>
               <option value={500}>500 Meters Radius</option>
-              <option value={1000}>1,000 Meters Radius</option>
+              <option value={1000}>1 km (1,000m) Radius</option>
+              <option value={3000}>3 km (3,000m) Radius</option>
+              <option value={5000}>5 km (5,000m) Supermarket Coverage Radius</option>
+              <option value={7000}>7 km (7,000m) Extended Zone</option>
+              <option value={10000}>10 km (10,000m) Maximum Zone</option>
             </select>
           </div>
         </div>
