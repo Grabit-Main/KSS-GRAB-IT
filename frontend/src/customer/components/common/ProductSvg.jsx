@@ -67,7 +67,15 @@ function Img({ src, alt, size: s }) {
       src={src}
       alt={alt || 'Product'}
       onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMG; }}
-      style={{ height: s + 'px', width: 'auto', objectFit: 'contain', maxHeight: s + 'px', maxWidth: s + 'px' }}
+      style={{
+        height: '100%',
+        width: '100%',
+        maxHeight: s + 'px',
+        maxWidth: s + 'px',
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.08))',
+        transition: 'transform 0.2s ease'
+      }}
     />
   );
 }

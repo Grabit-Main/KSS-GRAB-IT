@@ -111,16 +111,16 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
       {/* Product Image Box */}
       <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
         <div style={{
-          background: '#F5F5F7',
-          borderRadius: '8px',
+          background: '#F8FAFC',
+          borderRadius: '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '10px 4px',
+          padding: '8px 4px',
           marginBottom: '8px',
-          height: '95px'
+          height: '105px'
         }}>
-          <ProductSvg name={product.image} size={70} />
+          <ProductSvg name={product.image} size={88} />
         </div>
       </Link>
 
