@@ -817,8 +817,9 @@ export function AdminPortalApp() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
           {/* ── TOP HEADER (MOBILE RESPONSIVE) ── */}
+          {/* ── TOP EXECUTIVE HEADER ── */}
           <header style={{
-            height: isMobile ? '60px' : '68px',
+            height: isMobile ? '58px' : '64px',
             background: '#FFFFFF',
             borderBottom: '1px solid #E2E8F0',
             padding: isMobile ? '0 14px' : '0 24px',
@@ -827,47 +828,72 @@ export function AdminPortalApp() {
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
-            zIndex: 90
+            zIndex: 90,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
           }}>
-            {/* Left: Clean Brand Section Title (Search Bar & Hamburger Button Removed) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Left: Sleek Executive Title (Compact, clean, no text wrapping) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
               <div style={{
-                width: '32px', height: '32px', borderRadius: '8px',
+                width: '34px', height: '34px', borderRadius: '10px',
                 background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#FFFFFF', fontWeight: 900, fontSize: '15px'
+                color: '#FFFFFF', fontWeight: 900, fontSize: '16px',
+                boxShadow: '0 3px 8px rgba(0, 113, 227, 0.25)',
+                flexShrink: 0
               }}>
                 G
               </div>
-              <div>
-                <h1 style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.3px' }}>
-                  GrabIt Executive Console
-                </h1>
-                <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
-                  Real-time Supermarket & Express Logistics Control
+              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h1 style={{
+                    fontSize: isMobile ? '15px' : '16.5px',
+                    fontWeight: 900,
+                    color: '#0F172A',
+                    margin: 0,
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '-0.3px'
+                  }}>
+                    GrabIt Admin
+                  </h1>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    background: '#ECFDF5', border: '1px solid #A7F3D0',
+                    color: '#059669', fontSize: '9.5px', fontWeight: 800,
+                    padding: '2px 7px', borderRadius: '100px', flexShrink: 0
+                  }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10B981' }} />
+                    Live
+                  </span>
                 </div>
+                {!isMobile && (
+                  <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600, marginTop: '1px', whiteSpace: 'nowrap' }}>
+                    Supermarket & Express Logistics Console
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Right: Notification Bell & Sign Out Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
 
-              {/* Real-Time Cloud Sync Pill */}
-              <div style={{
-                display: isMobile ? 'none' : 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                borderRadius: '20px',
-                padding: '4px 10px',
-                fontSize: '11px',
-                fontWeight: 800,
-                color: '#059669'
-              }}>
-                <span className="live-pulse-dot" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
-                Real-Time Cloud Sync
-              </div>
+              {/* Real-Time Cloud Sync Pill (Desktop) */}
+              {!isMobile && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: '#0071E3'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0071E3' }} />
+                  Cloud Connected
+                </div>
+              )}
 
               {/* Notification Bell */}
               <div style={{ position: 'relative' }}>
