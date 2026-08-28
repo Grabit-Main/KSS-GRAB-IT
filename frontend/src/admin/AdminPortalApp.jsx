@@ -25,7 +25,8 @@ import {
   Sparkles,
   Loader2,
   MapPin,
-  LogIn
+  LogIn,
+  Lightbulb
 } from 'lucide-react';
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
@@ -159,6 +160,7 @@ export function AdminPortalApp() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [productSortBy, setProductSortBy] = useState('default');
   const [notice, setNotice] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
 
   // ── Filtering & Modals ──
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,14 +203,22 @@ export function AdminPortalApp() {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const [ordersRes, partnersRes, productsRes] = await Promise.all([
+      const [ordersRes, partnersRes, productsRes, suggestionsRes] = await Promise.all([
         get('/orders/').catch(() => []),
         get('/users/').catch(() => []),
-        get('/products/').catch(() => [])
+        get('/products/').catch(() => []),
+        get('/admin/product-suggestions').catch(() => [])
       ]);
 
       if (Array.isArray(ordersRes)) setOrders(ordersRes);
       if (Array.isArray(partnersRes)) setPartners(partnersRes);
+      if (Array.isArray(suggestionsRes)) {
+        setSuggestions(suggestionsRes);
+      } else {
+        const local = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+        setSuggestions(local);
+      }
+
       if (Array.isArray(productsRes) && productsRes.length > 0) {
         const merged = [...baseProducts];
         const existingNames = new Set(baseProducts.map(p => (p.name || '').toLowerCase()));
@@ -360,6 +370,46 @@ export function AdminPortalApp() {
     setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
     setNotice(`✅ Deleted SKU "${name}".`);
   };
+  const handleDeleteSuggestion = async (sugId) => {
+    try {
+      await del(`/admin/product-suggestions/${sugId}`).catch(() => {});
+    } catch {}
+    setSuggestions(prev => prev.filter(s => s.id !== sugId));
+    try {
+      const local = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+      const filtered = local.filter(s => s.id !== sugId);
+      localStorage.setItem('grabit_product_suggestions', JSON.stringify(filtered));
+    } catch {}
+    setNotice('✅ Product suggestion dismissed.');
+  };
+
+  const handleAddToStoreFromSuggestion = (sug) => {
+    setNewProdName(sug.product_name || '');
+    const standardCategories = [
+      'Snacks & Munchies',
+      'Dairy & Bakery',
+      'Cold Drinks & Juices',
+      'Atta, Rice & Dal',
+      'Chocolates & Sweets',
+      'Personal Care',
+      'Household Essentials',
+      'Fresh Fruits & Veggies',
+      'Tea, Coffee & Drinks',
+      'Biscuits & Cookies',
+      'Instant & Frozen Food',
+      'Edible Oils & Ghee',
+      'Electronics & Gadgets',
+      'Fashion & Accessories'
+    ];
+    const matched = standardCategories.find(c => c.toLowerCase() === (sug.category || '').toLowerCase().trim());
+    setNewProdCategory(matched || 'Snacks & Munchies');
+    setNewProdPrice('99');
+    setNewProdStock('50');
+    setNewProdImage('');
+    
+    setShowAddProductModal(true);
+    handleDeleteSuggestion(sug.id);
+  };
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -449,7 +499,8 @@ export function AdminPortalApp() {
     { id: 'orders', label: 'Live Orders', icon: ShoppingBag, count: filteredOrders.length },
     { id: 'partners', label: 'Partners', icon: Users, count: partners.length || 60 },
     { id: 'products', label: 'Catalog', icon: Package, count: products.length || 48 },
-    { id: 'security', label: 'Store Map', icon: MapPin }
+    { id: 'security', label: 'Store Map', icon: MapPin },
+    { id: 'suggestions', label: 'Suggestions', icon: Lightbulb, count: suggestions.length }
   ];
 
   return (
@@ -2031,6 +2082,152 @@ export function AdminPortalApp() {
                     setNotice(`✅ Supermarket Location Updated: ${data.address} (${data.radius}m radius)`);
                   }}
                 />
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* ── TAB 6: CUSTOMER PRODUCT SUGGESTIONS REVIEW PANEL ── */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === 'suggestions' && (
+              <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+                {/* Header */}
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '24px', marginBottom: '20px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                  position: 'relative', overflow: 'hidden'
+                }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #0071E3 0%, #38BDF8 50%, #10B981 100%)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ background: '#EFF6FF', borderRadius: '12px', padding: '10px', display: 'flex' }}>
+                        <Lightbulb size={22} color="#0071E3" />
+                      </div>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#0F172A' }}>
+                          Customer Product Suggestions
+                        </h2>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
+                          Review missing products requested by customers and quickly add them to your catalog.
+                        </p>
+                      </div>
+                    </div>
+                    <span style={{
+                      background: suggestions.length > 0 ? '#FFF7ED' : '#F1F5F9',
+                      color: suggestions.length > 0 ? '#C2410C' : '#64748B',
+                      border: suggestions.length > 0 ? '1px solid #FFEDD5' : '1px solid #E2E8F0',
+                      padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800
+                    }}>
+                      {suggestions.length} {suggestions.length === 1 ? 'Request' : 'Requests'} Pending
+                    </span>
+                  </div>
+                </div>
+
+                {/* Empty state */}
+                {suggestions.length === 0 ? (
+                  <div style={{
+                    background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                    padding: '60px 24px', textAlign: 'center',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>💡</div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 800, color: '#475569' }}>
+                      No Product Suggestions Yet
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8', maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
+                      When customers suggest products from their home page, they will appear here for your review.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {suggestions.map((sug) => (
+                      <div
+                        key={sug.id}
+                        style={{
+                          background: '#FFFFFF',
+                          borderRadius: '16px',
+                          border: '1px solid #E2E8F0',
+                          padding: '20px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          flexWrap: 'wrap',
+                          gap: '16px'
+                        }}
+                      >
+                        {/* Left: Details */}
+                        <div style={{ flex: 1, minWidth: '220px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
+                              {sug.product_name}
+                            </span>
+                            <span style={{
+                              background: '#EFF6FF', color: '#0071E3', fontSize: '11px',
+                              fontWeight: 800, padding: '3px 9px', borderRadius: '8px', border: '1px solid #BFDBFE'
+                            }}>
+                              {sug.category}
+                            </span>
+                            {sug.brand && (
+                              <span style={{
+                                background: '#FFF7ED', color: '#C2410C', fontSize: '11px',
+                                fontWeight: 800, padding: '3px 9px', borderRadius: '8px', border: '1px solid #FFEDD5'
+                              }}>
+                                {sug.brand}
+                              </span>
+                            )}
+                          </div>
+
+                          {sug.notes && (
+                            <p style={{
+                              margin: '0 0 10px 0', fontSize: '12px', color: '#64748B',
+                              fontStyle: 'italic', background: '#F8FAFC', borderRadius: '8px',
+                              padding: '8px 12px', border: '1px solid #F1F5F9'
+                            }}>
+                              &ldquo;{sug.notes}&rdquo;
+                            </p>
+                          )}
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                            <span>📞 {sug.customer_phone || 'Anonymous'}</span>
+                            <span>📅 {sug.created_at ? new Date(sug.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown date'}</span>
+                          </div>
+                        </div>
+
+                        {/* Right: Actions */}
+                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleAddToStoreFromSuggestion(sug)}
+                            style={{
+                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                              color: '#FFFFFF', border: 'none',
+                              borderRadius: '10px', padding: '9px 14px', fontSize: '12px',
+                              fontWeight: 800, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              boxShadow: '0 3px 8px rgba(16,185,129,0.2)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <Plus size={13} /> Add to Store
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSuggestion(sug.id)}
+                            style={{
+                              background: '#FFFFFF', color: '#EF4444',
+                              border: '1px solid #FCA5A5',
+                              borderRadius: '10px', padding: '9px 14px', fontSize: '12px',
+                              fontWeight: 800, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <Trash2 size={13} /> Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

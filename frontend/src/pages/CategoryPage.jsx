@@ -291,7 +291,26 @@ export default function CategoryPage() {
     };
   }, []);
 
-  const cleanSlug = String(slug || '').toLowerCase().trim();
+  const resolveStandardSlug = (s) => {
+    const slugLower = String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+    if (slugLower === 'cold-drinks-juices' || slugLower === 'cold-drinks' || slugLower === 'beverages' || slugLower.includes('beverage')) return 'beverages';
+    if (slugLower === 'atta-rice-dal' || slugLower === 'atta' || slugLower === 'staples' || slugLower.includes('staple')) return 'staples';
+    if (slugLower === 'snacks-munchies' || slugLower === 'snacks' || slugLower.includes('snack')) return 'snacks-munchies';
+    if (slugLower === 'dairy-bakery' || slugLower === 'dairy' || slugLower.includes('dairy') || slugLower.includes('bakery')) return 'dairy-bakery';
+    if (slugLower === 'chocolates-sweets' || slugLower === 'chocolates' || slugLower.includes('chocolate') || slugLower.includes('sweet')) return 'chocolates';
+    if (slugLower === 'personal-care' || slugLower.includes('personal-care')) return 'personal-care';
+    if (slugLower === 'household-essentials' || slugLower === 'household' || slugLower.includes('household')) return 'household';
+    if (slugLower === 'fresh-fruits-veg' || slugLower === 'fruits-vegetables' || slugLower === 'produce' || slugLower.includes('fruit') || slugLower.includes('veggie')) return 'produce';
+    if (slugLower === 'tea-coffee-drinks' || slugLower === 'tea-coffee' || slugLower.includes('tea') || slugLower.includes('coffee')) return 'tea-coffee';
+    if (slugLower === 'biscuits-cookies' || slugLower === 'biscuits' || slugLower.includes('biscuit') || slugLower.includes('cookie')) return 'biscuits';
+    if (slugLower === 'instant-frozen-food' || slugLower === 'instant-food' || slugLower.includes('instant') || slugLower.includes('frozen')) return 'instant-food';
+    if (slugLower === 'edible-oils-ghee' || slugLower === 'oil' || slugLower.includes('oil') || slugLower.includes('ghee')) return 'oil';
+    if (slugLower === 'electronics-gadgets' || slugLower === 'electronics' || slugLower.includes('electronic') || slugLower.includes('gadget')) return 'electronics';
+    if (slugLower === 'fashion-accessories' || slugLower === 'fashion' || slugLower.includes('fashion') || slugLower.includes('clothing') || slugLower.includes('shoe')) return 'fashion';
+    return slugLower;
+  };
+
+  const cleanSlug = resolveStandardSlug(slug);
   const cleanSlugSpace = cleanSlug.replace(/-/g, ' ');
 
   const matchedCatObj = allCategories.find(c => 

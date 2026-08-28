@@ -263,23 +263,23 @@ export default function OrderTrackingPage() {
         zIndex: 40,
         boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', minWidth: 0 }}>
             <button
               onClick={() => navigate('/orders')}
               style={{
                 background: '#F1F5F9', border: 'none', borderRadius: '50%',
-                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', cursor: 'pointer', color: '#0F172A'
+                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', color: '#0F172A', flexShrink: 0
               }}
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={isMobile ? 18 : 20} />
             </button>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: isMobile ? '9px' : '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Order Tracking
               </div>
-              <h1 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+              <h1 style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {order?.displayId || `Order #${orderId}`}
               </h1>
             </div>
@@ -289,11 +289,11 @@ export default function OrderTrackingPage() {
             onClick={() => setSupportModalOpen(true)}
             style={{
               background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#0071E3',
-              borderRadius: '20px', padding: '8px 14px', fontSize: '13px', fontWeight: 800,
-              display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
+              borderRadius: '20px', padding: isMobile ? '6px 10px' : '8px 14px', fontSize: isMobile ? '11px' : '13px', fontWeight: 800,
+              display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
             }}
           >
-            <HelpCircle size={16} />
+            <HelpCircle size={isMobile ? 14 : 16} />
             Need Help?
           </button>
         </div>

@@ -1393,6 +1393,59 @@ async def admin_delete_partner(profile_id: str, user=Depends(require_roles("admi
     await store.delete("profiles", {"id": f"eq.{profile_id}"})
 
 # ==============================================================================
+# PRODUCT SUGGESTIONS (CUSTOMER & ADMIN PORTAL)
+# ==============================================================================
+import os
+
+SUGGESTIONS_FILE = os.path.join(os.path.dirname(__file__), "product_suggestions.json")
+
+def load_suggestions() -> list:
+    if os.path.exists(SUGGESTIONS_FILE):
+        try:
+            with open(SUGGESTIONS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_suggestions(suggestions: list):
+    try:
+        with open(SUGGESTIONS_FILE, "w", encoding="utf-8") as f:
+            json.dump(suggestions, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+@router.post("/product-suggestions")
+async def create_suggestion(payload: dict):
+    if not payload.get("product_name"):
+        raise HTTPException(400, "Product name is required")
+    
+    new_sug = {
+        "id": str(uuid.uuid4())[:8],
+        "product_name": payload["product_name"],
+        "category": payload.get("category", "General"),
+        "brand": payload.get("brand", ""),
+        "notes": payload.get("notes", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "customer_phone": payload.get("customer_phone", "Anonymous")
+    }
+    
+    sugs = load_suggestions()
+    sugs.insert(0, new_sug)
+    save_suggestions(sugs)
+    return new_sug
+
+@router.get("/admin/product-suggestions")
+async def list_suggestions(user=Depends(require_roles("admin"))):
+    return load_suggestions()
+
+@router.delete("/admin/product-suggestions/{sug_id}", status_code=204)
+async def delete_suggestion(sug_id: str, user=Depends(require_roles("admin"))):
+    sugs = load_suggestions()
+    updated = [s for s in sugs if s.get("id") != sug_id]
+    save_suggestions(updated)
+
+# ==============================================================================
 # MOUNT ROUTER DUAL-MODE (Both '/' and '/api/' paths)
 # ==============================================================================
 app.include_router(router, prefix="")
