@@ -148,13 +148,15 @@ function AppContent() {
     location.pathname.startsWith('/delivery') ||
     location.pathname.startsWith('/admin');
 
+  const hideHeader = location.pathname === '/exclusive-deals';
+
   if (isPortalOrAuth) {
     return <AnimatedRoutes />;
   }
 
   return (
     <div className="page-wrapper">
-      <Header />
+      {!hideHeader && <Header />}
       <main className="page-content">
         <AnimatedRoutes />
       </main>

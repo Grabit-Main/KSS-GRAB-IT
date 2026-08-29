@@ -49,12 +49,20 @@ export default function ExclusiveDealsPage() {
 
   return (
     <div style={{ background: '#FAF9FF', color: '#1E1B4B', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Breadcrumb Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '12px 0' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
-          <Link to="/" style={{ color: '#6B21A8', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-          <ChevronRight size={14} color="#94A3B8" />
-          <span style={{ color: '#0F172A', fontWeight: 700 }}>Exclusive Deals & Offers</span>
+      {/* Top Header Bar with Back Button */}
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '14px 0' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
+            <Link to="/" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              color: '#6B21A8', textDecoration: 'none', fontWeight: 700,
+              background: '#F3E8FF', padding: '6px 14px', borderRadius: '20px'
+            }}>
+              ← Back to Store
+            </Link>
+            <ChevronRight size={14} color="#94A3B8" />
+            <span style={{ color: '#0F172A', fontWeight: 700 }}>Exclusive Deals & Offers</span>
+          </div>
         </div>
       </div>
 
