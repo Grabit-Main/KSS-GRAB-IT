@@ -14,6 +14,7 @@ const IMAGE_ALIASES = {
   'silk-real.jpg': 'cadbury-silk-real.jpg',
   'surf-real.jpg': 'surf-excel-real.jpg',
   'atta-real.jpg': 'aashirvaad-atta-real.jpg',
+  'lays_cream_onion.png': 'lays-cream-onion.png',
   'default-product.png': null, // will use FALLBACK_IMG
 };
 

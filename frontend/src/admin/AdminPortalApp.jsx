@@ -30,7 +30,8 @@ import {
   PackageCheck,
   Clock,
   Flame,
-  XCircle
+  XCircle,
+  Lightbulb
 } from 'lucide-react';
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
@@ -160,10 +161,33 @@ export function AdminPortalApp() {
   const [orders, setOrders] = useState([]);
   const [partners, setPartners] = useState([]);
   const [products, setProducts] = useState(baseProducts);
+  const [suggestionsList, setSuggestionsList] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [productSortBy, setProductSortBy] = useState('default');
   const [notice, setNotice] = useState('');
+
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const apiData = await get('/admin/product-suggestions').catch(() => null);
+      const localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+      const merged = Array.isArray(apiData) && apiData.length > 0 ? apiData : localData;
+      setSuggestionsList(merged);
+    } catch {
+      const localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+      setSuggestionsList(localData);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSuggestions();
+    window.addEventListener('grabit_product_suggestion_added', fetchSuggestions);
+    window.addEventListener('storage', fetchSuggestions);
+    return () => {
+      window.removeEventListener('grabit_product_suggestion_added', fetchSuggestions);
+      window.removeEventListener('storage', fetchSuggestions);
+    };
+  }, [fetchSuggestions]);
 
   // ── Filtering & Modals ──
   const [searchQuery, setSearchQuery] = useState('');
@@ -520,6 +544,7 @@ export function AdminPortalApp() {
     { id: 'orders', label: 'Live Orders', icon: ShoppingBag, count: filteredOrders.length },
     { id: 'partners', label: 'Partners', icon: Users, count: partners.length || 60 },
     { id: 'products', label: 'Catalog', icon: Package, count: products.length || 48 },
+    { id: 'suggestions', label: 'Customer Requests', icon: Lightbulb, count: suggestionsList.length },
     { id: 'security', label: 'Store Map', icon: MapPin }
   ];
 
@@ -2200,6 +2225,81 @@ export function AdminPortalApp() {
                 </div>
               );
             })()}
+
+            {/* ── TAB: CUSTOMER PRODUCT SUGGESTIONS ── */}
+            {activeTab === 'suggestions' && (
+              <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Lightbulb size={20} color="#D97706" />
+                      <span>Customer Product Suggestions ({suggestionsList.length})</span>
+                    </h2>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                      Products requested by customers when shopping on Grabit. Use these insights to source top requested items!
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchSuggestions}
+                    style={{ background: '#EFF6FF', color: '#0071E3', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RefreshCw size={14} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {suggestionsList.length === 0 ? (
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '48px 24px', textAlign: 'center' }}>
+                    <Lightbulb size={48} color="#CBD5E1" style={{ marginBottom: '12px' }} />
+                    <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>No Product Suggestions Yet</h3>
+                    <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>When customers suggest missing products, they will be listed here.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                    {suggestionsList.map((sug) => (
+                      <div
+                        key={sug.id || sug.created_at}
+                        style={{
+                          background: '#FFFFFF', borderRadius: '16px',
+                          border: '1px solid #E2E8F0', padding: '18px 20px',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                          display: 'flex', flexDirection: 'column', gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                            {sug.product_name}
+                          </h4>
+                          <span style={{
+                            background: '#EFF6FF', color: '#0071E3',
+                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px'
+                          }}>
+                            {sug.category || 'General'}
+                          </span>
+                        </div>
+
+                        {sug.brand && (
+                          <div style={{ fontSize: '12.5px', color: '#475569', fontWeight: 600 }}>
+                            Brand: <strong>{sug.brand}</strong>
+                          </div>
+                        )}
+
+                        {sug.notes && (
+                          <p style={{ fontSize: '12px', color: '#64748B', margin: 0, fontStyle: 'italic', background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                            "{sug.notes}"
+                          </p>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9', marginTop: '4px', fontSize: '11.5px', color: '#94A3B8' }}>
+                          <span>Customer: {sug.customer_phone || 'Anonymous'}</span>
+                          <span>{sug.created_at ? new Date(sug.created_at).toLocaleDateString() : 'Recent'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ══════════════════════════════════════════════════════════════════ */}

@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Store, Truck, ShieldCheck } from 'lucide-react';
+import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Store, Truck, ShieldCheck, Lightbulb } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useDeliveryLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
 import AuthModal from './AuthModal';
 import FestiveSubHeader from './FestiveSubHeader';
 import ProductSvg from './ProductSvg';
+import ProductSuggestionModal from './ProductSuggestionModal';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import { searchProducts } from '../../data/products';
+import { getCanonicalSlug } from '../../data/categories';
 
 const MEGA_CATEGORIES = [
   {
@@ -158,6 +160,7 @@ export default function Header() {
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [showLoginConfirmModal, setShowLoginConfirmModal] = useState(false);
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -338,8 +341,28 @@ export default function Header() {
               Product Suggestions ({matchingProducts.length})
             </div>
             {matchingProducts.length === 0 ? (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 500 }}>
-                No direct product matches for "{searchQuery}". Press Enter to view full catalog.
+              <div style={{ padding: '16px', textAlign: 'center', background: '#F8FAFC', borderRadius: '12px', margin: '4px 12px 12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', marginBottom: '4px' }}>
+                  No matches for "{searchQuery}"
+                </div>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 12px', fontWeight: 500 }}>
+                  Can't find what you're looking for? Suggest it to us!
+                </p>
+                <button
+                  onMouseDown={() => {
+                    setIsSuggestionModalOpen(true);
+                    setIsSearchFocused(false);
+                  }}
+                  style={{
+                    background: '#0071E3', color: '#FFFFFF', border: 'none',
+                    borderRadius: '10px', padding: '8px 16px', fontSize: '12px',
+                    fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    boxShadow: '0 4px 12px rgba(0, 113, 227, 0.2)'
+                  }}
+                >
+                  <Lightbulb size={14} color="#FFFFFF" />
+                  <span>Suggest "{searchQuery}" to Grabit</span>
+                </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -394,6 +417,22 @@ export default function Header() {
             >
               <span>View all results for "{searchQuery}"</span>
               <ArrowRight size={14} />
+            </div>
+
+            <div
+              onMouseDown={() => {
+                setIsSuggestionModalOpen(true);
+                setIsSearchFocused(false);
+              }}
+              style={{
+                padding: '10px 16px', background: '#F8FAFC', color: '#0071E3',
+                fontSize: '12px', fontWeight: 800, textAlign: 'center',
+                cursor: 'pointer', borderTop: '1px solid #F1F5F9',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}
+            >
+              <Lightbulb size={14} color="#0071E3" />
+              <span>Can't find an item? Suggest a product to Grabit</span>
             </div>
           </div>
         )}
@@ -726,7 +765,9 @@ export default function Header() {
               { name: 'Electronics', link: '/category/electronics', img: 'electronics-hero-transparent.png', color: '#8B5CF6' },
               { name: 'Fashion', link: '/category/fashion', img: 'sneakers.jpg', color: '#F43F5E' },
             ].map((item, idx) => {
-              const isActive = locationPath === item.link;
+              const currentCatSlug = locationPath.startsWith('/category/') ? getCanonicalSlug(locationPath.replace('/category/', '')) : null;
+              const itemCatSlug = item.link.startsWith('/category/') ? getCanonicalSlug(item.link.replace('/category/', '')) : null;
+              const isActive = locationPath === item.link || (currentCatSlug && itemCatSlug && currentCatSlug === itemCatSlug);
               return (
                 <Link
                   key={idx}
@@ -1021,6 +1062,13 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* 💡 Product Suggestion Modal */}
+      <ProductSuggestionModal
+        isOpen={isSuggestionModalOpen}
+        onClose={() => setIsSuggestionModalOpen(false)}
+        prefillQuery={searchQuery}
+      />
     </>
   );
 }

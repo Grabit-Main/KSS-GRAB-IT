@@ -1,5 +1,93 @@
 import categoryService from '../seller/services/categoryService';
 
+export const SLUG_MAPPING = {
+  'atta, rice & dal': 'staples',
+  'atta-rice-dal': 'staples',
+  'atta,-rice-&-dal': 'staples',
+  'atta-rice-dals': 'staples',
+  'atta': 'staples',
+  'staples': 'staples',
+
+  'dairy & bakery': 'dairy-bakery',
+  'dairy-bakery': 'dairy-bakery',
+  'dairy-&-bakery': 'dairy-bakery',
+  'dairy': 'dairy-bakery',
+
+  'cold drinks & juices': 'beverages',
+  'cold-drinks-juices': 'beverages',
+  'cold-drinks-&-juices': 'beverages',
+  'cold-drinks': 'beverages',
+  'drinks': 'beverages',
+  'beverages': 'beverages',
+
+  'snacks & munchies': 'snacks-munchies',
+  'snacks-munchies': 'snacks-munchies',
+  'snacks-&-munchies': 'snacks-munchies',
+  'snacks': 'snacks-munchies',
+
+  'chocolates & sweets': 'chocolates',
+  'chocolates-sweets': 'chocolates',
+  'chocolates-&-sweets': 'chocolates',
+  'chocolates': 'chocolates',
+
+  'personal care': 'personal-care',
+  'personal-care': 'personal-care',
+
+  'household essentials': 'household',
+  'household-essentials': 'household',
+  'household': 'household',
+
+  'fresh fruits & veggies': 'produce',
+  'fresh-fruits-veggies': 'produce',
+  'fresh-fruits-&-veggies': 'produce',
+  'fresh-produce': 'produce',
+  'fruits-vegetables': 'produce',
+  'produce': 'produce',
+
+  'tea, coffee & drinks': 'tea-coffee',
+  'tea-coffee-drinks': 'tea-coffee',
+  'tea,-coffee-&-drinks': 'tea-coffee',
+  'tea-coffee': 'tea-coffee',
+
+  'biscuits & cookies': 'biscuits',
+  'biscuits-cookies': 'biscuits',
+  'biscuits-&-cookies': 'biscuits',
+  'cookies': 'biscuits',
+  'biscuits': 'biscuits',
+
+  'instant & frozen food': 'instant-food',
+  'instant-frozen-food': 'instant-food',
+  'instant-&-frozen-food': 'instant-food',
+  'instant-food': 'instant-food',
+
+  'edible oils & ghee': 'oil',
+  'edible-oils-ghee': 'oil',
+  'edible-oils-&-ghee': 'oil',
+  'oils-ghee': 'oil',
+  'oils': 'oil',
+  'oil': 'oil',
+
+  'electronics & gadgets': 'electronics',
+  'electronics-gadgets': 'electronics',
+  'electronics-&-gadgets': 'electronics',
+  'electronics': 'electronics',
+
+  'fashion & accessories': 'fashion',
+  'fashion-accessories': 'fashion',
+  'fashion-&-accessories': 'fashion',
+  'fashion': 'fashion',
+};
+
+export function getCanonicalSlug(identifier) {
+  if (!identifier) return '';
+  const str = String(identifier).toLowerCase().trim();
+  if (SLUG_MAPPING[str]) return SLUG_MAPPING[str];
+  const clean = str.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  if (SLUG_MAPPING[clean]) return SLUG_MAPPING[clean];
+  return clean || str;
+}
+
+
 export const baseCategories = [
   { id: 1,  name: 'Snacks & Munchies', slug: 'snacks-munchies', icon: '/category-snacks-banner.png' },
   { id: 2,  name: 'Dairy & Bakery', slug: 'dairy-bakery', icon: '/amul-butter-real.jpg' },

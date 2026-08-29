@@ -1,5 +1,5 @@
 import { get, post, del, uploadImage } from '../../api';
-import { categories as defaultCategories, subCategories } from '../../data/categories';
+import { categories as defaultCategories, subCategories, getCanonicalSlug } from '../../data/categories';
 import { products as defaultProducts } from '../../data/products';
 import { resolveMediaUrl, DEFAULT_CATEGORY_FALLBACK } from '../utils/mediaResolver';
 
@@ -53,15 +53,16 @@ export const categoryService = {
       // 1. Base Customer Portal Categories (14 Categories)
       const safeProducts = (typeof defaultProducts !== 'undefined' && Array.isArray(defaultProducts)) ? defaultProducts : [];
       let results = (Array.isArray(defaultCategories) ? defaultCategories : []).map((c) => {
-        const subList = (typeof subCategories !== 'undefined' && subCategories && subCategories[c.slug]) ? subCategories[c.slug] : [];
+        const canonicalSlug = getCanonicalSlug(c.slug || c.name);
+        const subList = (typeof subCategories !== 'undefined' && subCategories && subCategories[canonicalSlug]) ? subCategories[canonicalSlug] : [];
         const prodsInCat = safeProducts.filter((p) => {
-          if (p.category === c.slug) return true;
-          if (c.slug === 'beverages' && (p.category === 'beverages' || p.category === 3 || p.category === 9)) return true;
-          if (c.slug === 'staples' && (p.category === 'staples' || p.category === 4 || p.category === 11)) return true;
-          if (c.slug === 'chocolates' && (p.category === 'chocolates' || p.category === 5)) return true;
-          if (c.slug === 'produce' && (p.category === 'produce' || p.category === 8)) return true;
-          if (c.slug === 'biscuits' && (p.category === 'biscuits' || p.category === 10)) return true;
-          if (c.slug === 'oil' && (p.category === 'oil' || p.category === 12)) return true;
+          if (getCanonicalSlug(p.category) === canonicalSlug) return true;
+          if (canonicalSlug === 'beverages' && (p.category === 'beverages' || p.category === 3 || p.category === 9)) return true;
+          if (canonicalSlug === 'staples' && (p.category === 'staples' || p.category === 4 || p.category === 11)) return true;
+          if (canonicalSlug === 'chocolates' && (p.category === 'chocolates' || p.category === 5)) return true;
+          if (canonicalSlug === 'produce' && (p.category === 'produce' || p.category === 8)) return true;
+          if (canonicalSlug === 'biscuits' && (p.category === 'biscuits' || p.category === 10)) return true;
+          if (canonicalSlug === 'oil' && (p.category === 'oil' || p.category === 12)) return true;
           if (String(p.category) === String(c.id)) return true;
           return false;
         });
@@ -69,10 +70,10 @@ export const categoryService = {
         return {
           id: String(c.id),
           name: c.name,
-          slug: c.slug,
+          slug: canonicalSlug,
           icon: c.icon,
-          image: resolveMediaUrl(c.icon || c.slug, DEFAULT_CATEGORY_FALLBACK),
-          image_url: resolveMediaUrl(c.icon || c.slug, DEFAULT_CATEGORY_FALLBACK),
+          image: resolveMediaUrl(c.icon || canonicalSlug, DEFAULT_CATEGORY_FALLBACK),
+          image_url: resolveMediaUrl(c.icon || canonicalSlug, DEFAULT_CATEGORY_FALLBACK),
           is_active: true,
           subcategory_count: subList.length > 0 ? subList.length : 4,
           product_count: prodsInCat.length > 0 ? prodsInCat.length : 23,
@@ -85,11 +86,12 @@ export const categoryService = {
         const dbCats = await get('/categories/').catch(() => []);
         if (Array.isArray(dbCats) && dbCats.length > 0) {
           const mappedDb = dbCats.map((c) => {
-            const resolvedImg = resolveMediaUrl(c.image_url || c.name || c.slug, DEFAULT_CATEGORY_FALLBACK);
+            const canonicalSlug = getCanonicalSlug(c.slug || c.name);
+            const resolvedImg = resolveMediaUrl(c.image_url || c.name || canonicalSlug, DEFAULT_CATEGORY_FALLBACK);
             return {
               id: String(c.id),
               name: c.name,
-              slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+              slug: canonicalSlug,
               icon: resolvedImg,
               image: resolvedImg,
               image_url: resolvedImg,
@@ -99,11 +101,13 @@ export const categoryService = {
               description: `${c.name} quick-commerce essentials`,
             };
           });
-          results = [...mappedDb, ...results];
+          // Place base categories first so canonical slugs take precedence
+          results = [...results, ...mappedDb];
         }
       } catch (err) {
         console.warn('Live database category fetch fallback:', err);
       }
+
 
       // 3. Merge any custom created categories from localStorage
       try {

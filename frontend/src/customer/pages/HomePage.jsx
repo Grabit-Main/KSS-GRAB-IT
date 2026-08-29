@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, MapPin, Tag, Shield, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Zap, MapPin, Tag, Shield, ArrowRight, Sparkles, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
+import ProductSuggestionModal from '../../components/common/ProductSuggestionModal';
+import Suggest3dGraphic from '../../components/common/Suggest3dGraphic';
 import { products } from '../data/products';
-import { categories } from '../data/categories';
+import { categories, getCanonicalSlug } from '../data/categories';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -18,6 +20,7 @@ export default function HomePage() {
   const { items, addItem, updateQty, getItemQty } = useCart();
   const [addedBundleId, setAddedBundleId] = useState(null);
   const [selectedComboModal, setSelectedComboModal] = useState(null);
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
@@ -611,7 +614,7 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: catCols, gap: isMobile ? '8px' : '14px' }}>
             {categories.slice(0, isMobile ? 8 : 12).map((cat, idx) => {
-              const catSlug = cat.slug || (cat.name ? cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : cat.id);
+              const catSlug = getCanonicalSlug(cat.slug || cat.name || cat.id);
               return (
                 <Link
                   key={cat.id || cat.slug || idx}
@@ -1109,10 +1112,81 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* 💡 CUSTOMER PRODUCT SUGGESTION BANNER CARD */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '24px',
+          border: '1px solid #E2E8F0',
+          padding: isMobile ? '20px 16px' : '24px 32px',
+          marginTop: '24px',
+          marginBottom: '24px',
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: '260px' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src="/suggest-product-3d.png"
+                alt="Suggest Product 3D Asset"
+                style={{
+                  width: isMobile ? '76px' : '92px',
+                  height: isMobile ? '76px' : '92px',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 8px 18px rgba(0, 113, 227, 0.22))'
+                }}
+              />
+            </div>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#EFF6FF', color: '#0071E3', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '12px', marginBottom: '6px', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                💡 CAN'T FIND AN ITEM?
+              </div>
+              <h3 style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
+                Suggest a Product to Stock
+              </h3>
+              <p style={{ fontSize: isMobile ? '12px' : '13.5px', color: '#64748B', margin: 0, fontWeight: 500, lineHeight: 1.45 }}>
+                Tell us what product you're looking for and our sourcing team will endeavor to stock it in your local dark store!
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsSuggestionModalOpen(true)}
+            style={{
+              background: '#0071E3', color: '#FFFFFF', border: 'none',
+              borderRadius: '14px', padding: '13px 26px', fontSize: '13.5px',
+              fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0, 113, 227, 0.28)',
+              display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+              width: isMobile ? '100%' : 'auto', justifyContent: 'center',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#005BB5';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 22px rgba(0, 113, 227, 0.35)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#0071E3';
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 113, 227, 0.28)';
+            }}
+          >
+            <Sparkles size={16} color="#FFFFFF" />
+            <span>Suggest a Product</span>
+          </button>
+        </div>
+
         {/* 🌟 CUSTOMER REVIEW SECTION */}
         <CustomerReviewSection storeName="GrabIt Supermarket" />
       </div>
 
+      {/* 💡 Product Suggestion Modal */}
+      <ProductSuggestionModal
+        isOpen={isSuggestionModalOpen}
+        onClose={() => setIsSuggestionModalOpen(false)}
+      />
     </div>
   );
 }

@@ -5,8 +5,9 @@ import { Sparkles, Zap, Star, TrendingUp, ArrowLeft, Sliders, X, ChevronDown, Ch
 // Clean Production Verified Build
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
+import ProductSuggestionModal from '../../components/common/ProductSuggestionModal';
 import { products } from '../data/products';
-import { subCategories, brands } from '../data/categories';
+import { subCategories, brands, getCanonicalSlug } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../../utils/scrollToTop';
 const CATEGORY_MAP = {
@@ -269,6 +270,7 @@ const matchesSubCategory = (product, subCat) => {
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
   const [allCategories, setAllCategories] = useState(() => {
     try {
@@ -303,17 +305,18 @@ export default function CategoryPage() {
     };
   }, []);
 
-  const cleanSlug = String(slug || '').toLowerCase().trim();
-  const cleanSlugSpace = cleanSlug.replace(/-/g, ' ');
+  const canonicalSlug = getCanonicalSlug(slug);
+  const cleanSlug = canonicalSlug || String(slug || '').toLowerCase().trim();
+  const cleanSlugSpace = String(slug || '').toLowerCase().trim().replace(/-/g, ' ');
 
   const matchedCatObj = allCategories.find(c => 
-    (c.slug && String(c.slug).toLowerCase().trim() === cleanSlug) ||
+    (c.slug && (c.slug === cleanSlug || getCanonicalSlug(c.slug) === canonicalSlug)) ||
     String(c.id).toLowerCase().trim() === cleanSlug ||
     (c.name && String(c.name).toLowerCase().trim() === cleanSlugSpace) ||
-    (c.name && String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanSlug)
+    (c.name && getCanonicalSlug(c.name) === canonicalSlug)
   );
 
-  const catInfo = CATEGORY_MAP[cleanSlug] || (matchedCatObj ? {
+  const catInfo = CATEGORY_MAP[canonicalSlug] || CATEGORY_MAP[cleanSlug] || (matchedCatObj ? {
     title: matchedCatObj.name,
     sub: `Explore all products in ${matchedCatObj.name}.`,
     catKey: matchedCatObj.slug || matchedCatObj.id || cleanSlug,
@@ -379,6 +382,10 @@ export default function CategoryPage() {
     const pCatName = String(p.category_name || '').toLowerCase().trim();
     const pCatId = String(p.category_id || '').toLowerCase().trim();
 
+    if (getCanonicalSlug(pCat) === canonicalSlug || getCanonicalSlug(pSlug) === canonicalSlug || getCanonicalSlug(pCatName) === canonicalSlug) {
+      return true;
+    }
+
     if (matchedCatObj) {
       const mId = String(matchedCatObj.id || '').toLowerCase().trim();
       const mName = String(matchedCatObj.name || '').toLowerCase().trim();
@@ -396,7 +403,7 @@ export default function CategoryPage() {
 
     return false;
   });
-  const rawSubCats = subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
+  const rawSubCats = subCategories[canonicalSlug] || subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
 
   const subCats = rawSubCats.map(s => {
     if (s.name === 'All') return { ...s, count: categoryProducts.length };
@@ -404,7 +411,7 @@ export default function CategoryPage() {
     return { ...s, count: matchedCount > 0 ? matchedCount : s.count };
   });
 
-  const brandList = brands[slug] || [];
+  const brandList = brands[canonicalSlug] || brands[slug] || [];
 
   const toggleBrand = (b) => {
     setActiveBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]);
@@ -1039,8 +1046,91 @@ export default function CategoryPage() {
               ))}
             </div>
           )}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            border: '1px solid #E2E8F0',
+            padding: isMobile ? '20px 16px' : '24px 32px',
+            marginTop: '32px',
+            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            textAlign: isMobile ? 'center' : 'left',
+            gap: '20px'
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: 'center',
+              gap: '20px',
+              flex: 1,
+              minWidth: 0
+            }}>
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img
+                  src="/suggest-product-3d.png"
+                  alt="Suggest Product 3D"
+                  style={{
+                    width: isMobile ? '76px' : '88px',
+                    height: isMobile ? '76px' : '88px',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 8px 18px rgba(0, 113, 227, 0.22))'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  background: '#EFF6FF', color: '#0071E3', fontSize: '10px',
+                  fontWeight: 900, padding: '3px 10px', borderRadius: '12px',
+                  marginBottom: '6px', letterSpacing: '0.6px', textTransform: 'uppercase'
+                }}>
+                  💡 REQUEST AN ITEM
+                </div>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0', letterSpacing: '-0.3px' }}>
+                  Missing your favorite product in {catInfo.title}?
+                </h3>
+                <p style={{ fontSize: isMobile ? '12px' : '13px', color: '#64748B', margin: 0, fontWeight: 500, lineHeight: 1.45 }}>
+                  Tell us what item you'd like to see in {catInfo.title} and our sourcing team will endeavor to stock it!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsSuggestionModalOpen(true)}
+              style={{
+                background: '#0071E3', color: '#FFFFFF', border: 'none',
+                borderRadius: '14px', padding: '13px 26px', fontSize: '13.5px',
+                fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0, 113, 227, 0.28)',
+                display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+                width: isMobile ? '100%' : 'auto', justifyContent: 'center', flexShrink: 0,
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = '#005BB5';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 22px rgba(0, 113, 227, 0.35)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = '#0071E3';
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 113, 227, 0.28)';
+              }}
+            >
+              <Sparkles size={16} color="#FFFFFF" />
+              <span>Suggest Product</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* 💡 Product Suggestion Modal */}
+      <ProductSuggestionModal
+        isOpen={isSuggestionModalOpen}
+        onClose={() => setIsSuggestionModalOpen(false)}
+        prefillCategory={catInfo.title}
+      />
     </div>
   );
 }

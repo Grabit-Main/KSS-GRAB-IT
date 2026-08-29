@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Sparkles, Zap, Search, ShieldCheck, Clock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
-import { categories } from '../data/categories';
+import { categories, getCanonicalSlug } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 const CATEGORY_DETAILS = [
@@ -214,7 +214,7 @@ export default function CategoriesOverviewPage() {
         return !CATEGORY_DETAILS.some((cd) => cd.slug === c.slug || String(cd.name).toLowerCase().trim() === nameLower);
       })
       .map((c) => ({
-        slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+        slug: getCanonicalSlug(c.slug || c.name),
         name: c.name,
         sub: `${c.name} quick-commerce essentials`,
         group: 'lifestyle',

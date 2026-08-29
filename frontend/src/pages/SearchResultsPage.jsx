@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Check, Search, SlidersHorizontal, X, ArrowUpDown, Filter, ChevronDown } from 'lucide-react';
+import { Check, Search, SlidersHorizontal, X, ArrowUpDown, Filter, ChevronDown, Lightbulb } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
+import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { searchProducts, products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
 
@@ -96,6 +97,7 @@ export default function SearchResultsPage() {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isSortModalDropdownOpen, setIsSortModalDropdownOpen] = useState(false);
   const [isPriceModalDropdownOpen, setIsPriceModalDropdownOpen] = useState(false);
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
   useEffect(() => {
     setActiveCat('All');
@@ -517,28 +519,72 @@ export default function SearchResultsPage() {
               </div>
             ) : (
               /* Empty State */
-              <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '48px 24px', textAlign: 'center', marginBottom: '32px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  No matching products found
-                </h3>
-                <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
-                  We couldn't find any products matching your selected filter criteria.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    background: '#0071E3', color: '#FFFFFF', border: 'none',
-                    borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
-                    fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
-                  }}
-                >
-                  Reset All Filters
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '40px 24px', textAlign: 'center',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+                    No matching products found {query ? `for "${query}"` : ''}
+                  </h3>
+                  <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
+                    We couldn't find any products matching your search criteria.
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    style={{
+                      background: '#0071E3', color: '#FFFFFF', border: 'none',
+                      borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+
+                {/* 💡 Customer Product Suggestion Box */}
+                <div style={{
+                  background: '#FFFFFF',
+                  borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '24px 28px', textAlign: 'center',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)'
+                }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '16px', background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)', marginBottom: '12px', boxShadow: '0 6px 16px rgba(0,113,227,0.25)' }}>
+                    <Lightbulb size={24} color="#FFFFFF" />
+                  </div>
+                  <div style={{ display: 'inline-block', background: '#EFF6FF', color: '#0071E3', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '10px', marginBottom: '6px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    💡 REQUEST AN ITEM
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                    Looking for a specific product?
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 16px', maxWidth: '420px', marginInline: 'auto', fontWeight: 500, lineHeight: 1.4 }}>
+                    If an item you want is missing, submit a quick suggestion. Our team will endeavor to source and stock it for you!
+                  </p>
+                  <button
+                    onClick={() => setIsSuggestionModalOpen(true)}
+                    style={{
+                      background: '#0071E3', color: '#FFFFFF', border: 'none',
+                      borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)',
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#005BB5';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = '#0071E3';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <Lightbulb size={16} color="#FFFFFF" />
+                    <span>Suggest {query ? `"${query}"` : 'a Product'} to Grabit</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -759,6 +805,13 @@ export default function SearchResultsPage() {
         </div>,
         document.body
       )}
+
+      {/* 💡 Product Suggestion Modal */}
+      <ProductSuggestionModal
+        isOpen={isSuggestionModalOpen}
+        onClose={() => setIsSuggestionModalOpen(false)}
+        prefillQuery={query}
+      />
     </div>
   );
 }

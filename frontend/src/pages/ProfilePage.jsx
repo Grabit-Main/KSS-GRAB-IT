@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
+import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { forceScrollToTop } from '../utils/scrollToTop';
 import { 
   DEFAULT_CUSTOMER_ADDRESSES,
@@ -712,19 +713,10 @@ export default function ProfilePage() {
       )}
 
       {/* 9. SUGGEST PRODUCTS MODAL */}
-      {activeModal === 'suggest' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '400px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
-            <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: '#0F172A' }}>Suggest a Product</h3>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px' }}>Can't find an item? Tell us what to stock in your local darkstore!</p>
-            <form onSubmit={handleSuggestSubmit}>
-              <input type="text" value={suggestInput} onChange={e => setSuggestInput(e.target.value)} placeholder="e.g. Oat Milk, Specific Coffee Bean Brand..." style={{ width: '100%', height: '44px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: 700, outline: 'none', marginBottom: '16px' }} />
-              <button type="submit" style={{ width: '100%', background: '#0071E3', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '14px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Submit Product Suggestion</button>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductSuggestionModal
+        isOpen={activeModal === 'suggest'}
+        onClose={() => setActiveModal(null)}
+      />
 
       {/* 10. NOTIFICATIONS MODAL */}
       {activeModal === 'notifications' && (
