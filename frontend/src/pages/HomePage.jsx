@@ -1150,7 +1150,9 @@ export default function HomePage() {
               alt="Exclusive Deals &amp; Offers - Up to 60% OFF"
               style={{
                 width: '100%',
-                height: 'auto',
+                height: isMobile ? 'auto' : '340px',
+                objectFit: 'cover',
+                objectPosition: 'center',
                 display: 'block'
               }}
             />
