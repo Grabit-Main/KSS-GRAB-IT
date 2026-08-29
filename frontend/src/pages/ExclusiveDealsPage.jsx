@@ -77,41 +77,21 @@ export default function ExclusiveDealsPage() {
             </Link>
 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{
-                  margin: 0,
-                  fontSize: isMobile ? '17px' : '20px',
-                  fontWeight: 900,
-                  color: '#1E1B4B',
-                  letterSpacing: '-0.3px',
-                  lineHeight: 1.2
-                }}>
-                  Exclusive Deals & Offers
-                </h1>
-                <span style={{
-                  background: 'linear-gradient(135deg, #7C3AED 0%, #6B21A8 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  padding: '3px 9px',
-                  borderRadius: '20px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.6px',
-                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
-                }}>
-                  Up to 60% OFF
-                </span>
-              </div>
+              <h1 style={{
+                margin: 0,
+                fontSize: isMobile ? '17px' : '20px',
+                fontWeight: 900,
+                color: '#1E1B4B',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2
+              }}>
+                Exclusive Deals & Offers
+              </h1>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
                 Handpicked premium discounts & daily savings
               </p>
             </div>
           </div>
-
-          {/* Right: Grabit Logo */}
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src="/grabit-logo.png" alt="Grabit" style={{ height: isMobile ? '24px' : '28px', width: 'auto', display: 'block' }} />
-          </Link>
         </div>
       </div>
 
