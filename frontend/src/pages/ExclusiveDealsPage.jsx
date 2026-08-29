@@ -13,7 +13,7 @@ export default function ExclusiveDealsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('discount');
 
-  // Animated Countdown Timer (Hours, Minutes, Seconds)
+  // Ticking Countdown Timer
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 28, seconds: 45 });
 
   useEffect(() => {
@@ -28,9 +28,8 @@ export default function ExclusiveDealsPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Filter products for Exclusive Deals (High discount items 15%+ to 60%)
+  // Filter products for Exclusive Deals (High discount items)
   const dealProducts = useMemo(() => {
-    // Add extra high-discount curated items for Exclusive Deals page
     const extraDeals = [
       { id: 401, name: "Haldiram's Nagpur Aloo Bhujia 1kg Mega Saver Pack", weight: "1kg", price: 199, mrp: 350, discount: 43, rating: 4.9, reviews: 1890, image: "banner-exclusive-deals.png", category: "snacks", brand: "Haldiram's", inStock: true, stock_quantity: 50 },
       { id: 402, name: "Nescafe Classic Pure Instant Coffee 200g Glass Jar", weight: "200g", price: 420, mrp: 650, discount: 35, rating: 4.9, reviews: 2450, image: "banner-exclusive-deals.png", category: "tea-coffee", brand: "Nescafe", inStock: true, stock_quantity: 40 },
@@ -59,7 +58,7 @@ export default function ExclusiveDealsPage() {
 
   const tabs = [
     { id: 'all', label: '🔥 All Mega Deals (Up to 60% OFF)' },
-    { id: '60off', label: '⚡ 50% - 60% OFF Super Deals' },
+    { id: '60off', label: '⚡ 35% - 60% OFF Super Deals' },
     { id: 'snacks', label: '🍿 Snacks & Munchies' },
     { id: 'beverages', label: '🧃 Beverages & Coffee' },
     { id: 'staples', label: '🌾 Atta, Rice & Dals' },
@@ -85,43 +84,26 @@ export default function ExclusiveDealsPage() {
   }, [dealProducts, selectedTab, searchQuery, sortBy]);
 
   return (
-    <div style={{ background: '#0F0728', color: '#FFFFFF', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ background: '#FAF9FF', color: '#1E1B4B', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* 🔮 Animated Neon Top Bar */}
+      {/* 🔮 Soft Purple Gradient Top Timer Bar */}
       <div style={{
-        background: 'linear-gradient(90deg, #6D28D9 0%, #4C1D95 40%, #8B5CF6 70%, #6D28D9 100%)',
-        backgroundSize: '200% 200%',
-        animation: 'gradientMove 6s ease infinite',
+        background: 'linear-gradient(90deg, #6B21A8 0%, #7C3AED 50%, #8B5CF6 100%)',
+        color: '#FFFFFF',
         padding: '10px 0',
-        borderBottom: '1px solid rgba(139, 92, 246, 0.4)',
-        boxShadow: '0 4px 20px rgba(109, 40, 217, 0.5)'
+        boxShadow: '0 4px 16px rgba(107, 33, 168, 0.15)'
       }}>
         <style>{`
-          @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          @keyframes pulseGlow {
-            0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(168,85,247,0.6)); }
-            50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(236,72,153,0.9)); }
-            100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(168,85,247,0.6)); }
-          }
           @keyframes floatAnim {
             0% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
+            50% { transform: translateY(-6px); }
             100% { transform: translateY(0px); }
-          }
-          @keyframes shimmerGlow {
-            0% { opacity: 0.7; }
-            50% { opacity: 1; }
-            100% { opacity: 0.7; }
           }
         `}</style>
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: isMobile ? '12px' : '14px', fontWeight: 800 }}>
             <span style={{
-              background: '#F59E0B', color: '#0F0728', padding: '3px 10px', borderRadius: '20px',
+              background: '#FDE047', color: '#581C87', padding: '3px 10px', borderRadius: '20px',
               fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px'
             }}>
               🔥 MEGA FLASH SALE
@@ -129,7 +111,7 @@ export default function ExclusiveDealsPage() {
             <span>EXCLUSIVE DEALS & OFFERS – UP TO 60% OFF!</span>
           </div>
 
-          {/* Animated Countdown Timer */}
+          {/* Animated Ticking Countdown Timer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700 }}>
             <Clock size={16} color="#FDE047" />
             <span>Deals Expire In:</span>
@@ -140,11 +122,11 @@ export default function ExclusiveDealsPage() {
                 { val: String(timeLeft.seconds).padStart(2, '0'), label: 'S' }
               ].map((t, i) => (
                 <span key={i} style={{
-                  background: 'rgba(15, 7, 40, 0.85)',
-                  color: '#FDE047',
+                  background: '#FFFFFF',
+                  color: '#6B21A8',
                   padding: '3px 8px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(253, 224, 71, 0.4)',
+                  border: '1px solid #D8B4FE',
                   fontFamily: 'monospace',
                   fontSize: '13px',
                   fontWeight: 900
@@ -157,153 +139,137 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 🧭 Breadcrumb Navigation */}
-      <div className="container" style={{ paddingTop: '16px', paddingBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#A78BFA' }}>
-          <Link to="/" style={{ color: '#C4B5FD', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-          <ChevronRight size={14} color="#7C3AED" />
-          <span style={{ color: '#FFFFFF', fontWeight: 700 }}>Exclusive Deals & Offers</span>
+      {/* 🧭 Breadcrumb Header */}
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '12px 0' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
+          <Link to="/" style={{ color: '#6B21A8', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
+          <ChevronRight size={14} color="#94A3B8" />
+          <span style={{ color: '#0F172A', fontWeight: 700 }}>Exclusive Deals & Offers</span>
         </div>
       </div>
 
-      {/* 🚀 Main Animated Hero Showcase Banner */}
-      <div className="container" style={{ marginTop: '12px' }}>
+      {/* 🚀 Main Hero Showcase Banner Card */}
+      <div className="container" style={{ marginTop: isMobile ? '12px' : '20px' }}>
         <div style={{
           position: 'relative',
           borderRadius: isMobile ? '20px' : '28px',
           overflow: 'hidden',
-          border: '2px solid rgba(168, 85, 247, 0.4)',
-          boxShadow: '0 20px 60px rgba(109, 40, 217, 0.4)',
-          background: 'linear-gradient(135deg, #1E0B4B 0%, #2E1065 50%, #4C1D95 100%)',
-          animation: 'pulseGlow 8s ease-in-out infinite'
+          border: '1.5px solid #E9D5FF',
+          boxShadow: '0 16px 40px rgba(107, 33, 168, 0.12)',
+          background: '#FFFFFF'
         }}>
-          {/* Main Clean Banner Graphic */}
+          {/* Main Commercial Banner Graphic */}
           <img
             src="/banner-exclusive-deals.png"
-            alt="Exclusive Deals & Offers - Up to 60% OFF"
+            alt="Exclusive Deals &amp; Offers - Up to 60% OFF"
             style={{
               width: '100%',
-              height: isMobile ? 'auto' : '360px',
+              height: isMobile ? 'auto' : '340px',
               objectFit: 'cover',
               objectPosition: 'center',
               display: 'block'
             }}
           />
 
-          {/* Floating Neon Badge overlay */}
+          {/* Floating Light Theme Glass Badge Overlay */}
           <div style={{
             position: 'absolute',
-            top: isMobile ? '12px' : '24px',
+            top: isMobile ? '12px' : '20px',
             right: isMobile ? '12px' : '24px',
-            background: 'rgba(15, 7, 40, 0.75)',
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(12px)',
-            border: '1.5px solid rgba(236, 72, 153, 0.6)',
+            border: '1.5px solid #D8B4FE',
             borderRadius: '16px',
             padding: isMobile ? '8px 14px' : '12px 20px',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            boxShadow: '0 8px 24px rgba(236, 72, 153, 0.3)',
+            boxShadow: '0 8px 24px rgba(107, 33, 168, 0.15)',
             animation: 'floatAnim 4s ease-in-out infinite'
           }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%)',
+              background: 'linear-gradient(135deg, #7C3AED 0%, #6B21A8 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <Percent color="#FFFFFF" size={20} />
             </div>
             <div>
-              <div style={{ fontSize: isMobile ? '10px' : '11px', color: '#F472B6', fontWeight: 800, textTransform: 'uppercase' }}>Limited Time</div>
-              <div style={{ fontSize: isMobile ? '13px' : '16px', color: '#FFFFFF', fontWeight: 900 }}>FLAT 60% OFF</div>
+              <div style={{ fontSize: isMobile ? '10px' : '11px', color: '#6B21A8', fontWeight: 800, textTransform: 'uppercase' }}>Limited Time</div>
+              <div style={{ fontSize: isMobile ? '13px' : '16px', color: '#0F172A', fontWeight: 900 }}>FLAT 60% OFF</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 🎪 3 Animated Promo Feature Banners Grid */}
-      <div className="container" style={{ marginTop: isMobile ? '20px' : '32px' }}>
+      {/* 🎪 3 Light Theme Feature Promo Cards */}
+      <div className="container" style={{ marginTop: isMobile ? '16px' : '28px' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: '16px'
         }}>
-          {/* Banner 1: Midnight Flash */}
+          {/* Card 1: Midnight Flash */}
           <div style={{
-            background: 'linear-gradient(135deg, #831843 0%, #9D174D 50%, #BE185D 100%)',
+            background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
             borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(244, 114, 182, 0.3)',
-            boxShadow: '0 10px 30px rgba(157, 23, 77, 0.3)',
-            position: 'relative',
-            overflow: 'hidden'
+            border: '1.5px solid #FECDD3',
+            boxShadow: '0 8px 24px rgba(225, 29, 72, 0.08)'
           }}>
-            <div style={{
-              position: 'absolute', right: '-20px', bottom: '-20px', width: '100px', height: '100px',
-              borderRadius: '50%', background: 'rgba(255,255,255,0.08)'
-            }} />
-            <span style={{ background: '#F43F5E', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
+            <span style={{ background: '#E11D48', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
               ⚡ Midnight Flash
             </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#FFFFFF' }}>Flat 50% OFF Snacks</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#FBCFE8' }}>On Lays, Kurkure, Doritos & Pringles Cans.</p>
+            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#881337' }}>Flat 50% OFF Snacks</h3>
+            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#9F1239' }}>On Lays, Kurkure, Doritos & Pringles Cans.</p>
             <button onClick={() => setSelectedTab('snacks')} style={{
-              background: '#FFFFFF', color: '#831843', border: 'none', padding: '7px 16px', borderRadius: '10px',
-              fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+              background: '#E11D48', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
+              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 4px 12px rgba(225, 29, 72, 0.25)'
             }}>
               <span>Grab Deals</span> <ArrowRight size={14} />
             </button>
           </div>
 
-          {/* Banner 2: Weekend Grocery Fest */}
+          {/* Card 2: Weekend Grocery Fest */}
           <div style={{
-            background: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 50%, #3B82F6 100%)',
+            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
             borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(147, 197, 253, 0.3)',
-            boxShadow: '0 10px 30px rgba(29, 78, 216, 0.3)',
-            position: 'relative',
-            overflow: 'hidden'
+            border: '1.5px solid #BFDBFE',
+            boxShadow: '0 8px 24px rgba(37, 99, 235, 0.08)'
           }}>
-            <div style={{
-              position: 'absolute', right: '-20px', bottom: '-20px', width: '100px', height: '100px',
-              borderRadius: '50%', background: 'rgba(255,255,255,0.08)'
-            }} />
-            <span style={{ background: '#60A5FA', color: '#1E3A8A', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
+            <span style={{ background: '#2563EB', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
               🎁 Buy 2 Get 1 FREE
             </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#FFFFFF' }}>Grocery & Staples Fest</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#DBEAFE' }}>Aashirvaad Atta, Tata Dal & Fortune Oil.</p>
+            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#1E3A8A' }}>Grocery & Staples Fest</h3>
+            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#1E40AF' }}>Aashirvaad Atta, Tata Dal & Fortune Oil.</p>
             <button onClick={() => setSelectedTab('staples')} style={{
-              background: '#FFFFFF', color: '#1E3A8A', border: 'none', padding: '7px 16px', borderRadius: '10px',
-              fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+              background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
+              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
             }}>
               <span>Shop Staples</span> <ArrowRight size={14} />
             </button>
           </div>
 
-          {/* Banner 3: Personal Care Super Sale */}
+          {/* Card 3: Personal Care Super Sale */}
           <div style={{
-            background: 'linear-gradient(135deg, #581C87 0%, #7E22CE 50%, #A855F7 100%)',
+            background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
             borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(216, 180, 254, 0.3)',
-            boxShadow: '0 10px 30px rgba(126, 34, 206, 0.3)',
-            position: 'relative',
-            overflow: 'hidden'
+            border: '1.5px solid #DDD6FE',
+            boxShadow: '0 8px 24px rgba(124, 58, 237, 0.08)'
           }}>
-            <div style={{
-              position: 'absolute', right: '-20px', bottom: '-20px', width: '100px', height: '100px',
-              borderRadius: '50%', background: 'rgba(255,255,255,0.08)'
-            }} />
-            <span style={{ background: '#C084FC', color: '#3B0764', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
+            <span style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
               ✨ Min 40% OFF
             </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#FFFFFF' }}>Body & Skincare Sale</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#F3E8FF' }}>Dove Lotion, Dettol Soap & Nivea Care.</p>
+            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#4C1D95' }}>Body & Skincare Sale</h3>
+            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#5B21B6' }}>Dove Lotion, Dettol Soap & Nivea Care.</p>
             <button onClick={() => setSelectedTab('personal-care')} style={{
-              background: '#FFFFFF', color: '#581C87', border: 'none', padding: '7px 16px', borderRadius: '10px',
-              fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+              background: '#7C3AED', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
+              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)'
             }}>
               <span>Explore Care</span> <ArrowRight size={14} />
             </button>
@@ -311,17 +277,17 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 🛍️ Main Deals Catalog & Filters */}
-      <div className="container" style={{ marginTop: '36px' }}>
+      {/* 🛍️ Main Deals Catalog & Filters Container */}
+      <div className="container" style={{ marginTop: '32px' }}>
         <div style={{
-          background: 'rgba(30, 15, 75, 0.65)',
-          backdropFilter: 'blur(16px)',
+          background: '#FFFFFF',
           borderRadius: '24px',
           padding: isMobile ? '16px' : '24px',
-          border: '1px solid rgba(139, 92, 246, 0.25)',
+          border: '1.5px solid #E9D5FF',
+          boxShadow: '0 10px 30px rgba(107, 33, 168, 0.06)',
           marginBottom: '28px'
         }}>
-          {/* Section Title & Controls */}
+          {/* Section Header & Search/Sort Controls */}
           <div style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
@@ -331,19 +297,19 @@ export default function ExclusiveDealsPage() {
             marginBottom: '20px'
           }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Flame color="#F59E0B" size={28} />
+              <h2 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#4C1D95', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Flame color="#EA580C" size={26} />
                 <span>Exclusive Discounted Products</span>
               </h2>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#C4B5FD' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
                 Showing {filteredProducts.length} high-discount items with up to 60% OFF!
               </p>
             </div>
 
-            {/* Controls */}
+            {/* Search & Sort */}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-                <Search size={16} color="#A78BFA" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   placeholder="Search deals..."
@@ -353,9 +319,9 @@ export default function ExclusiveDealsPage() {
                     width: '100%',
                     padding: '9px 12px 9px 36px',
                     borderRadius: '12px',
-                    border: '1px solid rgba(139, 92, 246, 0.4)',
-                    background: 'rgba(15, 7, 40, 0.7)',
-                    color: '#FFFFFF',
+                    border: '1px solid #D8B4FE',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
                     fontSize: '13px',
                     outline: 'none',
                     boxSizing: 'border-box'
@@ -369,9 +335,9 @@ export default function ExclusiveDealsPage() {
                 style={{
                   padding: '9px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(139, 92, 246, 0.4)',
-                  background: 'rgba(15, 7, 40, 0.9)',
-                  color: '#FDE047',
+                  border: '1px solid #D8B4FE',
+                  background: '#FFFFFF',
+                  color: '#6B21A8',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -386,8 +352,8 @@ export default function ExclusiveDealsPage() {
             </div>
           </div>
 
-          {/* Interactive Category Filter Pills */}
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {/* Subcategory Pills */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
@@ -395,14 +361,14 @@ export default function ExclusiveDealsPage() {
                 style={{
                   padding: '9px 18px',
                   borderRadius: '24px',
-                  border: selectedTab === tab.id ? '2px solid #EC4899' : '1px solid rgba(139, 92, 246, 0.3)',
-                  background: selectedTab === tab.id ? 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%)' : 'rgba(15, 7, 40, 0.6)',
-                  color: '#FFFFFF',
+                  border: selectedTab === tab.id ? '2px solid #7C3AED' : '1px solid #E9D5FF',
+                  background: selectedTab === tab.id ? 'linear-gradient(135deg, #7C3AED 0%, #6B21A8 100%)' : '#F3E8FF',
+                  color: selectedTab === tab.id ? '#FFFFFF' : '#5B21B6',
                   fontSize: '13px',
-                  fontWeight: selectedTab === tab.id ? 800 : 500,
+                  fontWeight: selectedTab === tab.id ? 800 : 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: selectedTab === tab.id ? '0 4px 16px rgba(236, 72, 153, 0.4)' : 'none',
+                  boxShadow: selectedTab === tab.id ? '0 4px 14px rgba(124, 58, 237, 0.3)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -412,7 +378,7 @@ export default function ExclusiveDealsPage() {
           </div>
         </div>
 
-        {/* 📦 Discounted Product Cards Grid */}
+        {/* 📦 Discounted Products Grid */}
         {filteredProducts.length > 0 ? (
           <div style={{
             display: 'grid',
@@ -424,26 +390,26 @@ export default function ExclusiveDealsPage() {
                 key={product.id}
                 product={product}
                 badge={`${product.discount}% OFF`}
-                badgeColor="#EC4899"
+                badgeColor="#E11D48"
               />
             ))}
           </div>
         ) : (
           <div style={{
-            background: 'rgba(30, 15, 75, 0.6)',
+            background: '#FFFFFF',
             borderRadius: '20px',
             padding: '60px 24px',
             textAlign: 'center',
-            border: '1px solid rgba(139, 92, 246, 0.3)'
+            border: '1.5px solid #E9D5FF'
           }}>
-            <Gift size={54} color="#A78BFA" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ margin: '0 0 8px', fontSize: '20px', color: '#FFFFFF' }}>No deals found in this category</h3>
-            <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#C4B5FD' }}>Try switching category filters or clearing your search term.</p>
+            <Gift size={54} color="#7C3AED" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <h3 style={{ margin: '0 0 8px', fontSize: '20px', color: '#1F2937' }}>No deals found in this category</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#64748B' }}>Try switching category filters or clearing your search term.</p>
             <button
               onClick={() => { setSelectedTab('all'); setSearchQuery(''); }}
               style={{
                 padding: '10px 24px',
-                background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+                background: 'linear-gradient(135deg, #7C3AED 0%, #6B21A8 100%)',
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '12px',
@@ -457,13 +423,14 @@ export default function ExclusiveDealsPage() {
         )}
       </div>
 
-      {/* 🛡️ Trust & Safety Badges */}
+      {/* 🛡️ Light Theme Trust Badges Row */}
       <div className="container" style={{ marginTop: '48px' }}>
         <div style={{
-          background: 'rgba(30, 15, 75, 0.5)',
+          background: '#FFFFFF',
           borderRadius: '20px',
           padding: '24px',
-          border: '1px solid rgba(139, 92, 246, 0.2)',
+          border: '1.5px solid #E9D5FF',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
           gap: '16px'
@@ -475,12 +442,12 @@ export default function ExclusiveDealsPage() {
             { title: "Fast & Reliable Delivery", desc: "Express 10-minute doorstep drop" }
           ].map((item, idx) => (
             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ShieldCheck color="#A78BFA" size={22} />
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#F3E8FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ShieldCheck color="#7C3AED" size={22} />
               </div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#FFFFFF' }}>{item.title}</div>
-                <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>{item.desc}</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#1F2937' }}>{item.title}</div>
+                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>{item.desc}</div>
               </div>
             </div>
           ))}
