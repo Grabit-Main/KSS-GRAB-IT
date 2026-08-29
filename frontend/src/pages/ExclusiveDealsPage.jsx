@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronRight, Gift } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, Gift } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -49,19 +49,20 @@ export default function ExclusiveDealsPage() {
 
   return (
     <div style={{ background: '#FAF9FF', color: '#1E1B4B', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Top Header Bar with Back Button */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '14px 0' }}>
+      {/* Top Header Bar with Back Arrow */}
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '12px 0' }}>
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
-            <Link to="/" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              color: '#6B21A8', textDecoration: 'none', fontWeight: 700,
-              background: '#F3E8FF', padding: '6px 14px', borderRadius: '20px'
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
+            <Link to="/" aria-label="Back to Store" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: '#F3E8FF', color: '#6B21A8',
+              textDecoration: 'none', transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(107, 33, 168, 0.12)'
             }}>
-              ← Back to Store
+              <ArrowLeft size={20} color="#6B21A8" />
             </Link>
-            <ChevronRight size={14} color="#94A3B8" />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Exclusive Deals & Offers</span>
+            <span style={{ color: '#0F172A', fontWeight: 700, fontSize: '15px' }}>Exclusive Deals & Offers</span>
           </div>
         </div>
       </div>
