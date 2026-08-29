@@ -49,21 +49,69 @@ export default function ExclusiveDealsPage() {
 
   return (
     <div style={{ background: '#FAF9FF', color: '#1E1B4B', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Top Header Bar with Back Arrow */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '12px 0' }}>
+      {/* Top Professional Header Bar */}
+      <div style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E9D5FF',
+        padding: isMobile ? '12px 0' : '14px 0',
+        boxShadow: '0 2px 12px rgba(107, 33, 168, 0.05)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
+          {/* Left: Back Arrow + Professional Heading */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <Link to="/" aria-label="Back to Store" style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '36px', height: '36px', borderRadius: '50%',
+              width: '38px', height: '38px', borderRadius: '12px',
               background: '#F3E8FF', color: '#6B21A8',
               textDecoration: 'none', transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(107, 33, 168, 0.12)'
-            }}>
+              border: '1px solid #E9D5FF',
+              boxShadow: '0 2px 8px rgba(107, 33, 168, 0.08)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E9D5FF'; e.currentTarget.style.transform = 'translateX(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F3E8FF'; e.currentTarget.style.transform = 'none'; }}
+            >
               <ArrowLeft size={20} color="#6B21A8" />
             </Link>
-            <span style={{ color: '#0F172A', fontWeight: 700, fontSize: '15px' }}>Exclusive Deals & Offers</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{
+                  margin: 0,
+                  fontSize: isMobile ? '17px' : '20px',
+                  fontWeight: 900,
+                  color: '#1E1B4B',
+                  letterSpacing: '-0.3px',
+                  lineHeight: 1.2
+                }}>
+                  Exclusive Deals & Offers
+                </h1>
+                <span style={{
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #6B21A8 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  padding: '3px 9px',
+                  borderRadius: '20px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.6px',
+                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
+                }}>
+                  Up to 60% OFF
+                </span>
+              </div>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                Handpicked premium discounts & daily savings
+              </p>
+            </div>
           </div>
+
+          {/* Right: Grabit Logo */}
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/grabit-logo.png" alt="Grabit" style={{ height: isMobile ? '24px' : '28px', width: 'auto', display: 'block' }} />
+          </Link>
         </div>
       </div>
 
