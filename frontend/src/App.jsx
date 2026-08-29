@@ -23,6 +23,7 @@ import DiwaliBannerPage from './pages/DiwaliBannerPage';
 import FreshProducePage from './pages/FreshProducePage';
 import PharmacyPage from './pages/PharmacyPage';
 import ChickenMeatPage from './pages/ChickenMeatPage';
+import ExclusiveDealsPage from './pages/ExclusiveDealsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
 import './styles/global.css';
 import './styles/components.css';
@@ -102,6 +103,7 @@ function AnimatedRoutes() {
       <Route path="/fresh-produce" element={<FreshProducePage />} />
       <Route path="/pharmacy" element={<PharmacyPage />} />
       <Route path="/chicken-meat" element={<ChickenMeatPage />} />
+      <Route path="/exclusive-deals" element={<ExclusiveDealsPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders" element={<OrdersPage />} />

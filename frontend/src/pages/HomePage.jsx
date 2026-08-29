@@ -1129,7 +1129,7 @@ export default function HomePage() {
         position: 'relative',
         zIndex: 2
       }}>
-        <Link to="/category/all" style={{ textDecoration: 'none' }}>
+        <Link to="/exclusive-deals" style={{ textDecoration: 'none' }}>
           <div style={{
             borderRadius: isMobile ? '18px' : '24px',
             overflow: 'hidden',
