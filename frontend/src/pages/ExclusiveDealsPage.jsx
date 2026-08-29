@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Flame, Sparkles, ShoppingBag } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -9,13 +9,6 @@ export default function ExclusiveDealsPage() {
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
-
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
 
   // 🍿 1. Snacks & Munchies Deals
   const snackProducts = useMemo(() => {
@@ -129,197 +122,134 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 3 Light Theme Feature Promo Cards */}
-      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px' }}>
+      {/* 🍿 SECTION 1: SNACKS & MUNCHIES (WITH BANNER DIRECTLY ABOVE) */}
+      <div id="snacks-section" className="container" style={{ marginTop: isMobile ? '20px' : '28px' }}>
+        {/* Banner 1: Midnight Flash */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
+          borderRadius: '20px',
+          padding: '24px',
+          border: '1.5px solid #FECDD3',
+          boxShadow: '0 8px 24px rgba(225, 29, 72, 0.08)',
+          marginBottom: '20px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
           gap: '16px'
         }}>
-          {/* Card 1: Midnight Flash */}
-          <div style={{
-            background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
-            borderRadius: '20px',
-            padding: '20px',
-            border: '1.5px solid #FECDD3',
-            boxShadow: '0 8px 24px rgba(225, 29, 72, 0.08)'
-          }}>
-            <span style={{ background: '#E11D48', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              ⚡ Midnight Flash
+          <div>
+            <span style={{ background: '#E11D48', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
+              ⚡ Midnight Flash Sale
             </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#881337' }}>Flat 50% OFF Snacks</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#9F1239' }}>On Lays, Kurkure, Doritos & Pringles Cans.</p>
-            <button onClick={() => scrollToSection('snacks-section')} style={{
-              background: '#E11D48', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
-              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 4px 12px rgba(225, 29, 72, 0.25)'
-            }}>
-              <span>Grab Deals</span> <ArrowRight size={14} />
-            </button>
+            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#881337' }}>
+              Flat 50% OFF Snacks & Munchies
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#9F1239' }}>
+              Instant savings on Lay's, Kurkure, Doritos, Pringles, Kellogg's & Cadbury chocolates!
+            </p>
           </div>
-
-          {/* Card 2: Weekend Grocery Fest */}
-          <div style={{
-            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-            borderRadius: '20px',
-            padding: '20px',
-            border: '1.5px solid #BFDBFE',
-            boxShadow: '0 8px 24px rgba(37, 99, 235, 0.08)'
-          }}>
-            <span style={{ background: '#2563EB', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              🎁 Buy 2 Get 1 FREE
-            </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#1E3A8A' }}>Grocery & Staples Fest</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#1E40AF' }}>Aashirvaad Atta, Tata Dal & Fortune Oil.</p>
-            <button onClick={() => scrollToSection('grocery-section')} style={{
-              background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
-              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-            }}>
-              <span>Shop Staples</span> <ArrowRight size={14} />
-            </button>
-          </div>
-
-          {/* Card 3: Personal Care Super Sale */}
-          <div style={{
-            background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-            borderRadius: '20px',
-            padding: '20px',
-            border: '1.5px solid #DDD6FE',
-            boxShadow: '0 8px 24px rgba(124, 58, 237, 0.08)'
-          }}>
-            <span style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              ✨ Min 40% OFF
-            </span>
-            <h3 style={{ margin: '10px 0 6px', fontSize: '18px', fontWeight: 900, color: '#4C1D95' }}>Body & Skincare Sale</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#5B21B6' }}>Dove Lotion, Dettol Soap & Nivea Care.</p>
-            <button onClick={() => scrollToSection('skincare-section')} style={{
-              background: '#7C3AED', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: '10px',
-              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)'
-            }}>
-              <span>Explore Care</span> <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 🍿 SECTION 1: SNACKS & MUNCHIES PRODUCTS */}
-      <div id="snacks-section" className="container" style={{ marginTop: '36px', scrollMarginTop: '80px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          marginBottom: '16px',
-          paddingBottom: '10px',
-          borderBottom: '2px solid #FECDD3'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>🍿</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#881337' }}>
-                Snacks & Munchies Deals
-              </h2>
-              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#9F1239' }}>Flat 50% OFF on Lays, Kurkure, Doritos & Pringles</p>
-            </div>
-          </div>
-          <span style={{ background: '#FFE4E6', color: '#BE185D', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>
-            {snackProducts.length} Items
+          <span style={{ background: '#FFE4E6', color: '#BE185D', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
+            🍿 {snackProducts.length} Items Available
           </span>
         </div>
 
+        {/* Snacks Products Grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
           gap: isMobile ? '12px' : '20px'
         }}>
           {snackProducts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              badge={`${product.discount}% OFF`}
-              badgeColor="#E11D48"
-            />
+            <ProductCard key={product.id} product={product} badge={`${product.discount}% OFF`} badgeColor="#E11D48" />
           ))}
         </div>
       </div>
 
-      {/* 🌾 SECTION 2: GROCERY & STAPLES PRODUCTS */}
-      <div id="grocery-section" className="container" style={{ marginTop: '48px', scrollMarginTop: '80px' }}>
+      {/* 🌾 SECTION 2: GROCERY & STAPLES (WITH BANNER DIRECTLY ABOVE) */}
+      <div id="grocery-section" className="container" style={{ marginTop: isMobile ? '36px' : '48px' }}>
+        {/* Banner 2: Weekend Grocery Fest */}
         <div style={{
+          background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+          borderRadius: '20px',
+          padding: '24px',
+          border: '1.5px solid #BFDBFE',
+          boxShadow: '0 8px 24px rgba(37, 99, 235, 0.08)',
+          marginBottom: '20px',
           display: 'flex',
-          alignItems: 'center',
           justify: 'space-between',
-          marginBottom: '16px',
-          paddingBottom: '10px',
-          borderBottom: '2px solid #BFDBFE'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>🌾</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#1E3A8A' }}>
-                Grocery & Staples Fest
-              </h2>
-              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#1E40AF' }}>Buy 2 Get 1 FREE on Aashirvaad Atta, Tata Dal & Oils</p>
-            </div>
+          <div>
+            <span style={{ background: '#2563EB', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
+              🎁 Buy 2 Get 1 FREE
+            </span>
+            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#1E3A8A' }}>
+              Grocery & Staples Fest
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#1E40AF' }}>
+              Unbeatable prices on Aashirvaad Sharbati Atta, Tata Toor Dal, Fortune Oil & Basmati Rice!
+            </p>
           </div>
-          <span style={{ background: '#DBEAFE', color: '#1D4ED8', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>
-            {groceryProducts.length} Items
+          <span style={{ background: '#DBEAFE', color: '#1D4ED8', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
+            🌾 {groceryProducts.length} Items Available
           </span>
         </div>
 
+        {/* Grocery Products Grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
           gap: isMobile ? '12px' : '20px'
         }}>
           {groceryProducts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              badge={`${product.discount}% OFF`}
-              badgeColor="#2563EB"
-            />
+            <ProductCard key={product.id} product={product} badge={`${product.discount}% OFF`} badgeColor="#2563EB" />
           ))}
         </div>
       </div>
 
-      {/* 💄 SECTION 3: BODY & SKINCARE PRODUCTS */}
-      <div id="skincare-section" className="container" style={{ marginTop: '48px', scrollMarginTop: '80px' }}>
+      {/* 💄 SECTION 3: BODY & SKINCARE (WITH BANNER DIRECTLY ABOVE) */}
+      <div id="skincare-section" className="container" style={{ marginTop: isMobile ? '36px' : '48px' }}>
+        {/* Banner 3: Personal Care Sale */}
         <div style={{
+          background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
+          borderRadius: '20px',
+          padding: '24px',
+          border: '1.5px solid #DDD6FE',
+          boxShadow: '0 8px 24px rgba(124, 58, 237, 0.08)',
+          marginBottom: '20px',
           display: 'flex',
-          alignItems: 'center',
           justify: 'space-between',
-          marginBottom: '16px',
-          paddingBottom: '10px',
-          borderBottom: '2px solid #DDD6FE'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>💄</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#4C1D95' }}>
-                Body & Skincare Deals
-              </h2>
-              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#5B21B6' }}>Min 40% OFF on Dove, Dettol Soap & Nivea Cream</p>
-            </div>
+          <div>
+            <span style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
+              ✨ Min 40% OFF
+            </span>
+            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#4C1D95' }}>
+              Body & Skincare Sale
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#5B21B6' }}>
+              Deep nourishment with Dove Body Lotion, Dettol Soaps, Nivea Cream & Himalaya Care!
+            </p>
           </div>
-          <span style={{ background: '#EDE9FE', color: '#6D28D9', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>
-            {skincareProducts.length} Items
+          <span style={{ background: '#EDE9FE', color: '#6D28D9', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
+            💄 {skincareProducts.length} Items Available
           </span>
         </div>
 
+        {/* Skincare Products Grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
           gap: isMobile ? '12px' : '20px'
         }}>
           {skincareProducts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              badge={`${product.discount}% OFF`}
-              badgeColor="#7C3AED"
-            />
+            <ProductCard key={product.id} product={product} badge={`${product.discount}% OFF`} badgeColor="#7C3AED" />
           ))}
         </div>
       </div>
