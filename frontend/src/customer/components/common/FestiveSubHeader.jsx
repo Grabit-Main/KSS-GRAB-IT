@@ -33,6 +33,18 @@ export default function FestiveSubHeader() {
 
   const pills = [
     {
+      id: 'diwali',
+      label: 'Diwali Animated Banner',
+      icon: '🪔',
+      bg: 'linear-gradient(135deg, #4A040F 0%, #6B0918 100%)',
+      color: '#FFE58F',
+      border: '#F5B041',
+      badge: 'ANIMATED',
+      badgeBg: '#D4AC0D',
+      link: '/diwali-banner',
+      glow: 'rgba(245, 176, 65, 0.4)'
+    },
+    {
       id: 'rakhi',
       label: 'Raksha Bandhan Store',
       icon: '🪢',

@@ -704,6 +704,31 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── DIWALI FESTIVAL ANIMATED BANNER (ABOVE POPULAR NEAR YOU) ──────────────── */}
+      <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px' }}>
+        <Link to="/diwali-banner" style={{ textDecoration: 'none', display: 'block' }}>
+          <div style={{
+            position: 'relative',
+            borderRadius: isMobile ? '14px' : '18px',
+            overflow: 'hidden',
+            boxShadow: '0 12px 36px rgba(107, 9, 24, 0.4), 0 0 30px rgba(212, 175, 55, 0.2)',
+            border: '2px solid #D4AF37',
+            background: '#280106',
+            transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 16px 45px rgba(107, 9, 24, 0.5), 0 0 40px rgba(212, 175, 55, 0.35)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(107, 9, 24, 0.4), 0 0 30px rgba(212, 175, 55, 0.2)'; }}
+          >
+            <embed
+              src="/diwali-banner-grabit.svg"
+              type="image/svg+xml"
+              style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }}
+            />
+          </div>
+        </Link>
+      </div>
+
       {/* ── 4. POPULAR NEAR YOU ──────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px', position: 'relative', zIndex: 2 }}>
         <div className="professional-card" style={{

@@ -99,9 +99,9 @@ export default function HomePage() {
       subtitle: 'From popcorn & crunchy chips to cookies, nachos & treats – we\'ve got it all.',
       btn1: { label: 'Shop Snacks', bg: '#D97706', color: '#FFFFFF', shadow: '0 4px 16px rgba(217,119,6,0.35)', link: '/category/snacks-munchies', icon: <ArrowRight size={16} /> },
       btn2: { label: 'View All', bg: '#FFFFFF', color: '#D97706', border: '1.5px solid #FDBA74', link: '/category/snacks-munchies' },
-      img: '/category-snacks-banner.png',
-      imgAlt: 'Lay\'s Classic Salted, Pringles & Bowl of Chips',
-      imgFilter: 'drop-shadow(0 14px 28px rgba(217,119,6,0.25))',
+      img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645100/grabit_media/category_snacks_feast_clean_center.png',
+      imgAlt: 'Grabit Snacks Feast Banner',
+      imgFilter: 'drop-shadow(0 12px 24px rgba(217,119,6,0.2))',
       discountVal: '40%',
       discountColor: '#D97706',
     },
@@ -679,6 +679,31 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── DIWALI FESTIVAL ANIMATED BANNER (ABOVE POPULAR NEAR YOU) ──────────────── */}
+      <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px' }}>
+        <Link to="/diwali-banner" style={{ textDecoration: 'none', display: 'block' }}>
+          <div style={{
+            position: 'relative',
+            borderRadius: isMobile ? '14px' : '18px',
+            overflow: 'hidden',
+            boxShadow: '0 12px 36px rgba(107, 9, 24, 0.4), 0 0 30px rgba(212, 175, 55, 0.2)',
+            border: '2px solid #D4AF37',
+            background: '#280106',
+            transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 16px 45px rgba(107, 9, 24, 0.5), 0 0 40px rgba(212, 175, 55, 0.35)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(107, 9, 24, 0.4), 0 0 30px rgba(212, 175, 55, 0.2)'; }}
+          >
+            <embed
+              src="/diwali-banner-grabit.svg"
+              type="image/svg+xml"
+              style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }}
+            />
+          </div>
+        </Link>
       </div>
 
       {/* ── 4. POPULAR NEAR YOU ──────────────────── */}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grabit - Diwali Banner Preview</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #0B0F19;
+      color: #FFFFFF;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      color: #FFD700;
+      letter-spacing: 0.5px;
+    }
+    p {
+      color: #94A3B8;
+      margin: 0 0 30px 0;
+      font-size: 15px;
+    }
+    .banner-card {
+      width: 100%;
+      max-width: 1100px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(212, 175, 55, 0.2);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .banner-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 50px rgba(212, 175, 55, 0.35);
+    }
+    .banner-card img, .banner-card embed {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .actions {
+      margin-top: 30px;
+      display: flex;
+      gap: 16px;
+    }
+    .btn {
+      background: #D4AF37;
+      color: #1A0508;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #FFE58F;
+    }
+  </style>
+</head>
+<body>
+  <h1>🪔 Grabit Diwali Banner (Animated Preview)</h1>
+  <p>Standalone SVG asset with CSS flame flicker & glowing Deepak fire animation</p>
+
+  <div class="banner-card">
+    <embed src="/diwali-banner-grabit.svg" type="image/svg+xml" width="100%" height="auto" />
+  </div>
+
+  <div class="actions">
+    <a href="/diwali-banner-grabit.svg" download="diwali-banner-grabit.svg" class="btn">📥 Download SVG File</a>
+    <a href="/diwali-banner-grabit.svg" target="_blank" class="btn" style="background: rgba(255,255,255,0.1); color: #FFF; border: 1px solid rgba(255,255,255,0.2);">🔍 Open Raw SVG</a>
+  </div>
+</body>
+</html>
