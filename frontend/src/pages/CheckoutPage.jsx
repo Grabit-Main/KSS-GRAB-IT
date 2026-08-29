@@ -16,6 +16,9 @@ import {
 
 const STEPS = ['Delivery', 'Payment', 'Review & Place Order'];
 
+// Single constant for the one supermarket in the system
+const STORE_ID = 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb';
+
 const PAYMENT_METHODS = [
   { id: 'upi', icon: <Smartphone size={18} color="#0071E3" />, label: 'UPI', sub: 'Pay using any UPI app', logos: ['GPay', 'Paytm'] },
   { id: 'card', icon: <CreditCard size={18} color="#0071E3" />, label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay & more', logos: ['VISA', 'MC', 'RuPay'] },
@@ -32,6 +35,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(0);
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const navigate = useNavigate();
 
   // Instant scroll to top whenever step changes
@@ -197,8 +201,9 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `GB-${randomNum}`;
+    if (isPlacingOrder) return;
+    setIsPlacingOrder(true);
+
     const rawId = `ord-${Date.now()}`;
     const orderItems = items.map((item) => ({
       id: item.id,
@@ -209,7 +214,10 @@ export default function CheckoutPage() {
       image: item.image,
     }));
 
-    const newOrder = {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `GB-${randomNum}`;
+
+    const baseOrder = {
       id: orderNumber,
       orderNumber: orderNumber,
       rawId: rawId,
@@ -230,51 +238,65 @@ export default function CheckoutPage() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    let finalOrder = { ...newOrder };
-
     try {
       const apiRes = await post('/orders/', {
-        store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+        store_id: STORE_ID,
         delivery_address: selectedAddress.address,
         items: orderItems,
         total_amount: toPay,
-        customer_name: newOrder.customer_name,
-        customer_phone: newOrder.customer_phone,
-        payment_method: newOrder.payment_method,
+        customer_name: baseOrder.customer_name,
+        customer_phone: baseOrder.customer_phone,
+        payment_method: baseOrder.payment_method,
         latitude: 12.9716,
         longitude: 77.5946,
         status: 'placed'
-      }).catch(() => null);
+      });
 
-      if (apiRes && apiRes.id) {
-        finalOrder.id = apiRes.id;
-        finalOrder.rawId = apiRes.id;
-        finalOrder.orderNumber = apiRes.id;
+      if (!apiRes || !apiRes.id) {
+        throw new Error('Order was not confirmed by the server. Please try again.');
       }
-    } catch {}
 
-    try {
-      const digits = (finalOrder.customer_phone || currentPhone || '').replace(/\D/g, '');
-      const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
-      const storageKey = custPhone ? `grabit_orders_${custPhone}` : 'grabit_orders_guest';
+      // Build confirmed order using server-recomputed total_amount (B5c)
+      const confirmedTotal = (apiRes.total_amount != null) ? apiRes.total_amount : toPay;
+      const finalOrder = {
+        ...baseOrder,
+        id: apiRes.id,
+        rawId: apiRes.id,
+        orderNumber: apiRes.id,
+        total_amount: confirmedTotal,
+      };
 
-      const existingUserOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const filteredUser = existingUserOrders.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
-      localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filteredUser]));
+      // Persist to localStorage ONLY on confirmed success
+      try {
+        const digits = (finalOrder.customer_phone || currentPhone || '').replace(/\D/g, '');
+        const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
+        const storageKey = custPhone ? `grabit_orders_${custPhone}` : 'grabit_orders_guest';
 
-      const globalExisting = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      const filteredGlobal = globalExisting.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
-      localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filteredGlobal]));
+        const existingUserOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const filteredUser = existingUserOrders.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
+        localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filteredUser]));
 
-      window.dispatchEvent(new Event('grabit_orders_updated'));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {
-      console.warn('Storage sync:', e);
+        const globalExisting = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        const filteredGlobal = globalExisting.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
+        localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filteredGlobal]));
+
+        window.dispatchEvent(new Event('grabit_orders_updated'));
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {
+        console.warn('Storage sync:', e);
+      }
+
+      // Clear cart and show success only after confirmed order
+      clearCart();
+      setOrderPlaced(true);
+      setTimeout(() => navigate('/orders'), 2000);
+    } catch (err) {
+      // Show error toast and stay on review step — button re-enables via finally
+      const msg = err?.message || 'Order failed. Please check your connection and try again.';
+      showToast(msg, 'error');
+    } finally {
+      setIsPlacingOrder(false);
     }
-
-    setOrderPlaced(true);
-    clearCart();
-    setTimeout(() => navigate('/orders'), 2000);
   };
 
   if (orderPlaced) {
@@ -601,8 +623,21 @@ export default function CheckoutPage() {
       </div>
 
       {step === 2 && (
-        <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: '16px', justifyContent: 'center', background: '#0071E3', borderRadius: '12px', fontWeight: 900, minHeight: '46px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handlePlaceOrder}>
-          🔒 Place Order ₹{toPay}
+        <button
+          className="btn btn-primary btn-lg"
+          style={{
+            width: '100%', marginTop: '16px', justifyContent: 'center',
+            background: isPlacingOrder ? '#93C5FD' : '#0071E3',
+            borderRadius: '12px', fontWeight: 900, minHeight: '46px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+            cursor: isPlacingOrder ? 'not-allowed' : 'pointer',
+            opacity: isPlacingOrder ? 0.8 : 1,
+            transition: 'background 0.2s, opacity 0.2s'
+          }}
+          onClick={handlePlaceOrder}
+          disabled={isPlacingOrder}
+        >
+          {isPlacingOrder ? '⏳ Placing Order…' : `🔒 Place Order ₹${toPay}`}
         </button>
       )}
       {step === 1 && (

@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { get, post } from '../api';
 
 const CartContext = createContext();
-
-const API_BASE = 'http://127.0.0.1:8000';
 
 export const AVAILABLE_COUPONS = [
   {
@@ -82,13 +81,9 @@ export function CartProvider({ children }) {
       localStorage.setItem(storageKey, JSON.stringify(items));
     } catch {}
 
-    // Cloud DB & Redis sync
+    // Cloud DB & Redis sync — use env-aware api.js helper
     if (currentPhone) {
-      fetch(`${API_BASE}/cart/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: currentPhone, items })
-      }).catch(() => {});
+      post('/cart/sync', { phone: currentPhone, items }).catch(() => {});
     }
   }, [items]);
 
@@ -101,15 +96,12 @@ export function CartProvider({ children }) {
       // If local cart is explicitly empty, do not re-populate from stale cloud cart
       if (Array.isArray(local) && local.length === 0) return;
       try {
-        const res = await fetch(`${API_BASE}/cart/user/${currentPhone}`);
-        if (res.ok) {
-          const data = await res.json();
-          const localCheck = loadStoredCart(currentPhone);
-          if (localCheck.length === 0) return; // Cart was cleared while request was in flight
-          if (Array.isArray(data.items) && data.items.length > 0) {
-            setItems(data.items);
-            localStorage.setItem(getCartKey(currentPhone), JSON.stringify(data.items));
-          }
+        const data = await get(`/cart/user/${currentPhone}`);
+        const localCheck = loadStoredCart(currentPhone);
+        if (localCheck.length === 0) return; // Cart was cleared while request was in flight
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
+          setItems(data.items);
+          localStorage.setItem(getCartKey(currentPhone), JSON.stringify(data.items));
         }
       } catch {}
     };
@@ -125,18 +117,15 @@ export function CartProvider({ children }) {
 
       if (newPhone && (!local || local.length > 0)) {
         try {
-          const res = await fetch(`${API_BASE}/cart/user/${newPhone}`);
-          if (res.ok) {
-            const data = await res.json();
-            const localCheck = loadStoredCart(newPhone);
-            if (localCheck.length === 0) {
-              setItems([]);
-              return;
-            }
-            if (Array.isArray(data.items)) {
-              setItems(data.items);
-              localStorage.setItem(getCartKey(newPhone), JSON.stringify(data.items));
-            }
+          const data = await get(`/cart/user/${newPhone}`);
+          const localCheck = loadStoredCart(newPhone);
+          if (localCheck.length === 0) {
+            setItems([]);
+            return;
+          }
+          if (data && Array.isArray(data.items)) {
+            setItems(data.items);
+            localStorage.setItem(getCartKey(newPhone), JSON.stringify(data.items));
           }
         } catch {}
       }
@@ -206,11 +195,7 @@ export function CartProvider({ children }) {
       localStorage.removeItem('grabit_cart_guest');
     } catch {}
     if (currentPhone) {
-      fetch(`${API_BASE}/cart/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: currentPhone, items: [] })
-      }).catch(() => {});
+      post('/cart/sync', { phone: currentPhone, items: [] }).catch(() => {});
     }
     try {
       window.dispatchEvent(new CustomEvent('grabit_cart_updated', { detail: [] }));
@@ -236,19 +221,7 @@ export function CartProvider({ children }) {
     
     let coupon = AVAILABLE_COUPONS.find(c => c.code === cleanCode);
     if (!coupon) {
-      if (cleanCode === 'SAVEMORE' || cleanCode === 'GRABIT20') {
-        coupon = {
-          code: cleanCode,
-          title: '₹20 Promo Discount',
-          description: 'Flat ₹20 OFF on your order',
-          minOrder: 99,
-          discountType: 'fixed',
-          discountValue: 20,
-          badge: 'PROMO'
-        };
-      } else {
-        return { success: false, message: `Invalid coupon code "${cleanCode}"` };
-      }
+      return { success: false, message: `Invalid coupon code "${cleanCode}"` };
     }
 
     if (itemTotal < coupon.minOrder) {

@@ -29,6 +29,9 @@ from .schemas import (
 from .security import create_token, current_user, require_roles
 from .store import store
 
+# Single named constant for the one supermarket in this system
+STORE_ID = "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
+
 def is_valid_uuid(val: any) -> bool:
     try:
         uuid.UUID(str(val))
@@ -220,24 +223,28 @@ async def send_otp(body: PhoneRequest):
     except Exception:
         pass
     response = {"message": "Verification code sent", "expires_in": 300}
-    if settings().otp_debug or True:
+    # Only echo OTP back when the debug flag is explicitly enabled in settings
+    if settings().otp_debug:
         response["debug_otp"] = code
     return response
 
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyOtpRequest):
-    # Verify OTP against Redis or debug code
+    # Verify OTP against Redis — fail closed if Redis is unreachable
     try:
         stored = await redis_exec(["GET", f"otp:{body.phone}"])
-        if stored and not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
-            if len(body.otp) != 6:
-                raise HTTPException(400, "Invalid verification code")
-        if stored:
-            await cache_del(f"otp:{body.phone}")
-    except HTTPException:
-        raise
     except Exception:
-        pass
+        raise HTTPException(503, "OTP service unavailable. Please try again.")
+
+    if stored is None:
+        # Redis returned nothing: either OTP was never sent or already consumed
+        raise HTTPException(503, "OTP service unavailable. Please request a new code.")
+
+    if not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
+        raise HTTPException(400, "Invalid verification code")
+
+    # Correct code — consume it so it cannot be reused
+    await cache_del(f"otp:{body.phone}")
 
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
     if rows:
@@ -411,10 +418,10 @@ async def create_product(body: ProductRequest, user=Depends(require_roles("selle
             store_id = stores[0]["id"]
         else:
             all_stores = await store.get("stores", {"limit": 1})
-            store_id = all_stores[0]["id"] if all_stores else "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
+            store_id = all_stores[0]["id"] if all_stores else STORE_ID
     else:
         all_stores = await store.get("stores", {"limit": 1})
-        store_id = all_stores[0]["id"] if all_stores else "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
+        store_id = all_stores[0]["id"] if all_stores else STORE_ID
 
     payload = body.model_dump()
 
@@ -431,7 +438,7 @@ async def create_product(body: ProductRequest, user=Depends(require_roles("selle
     if store_id and is_valid_uuid(store_id):
         payload["store_id"] = store_id
     else:
-        payload["store_id"] = "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
+        payload["store_id"] = STORE_ID
 
     res = await store.insert("products", payload)
     await cache_del("cache:products:all:all:none")
@@ -804,6 +811,63 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
         except Exception:
             pass
 
+    # ── SERVER-SIDE PRICE RECOMPUTATION & STOCK VALIDATION ────────────────────
+    # Fetch real product prices and stock from the DB; never trust the client total.
+    submitted_items = payload.get("items") or []
+    validated_items = []
+    computed_subtotal = 0.0
+
+    if submitted_items:
+        product_ids = list({str(item.get("id")) for item in submitted_items if item.get("id")})
+        if product_ids:
+            id_filter = ",".join(product_ids)
+            try:
+                db_products = await store.get("products", {"id": f"in.({id_filter})", "select": "id,name,price,stock"})
+            except Exception:
+                db_products = []
+
+            db_prod_map = {str(p["id"]): p for p in (db_products or [])}
+
+            for item in submitted_items:
+                pid = str(item.get("id", ""))
+                qty = int(item.get("qty") or item.get("quantity") or 1)
+                db_prod = db_prod_map.get(pid)
+
+                if db_prod:
+                    db_price = float(db_prod.get("price") or 0)
+                    db_stock = int(db_prod.get("stock") or 0)
+                    item_name = db_prod.get("name") or item.get("name") or "Product"
+
+                    # Stock check: reject if any item is out of stock
+                    if db_stock < qty:
+                        raise HTTPException(
+                            400,
+                            f"'{item_name}' is out of stock (requested {qty}, available {db_stock})"
+                        )
+
+                    computed_subtotal += db_price * qty
+                    validated_items.append({
+                        **item,
+                        "price": db_price,  # overwrite client price with DB price
+                        "qty": qty,
+                        "quantity": qty,
+                    })
+                else:
+                    # Product not found in DB — include with client price but log 0 stock risk
+                    client_price = float(item.get("price") or 0)
+                    computed_subtotal += client_price * qty
+                    validated_items.append({**item, "qty": qty, "quantity": qty})
+
+    # Client may pass a delivery fee; add it to the server-recomputed subtotal
+    client_total = float(payload.get("total_amount") or 0.0)
+    client_subtotal = sum(
+        float(i.get("price", 0)) * int(i.get("qty") or i.get("quantity") or 1)
+        for i in submitted_items
+    ) if submitted_items else 0.0
+    delivery_fee = max(0.0, round(client_total - client_subtotal, 2)) if submitted_items else 0.0
+    server_total = round(computed_subtotal + delivery_fee, 2)
+    # ──────────────────────────────────────────────────────────────────────────
+
     full_order = {
         "id": order_id,
         "rawId": order_id,
@@ -811,12 +875,12 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
         "customer_name": customer_name,
         "customer_phone": db_phone or raw_phone,
         "delivery_address": payload.get("delivery_address") or "Delivery Address",
-        "items": payload.get("items") or [],
-        "total_amount": float(payload.get("total_amount") or 0.0),
-        "total": float(payload.get("total_amount") or 0.0),
+        "items": validated_items if validated_items else submitted_items,
+        "total_amount": server_total,
+        "total": server_total,
         "payment_method": payload.get("payment_method") or "UPI",
         "status": payload.get("status") or "placed",
-        "store_id": payload.get("store_id") or "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb",
+        "store_id": payload.get("store_id") or STORE_ID,
         "created_at": now_iso
     }
 
@@ -876,6 +940,25 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
         await store.insert("orders", db_payload)
     except Exception:
         pass
+
+    # 3. Decrement stock for each validated item in the products table
+    if validated_items:
+        for item in validated_items:
+            pid = str(item.get("id", ""))
+            qty = int(item.get("qty") or item.get("quantity") or 1)
+            if pid and is_valid_uuid(pid):
+                try:
+                    # Fetch current stock then patch to (stock - qty), floored at 0
+                    prod_rows = await store.get("products", {"id": f"eq.{pid}", "select": "id,stock"})
+                    if prod_rows:
+                        current_stock = int(prod_rows[0].get("stock") or 0)
+                        new_stock = max(0, current_stock - qty)
+                        await store.patch("products", {"stock": new_stock}, {"id": f"eq.{pid}"})
+                        # Invalidate product cache so next read gets fresh stock
+                        await cache_del(f"cache:product:{pid}")
+                        await cache_del("cache:products:all:all:none")
+                except Exception:
+                    pass  # Non-fatal: order already accepted; stock sync is best-effort
 
     if user and user.get("sub"):
         await cache_del(f"cache:cart:{user.get('sub')}")

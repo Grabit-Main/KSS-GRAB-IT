@@ -1,216 +1,321 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="100%" height="100%">
   <defs>
-    <!-- Rich Deep Maroon Background Gradient -->
-    <radialGradient id="bg-grad" cx="40%" cy="50%" r="75%">
-      <stop offset="0%" stop-color="#6B0918"/>
-      <stop offset="50%" stop-color="#4A040F"/>
-      <stop offset="100%" stop-color="#280106"/>
+    <!-- Rich Royal Crimson & Gold Radiance Background -->
+    <radialGradient id="bg-grad-grand" cx="30%" cy="50%" r="85%">
+      <stop offset="0%" stop-color="#8B0016"/>
+      <stop offset="35%" stop-color="#5E000D"/>
+      <stop offset="70%" stop-color="#3B0007"/>
+      <stop offset="100%" stop-color="#1F0003"/>
     </radialGradient>
 
-    <!-- Shimmering Gold Gradient -->
-    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFE58F"/>
-      <stop offset="30%" stop-color="#F5B041"/>
-      <stop offset="70%" stop-color="#D4AC0D"/>
-      <stop offset="100%" stop-color="#9A7D0A"/>
+    <!-- Metallic Gold Foil Gradient -->
+    <linearGradient id="gold-foil" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3B0"/>
+      <stop offset="25%" stop-color="#FFD700"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="75%" stop-color="#AA7C11"/>
+      <stop offset="100%" stop-color="#FFF0A5"/>
     </linearGradient>
 
-    <!-- Terracotta Diya Body Gradient -->
-    <linearGradient id="diya-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#E67E22"/>
-      <stop offset="50%" stop-color="#D35400"/>
-      <stop offset="100%" stop-color="#7E5109"/>
-    </linearGradient>
-
-    <!-- Flame Glow Effect -->
-    <radialGradient id="flame-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FFF59D" stop-opacity="1"/>
-      <stop offset="30%" stop-color="#FF9800" stop-opacity="0.8"/>
-      <stop offset="70%" stop-color="#E65100" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#BF360C" stop-opacity="0"/>
+    <!-- Glowing Fire Aura Light Rays -->
+    <radialGradient id="fire-aura-huge" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE082" stop-opacity="1"/>
+      <stop offset="25%" stop-color="#FFB300" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#FF6F00" stop-opacity="0.45"/>
+      <stop offset="80%" stop-color="#D50000" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#8B0016" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- Flame Core Gradient -->
-    <linearGradient id="flame-grad" x1="50%" y1="100%" x2="50%" y2="0%">
-      <stop offset="0%" stop-color="#D84315"/>
-      <stop offset="25%" stop-color="#F57C00"/>
-      <stop offset="60%" stop-color="#FFD54F"/>
+    <!-- Realistic Flame Core -->
+    <linearGradient id="flame-core" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#BF360C"/>
+      <stop offset="20%" stop-color="#E65100"/>
+      <stop offset="45%" stop-color="#FF9800"/>
+      <stop offset="75%" stop-color="#FFD54F"/>
       <stop offset="95%" stop-color="#FFFFFF"/>
     </linearGradient>
 
-    <!-- Drop Shadow -->
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.6"/>
+    <!-- Terracotta 3D Diya Body -->
+    <linearGradient id="clay-3d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A65"/>
+      <stop offset="30%" stop-color="#E64A19"/>
+      <stop offset="70%" stop-color="#BF360C"/>
+      <stop offset="100%" stop-color="#4E1500"/>
+    </linearGradient>
+
+    <!-- Marigold Orange Yellow Flowers -->
+    <radialGradient id="flower-orange" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="40%" stop-color="#FF9800"/>
+      <stop offset="85%" stop-color="#E65100"/>
+    </radialGradient>
+    <radialGradient id="flower-yellow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FFEB3B"/>
+      <stop offset="85%" stop-color="#F57F17"/>
+    </radialGradient>
+
+    <!-- Drop Shadows & Glow Filters -->
+    <filter id="super-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.75"/>
     </filter>
 
-    <filter id="glow-blur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    <filter id="intense-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur1"/>
+      <feGaussianBlur stdDeviation="4" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
 
   <style>
-    .flame-anim {
-      transform-origin: 220px 220px;
-      animation: flicker 1.8s ease-in-out infinite alternate;
+    /* Flame flicker animations */
+    .flame-main {
+      transform-origin: 250px 240px;
+      animation: flameFlicker 1.6s ease-in-out infinite alternate;
     }
-    .flame-glow-anim {
-      transform-origin: 220px 220px;
-      animation: pulseGlow 1.8s ease-in-out infinite alternate;
+    .flame-glow-huge {
+      transform-origin: 250px 240px;
+      animation: pulseAura 2s ease-in-out infinite alternate;
     }
-    .hanging-lamp {
-      animation: swing 3s ease-in-out infinite alternate;
+    .sparkle-particle {
+      animation: floatSparkle 4s linear infinite;
+    }
+    .garland-swing {
       transform-origin: top center;
+      animation: swingGarland 4s ease-in-out infinite alternate;
     }
-    @keyframes flicker {
-      0% { transform: scale(1) rotate(0deg); opacity: 0.95; }
-      25% { transform: scale(1.04, 0.96) rotate(-1.5deg); opacity: 1; }
-      50% { transform: scale(0.97, 1.05) rotate(1deg); opacity: 0.9; }
-      75% { transform: scale(1.03, 0.98) rotate(-0.8deg); opacity: 0.98; }
-      100% { transform: scale(1.02, 1.02) rotate(1.2deg); opacity: 1; }
+    .small-diya-flicker {
+      animation: flameFlicker 1.2s ease-in-out infinite alternate;
     }
-    @keyframes pulseGlow {
-      0% { transform: scale(0.95); opacity: 0.7; }
-      50% { transform: scale(1.1); opacity: 0.95; }
-      100% { transform: scale(1.02); opacity: 0.8; }
+
+    @keyframes flameFlicker {
+      0% { transform: scale(1) rotate(0deg); opacity: 1; }
+      20% { transform: scale(1.06, 0.95) rotate(-2deg); opacity: 0.96; }
+      40% { transform: scale(0.95, 1.05) rotate(1.5deg); opacity: 0.92; }
+      60% { transform: scale(1.04, 0.98) rotate(-1deg); opacity: 1; }
+      80% { transform: scale(0.98, 1.03) rotate(2deg); opacity: 0.94; }
+      100% { transform: scale(1.02, 1.01) rotate(-1.5deg); opacity: 1; }
+    }
+    @keyframes pulseAura {
+      0% { transform: scale(0.92); opacity: 0.75; }
+      50% { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(0.98); opacity: 0.85; }
+    }
+    @keyframes floatSparkle {
+      0% { transform: translateY(0px) scale(0.8); opacity: 0; }
+      50% { opacity: 0.9; }
+      100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
+    }
+    @keyframes swingGarland {
+      0% { transform: rotate(-1.5deg); }
+      100% { transform: rotate(1.5deg); }
     }
   </style>
 
-  <!-- Canvas Background -->
-  <rect width="1200" height="450" fill="url(#bg-grad)"/>
+  <!-- Background Base Layer -->
+  <rect width="1200" height="520" fill="url(#bg-grad-grand)"/>
 
-  <!-- Background Watermark Mandala Patterns -->
-  <g opacity="0.08" stroke="url(#gold-grad)" stroke-width="1.5" fill="none">
-    <!-- Left Mandala -->
-    <circle cx="220" cy="270" r="160"/>
-    <circle cx="220" cy="270" r="120"/>
-    <circle cx="220" cy="270" r="80"/>
-    <circle cx="220" cy="270" r="40"/>
-    <path d="M220 110 L220 430 M60 270 L380 270 M106 156 L333 383 M106 383 L333 156"/>
-    <!-- Right Background Mandala -->
-    <circle cx="1020" cy="225" r="260"/>
-    <circle cx="1020" cy="225" r="200"/>
-    <circle cx="1020" cy="225" r="140"/>
-    <path d="M1020 -35 L1020 485 M760 225 L1280 225 M836 41 L1203 408 M836 408 L1203 41"/>
+  <!-- GRAND GOLDEN MANDALA & RANGOLI ARTWORK BACKGROUND (High Opacity Gold Glow) -->
+  <g opacity="0.18" stroke="url(#gold-foil)" stroke-width="1.8" fill="none">
+    <!-- Main Left Mandala behind Deepak -->
+    <circle cx="250" cy="300" r="230"/>
+    <circle cx="250" cy="300" r="180"/>
+    <circle cx="250" cy="300" r="130"/>
+    <circle cx="250" cy="300" r="70"/>
+    <!-- Mandala Rays & Petals -->
+    <path d="M250 70 L250 530 M70 300 L430 300 M122 172 L377 427 M122 427 L377 172"/>
+    {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(a => `
+      <path d="M250 300 Q${250 + 200 * Math.cos(a * Math.PI / 180)} ${300 + 200 * Math.sin(a * Math.PI / 180)} ${250 + 230 * Math.cos((a+15) * Math.PI / 180)} ${300 + 230 * Math.sin((a+15) * Math.PI / 180)}"/>
+    `).join('')}
+
+    <!-- Main Right Mandala Artwork -->
+    <circle cx="1050" cy="260" r="300"/>
+    <circle cx="1050" cy="260" r="230"/>
+    <circle cx="1050" cy="260" r="160"/>
+    <path d="M1050 -40 L1050 560 M750 260 L1350 260 M837 47 L1262 472 M837 472 L1262 47"/>
   </g>
 
-  <!-- Ornate Golden Outer Frame Border -->
-  <rect x="25" y="25" width="1150" height="400" rx="8" fill="none" stroke="url(#gold-grad)" stroke-width="2.5" opacity="0.85"/>
-  <rect x="33" y="33" width="1134" height="384" rx="6" fill="none" stroke="url(#gold-grad)" stroke-width="1" opacity="0.4"/>
+  <!-- LUXURIOUS GOLDEN MARIGOLD FLORAL GARLANDS (TOP TORAN) -->
+  <g class="garland-swing">
+    <!-- Hanging Strings of Marigold Flowers across top -->
+    <path d="M0,0 Q150,60 300,0 Q450,60 600,0 Q750,60 900,0 Q1050,60 1200,0" fill="none" stroke="url(#gold-foil)" stroke-width="2.5" stroke-dasharray="8 4"/>
+    
+    <!-- Marigold Flowers along Toran -->
+    <!-- Flower Cluster 1 -->
+    <circle cx="150" cy="35" r="16" fill="url(#flower-orange)"/>
+    <circle cx="150" cy="35" r="10" fill="url(#flower-yellow)"/>
+    <!-- Flower Cluster 2 -->
+    <circle cx="450" cy="35" r="16" fill="url(#flower-orange)"/>
+    <circle cx="450" cy="35" r="10" fill="url(#flower-yellow)"/>
+    <!-- Flower Cluster 3 -->
+    <circle cx="750" cy="35" r="16" fill="url(#flower-orange)"/>
+    <circle cx="750" cy="35" r="10" fill="url(#flower-yellow)"/>
+    <!-- Flower Cluster 4 -->
+    <circle cx="1050" cy="35" r="16" fill="url(#flower-orange)"/>
+    <circle cx="1050" cy="35" r="10" fill="url(#flower-yellow)"/>
 
-  <!-- Four Corner Filigree Accents -->
+    <!-- Hanging Bell & Diya Drops from Toran -->
+    <!-- Drop 1 -->
+    <line x1="300" y1="0" x2="300" y2="90" stroke="url(#gold-foil)" stroke-width="1.5"/>
+    <path d="M290 90 L310 90 L305 110 L295 110 Z" fill="url(#gold-foil)"/>
+    <circle cx="300" cy="115" r="4" fill="#FFE58F"/>
+
+    <!-- Drop 2 -->
+    <line x1="600" y1="0" x2="600" y2="120" stroke="url(#gold-foil)" stroke-width="1.5"/>
+    <path d="M585 120 C585 135 615 135 615 120 Z" fill="url(#clay-3d)" stroke="url(#gold-foil)" stroke-width="1.5"/>
+    <circle class="small-diya-flicker" cx="600" cy="115" r="5" fill="#FFE082" filter="url(#intense-glow)"/>
+
+    <!-- Drop 3 -->
+    <line x1="900" y1="0" x2="900" y2="90" stroke="url(#gold-foil)" stroke-width="1.5"/>
+    <path d="M890 90 L910 90 L905 110 L895 110 Z" fill="url(#gold-foil)"/>
+    <circle cx="900" cy="115" r="4" fill="#FFE58F"/>
+  </g>
+
+  <!-- ORNATE DOUBLE GOLDEN BORDER FRAME -->
+  <rect x="20" y="20" width="1160" height="480" rx="16" fill="none" stroke="url(#gold-foil)" stroke-width="3" opacity="0.9"/>
+  <rect x="28" y="28" width="1144" height="464" rx="12" fill="none" stroke="url(#gold-foil)" stroke-width="1" opacity="0.5"/>
+
+  <!-- Ornate Royal Corner Embellishments -->
   <!-- Top-Left Corner -->
-  <g transform="translate(30, 30)" fill="url(#gold-grad)">
-    <path d="M0,0 Q25,0 45,20 Q20,25 0,0 M0,0 Q0,25 20,45 Q25,20 0,0"/>
-    <circle cx="12" cy="12" r="3.5"/>
+  <g transform="translate(24, 24)" fill="url(#gold-foil)">
+    <path d="M0 0 L40 0 C40 20 20 40 0 40 Z"/>
+    <path d="M10 10 Q35 10 35 35 Q10 35 10 10 Z" fill="#8B0016"/>
+    <circle cx="18" cy="18" r="4" fill="url(#gold-foil)"/>
   </g>
   <!-- Top-Right Corner -->
-  <g transform="translate(1170, 30) scale(-1, 1)" fill="url(#gold-grad)">
-    <path d="M0,0 Q25,0 45,20 Q20,25 0,0 M0,0 Q0,25 20,45 Q25,20 0,0"/>
-    <circle cx="12" cy="12" r="3.5"/>
+  <g transform="translate(1176, 24) scale(-1, 1)" fill="url(#gold-foil)">
+    <path d="M0 0 L40 0 C40 20 20 40 0 40 Z"/>
+    <path d="M10 10 Q35 10 35 35 Q10 35 10 10 Z" fill="#8B0016"/>
+    <circle cx="18" cy="18" r="4" fill="url(#gold-foil)"/>
   </g>
   <!-- Bottom-Left Corner -->
-  <g transform="translate(30, 420) scale(1, -1)" fill="url(#gold-grad)">
-    <path d="M0,0 Q25,0 45,20 Q20,25 0,0 M0,0 Q0,25 20,45 Q25,20 0,0"/>
-    <circle cx="12" cy="12" r="3.5"/>
+  <g transform="translate(24, 496) scale(1, -1)" fill="url(#gold-foil)">
+    <path d="M0 0 L40 0 C40 20 20 40 0 40 Z"/>
+    <path d="M10 10 Q35 10 35 35 Q10 35 10 10 Z" fill="#8B0016"/>
+    <circle cx="18" cy="18" r="4" fill="url(#gold-foil)"/>
   </g>
   <!-- Bottom-Right Corner -->
-  <g transform="translate(1170, 420) scale(-1, -1)" fill="url(#gold-grad)">
-    <path d="M0,0 Q25,0 45,20 Q20,25 0,0 M0,0 Q0,25 20,45 Q25,20 0,0"/>
-    <circle cx="12" cy="12" r="3.5"/>
+  <g transform="translate(1176, 496) scale(-1, -1)" fill="url(#gold-foil)">
+    <path d="M0 0 L40 0 C40 20 20 40 0 40 Z"/>
+    <path d="M10 10 Q35 10 35 35 Q10 35 10 10 Z" fill="#8B0016"/>
+    <circle cx="18" cy="18" r="4" fill="url(#gold-foil)"/>
   </g>
 
-  <!-- Hanging Golden Diyas / Lamps -->
-  <!-- Lamp 1 -->
-  <g class="hanging-lamp" transform="translate(480, 0)">
-    <line x1="0" y1="0" x2="0" y2="130" stroke="url(#gold-grad)" stroke-width="1.5" stroke-dasharray="4 2"/>
-    <path d="M-12 130 C-12 145 12 145 12 130 Z" fill="url(#gold-grad)"/>
-    <circle cx="0" cy="126" r="3" fill="#FFF59D"/>
-  </g>
-  <!-- Lamp 2 -->
-  <g class="hanging-lamp" transform="translate(520, 0)" style="animation-delay: 0.6s;">
-    <line x1="0" y1="0" x2="0" y2="180" stroke="url(#gold-grad)" stroke-width="1.5" stroke-dasharray="4 2"/>
-    <path d="M-15 180 C-15 198 15 198 15 180 Z" fill="url(#gold-grad)"/>
-    <circle cx="0" cy="175" r="4" fill="#FFF59D"/>
-  </g>
-  <!-- Lamp 3 -->
-  <g class="hanging-lamp" transform="translate(560, 0)" style="animation-delay: 1.2s;">
-    <line x1="0" y1="0" x2="0" y2="110" stroke="url(#gold-grad)" stroke-width="1.5" stroke-dasharray="4 2"/>
-    <path d="M-10 110 C-10 122 10 122 10 110 Z" fill="url(#gold-grad)"/>
-    <circle cx="0" cy="107" r="2.5" fill="#FFF59D"/>
+  <!-- FLOATING GOLDEN BOKEH SPARK PARTICLES ACROSS BANNER -->
+  <g fill="#FFE58F">
+    <circle class="sparkle-particle" cx="120" cy="400" r="3" style="animation-delay: 0s;"/>
+    <circle class="sparkle-particle" cx="280" cy="450" r="4" style="animation-delay: 1.2s;"/>
+    <circle class="sparkle-particle" cx="420" cy="380" r="2.5" style="animation-delay: 2.1s;"/>
+    <circle class="sparkle-particle" cx="540" cy="420" r="3.5" style="animation-delay: 0.7s;"/>
+    <circle class="sparkle-particle" cx="720" cy="390" r="3" style="animation-delay: 1.8s;"/>
+    <circle class="sparkle-particle" cx="890" cy="440" r="4.5" style="animation-delay: 2.8s;"/>
+    <circle class="sparkle-particle" cx="1080" cy="410" r="3" style="animation-delay: 0.4s;"/>
   </g>
 
-  <!-- LEFT SIDE: GRAND GLOWING TRADITIONAL TERRACOTTA DIYA -->
+  <!-- LEFT SIDE: MAGNIFICENT 3D DEEPAK (DIYA) WITH INTENSE RADIANT FLAME GLOW -->
   <g transform="translate(30, 20)">
-    <!-- Shadow under Diya -->
-    <ellipse cx="220" cy="335" rx="140" ry="22" fill="#000000" opacity="0.6"/>
+    
+    <!-- Deep Floor Shadow under Diya -->
+    <ellipse cx="250" cy="410" rx="190" ry="28" fill="#000000" opacity="0.75"/>
 
-    <!-- Radiant Outer Fire Halo -->
-    <circle class="flame-glow-anim" cx="220" cy="190" r="130" fill="url(#flame-glow)"/>
+    <!-- INTENSE RADIANT GOLDEN FIRE AURA (LARGE LIGHT RAYS) -->
+    <circle class="flame-glow-huge" cx="250" cy="220" r="200" fill="url(#fire-aura-huge)"/>
+    <circle class="flame-glow-huge" cx="250" cy="220" r="130" fill="url(#fire-aura-huge)" style="animation-delay: 0.5s;"/>
 
-    <!-- Diya Wick Stem -->
-    <rect x="217" y="240" width="6" height="20" rx="3" fill="#2C1609"/>
-
-    <!-- ANIMATED DIYA FLAME -->
-    <g class="flame-anim">
-      <!-- Outer Flame -->
-      <path d="M220 90 Q255 170 238 245 Q220 260 202 245 Q185 170 220 90 Z" fill="url(#flame-grad)" filter="url(#glow-blur)"/>
-      <!-- Inner Bright White Core -->
-      <path d="M220 135 Q238 185 228 242 Q220 250 212 242 Q202 185 220 135 Z" fill="#FFFFFF"/>
+    <!-- Light Beams / Shimmering Rays from Flame -->
+    <g opacity="0.35" stroke="url(#gold-foil)" stroke-width="1.5">
+      <line x1="250" y1="220" x2="80" y2="80"/>
+      <line x1="250" y1="220" x2="250" y2="20"/>
+      <line x1="250" y1="220" x2="420" y2="80"/>
+      <line x1="250" y1="220" x2="450" y2="220"/>
+      <line x1="250" y1="220" x2="50" y2="220"/>
     </g>
 
-    <!-- Traditional Clay Diya Base -->
-    <!-- Outer Clay Lip -->
-    <path d="M70 260 C70 245 370 245 370 260 C370 325 290 340 220 340 C150 340 70 325 70 260 Z" fill="url(#diya-grad)" stroke="url(#gold-grad)" stroke-width="3" filter="url(#shadow)"/>
-    <!-- Inner Bowl Oil Pool -->
-    <ellipse cx="220" cy="260" rx="145" ry="20" fill="#3E1A00" stroke="#F39C12" stroke-width="2"/>
-    <ellipse cx="220" cy="262" rx="135" ry="15" fill="#B9770E" opacity="0.8"/>
+    <!-- Diya Cotton Wick Stem -->
+    <path d="M246 290 Q250 270 252 250" stroke="#1A0500" stroke-width="7" stroke-linecap="round"/>
 
-    <!-- Diya Ornate Engraved Pattern Details -->
-    <path d="M90 280 Q220 310 350 280" fill="none" stroke="url(#gold-grad)" stroke-width="2" stroke-dasharray="6 4"/>
-    <circle cx="130" cy="290" r="3" fill="url(#gold-grad)"/>
-    <circle cx="170" cy="297" r="3" fill="url(#gold-grad)"/>
-    <circle cx="220" cy="300" r="4" fill="url(#gold-grad)"/>
-    <circle cx="270" cy="297" r="3" fill="url(#gold-grad)"/>
-    <circle cx="310" cy="290" r="3" fill="url(#gold-grad)"/>
+    <!-- MAGNIFICENT ANIMATED FLAME -->
+    <g class="flame-main">
+      <!-- Outer Fire Flame Body -->
+      <path d="M250 90 Q295 180 272 265 Q250 285 228 265 Q205 180 250 90 Z" fill="url(#flame-core)" filter="url(#intense-glow)"/>
+      <!-- Inner Brilliant White Fire Core -->
+      <path d="M250 140 Q272 195 260 262 Q250 272 240 262 Q228 195 250 140 Z" fill="#FFFFFF" filter="url(#intense-glow)"/>
+      <!-- Diamond Sparkle in Flame Core -->
+      <polygon points="250,160 254,175 265,175 256,184 260,198 250,188 240,198 244,184 235,175 246,175" fill="#FFF9C4" opacity="0.9"/>
+    </g>
+
+    <!-- 3D CARVED TERRACOTTA CLAY DIYA BOWL -->
+    <!-- Main Outer Clay Body -->
+    <path d="M70 300 C70 275 430 275 430 300 C430 385 340 415 250 415 C160 415 70 385 70 300 Z" fill="url(#clay-3d)" stroke="url(#gold-foil)" stroke-width="4" filter="url(#super-shadow)"/>
+    
+    <!-- Top Bowl Rim & Oil Pool -->
+    <ellipse cx="250" cy="300" rx="180" ry="26" fill="#3E1100" stroke="url(#gold-foil)" stroke-width="3"/>
+    <ellipse cx="250" cy="302" rx="168" ry="18" fill="#B56C07" opacity="0.85"/>
+    <ellipse cx="250" cy="304" rx="150" ry="12" fill="#E59866" opacity="0.4"/>
+
+    <!-- Decorative Gold Jewels & Pearl Inlays on Diya Outer Rim -->
+    <path d="M95 325 Q250 365 405 325" fill="none" stroke="url(#gold-foil)" stroke-width="3" stroke-dasharray="8 5"/>
+    <path d="M120 350 Q250 390 380 350" fill="none" stroke="url(#gold-foil)" stroke-width="2"/>
+
+    <!-- Gold Gemstone Inlays along Body -->
+    {[130, 170, 210, 250, 290, 330, 370].map(x => `
+      <circle cx="${x}" cy="${330 + Math.sin((x-130)/240 * Math.PI) * 25}" r="5" fill="url(#gold-foil)" stroke="#8B0016" stroke-width="1.5"/>
+      <circle cx="${x}" cy="${330 + Math.sin((x-130)/240 * Math.PI) * 25}" r="2" fill="#FFFFFF"/>
+    `).join('')}
   </g>
 
-  <!-- RIGHT SIDE: BRANDING & FESTIVE TYPOGRAPHY -->
-  <g transform="translate(680, 0)">
+  <!-- RIGHT SIDE: GRAND VIBRANT FESTIVE TYPOGRAPHY & BRANDING -->
+  <g transform="translate(640, 0)">
 
-    <!-- Company Badge / Quick Commerce Tag -->
-    <g transform="translate(0, 105)">
-      <rect x="0" y="0" width="220" height="32" rx="16" fill="rgba(255, 255, 255, 0.12)" stroke="url(#gold-grad)" stroke-width="1.5"/>
-      <circle cx="20" cy="16" r="6" fill="#2ECC71"/>
-      <text x="36" y="21" font-family="'Inter', system-ui, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF" letter-spacing="1">
+    <!-- 10-MIN EXPRESS DELIGHTS BADGE -->
+    <g transform="translate(0, 110)">
+      <rect x="0" y="0" width="260" height="38" rx="19" fill="rgba(255, 255, 255, 0.12)" stroke="url(#gold-foil)" stroke-width="1.5" filter="url(#super-shadow)"/>
+      <circle cx="24" cy="19" r="8" fill="#2ECC71"/>
+      <circle cx="24" cy="19" r="4" fill="#FFFFFF"/>
+      <text x="44" y="24" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="900" fill="#FFFFFF" letter-spacing="1.5">
         EXPRESS 10-MIN DELIVERY
       </text>
     </g>
 
-    <!-- Company Name / Logo -->
-    <g transform="translate(0, 185)">
-      <!-- Grabit Brand Text -->
-      <text x="0" y="0" font-family="'Inter', system-ui, sans-serif" font-size="54" font-weight="900" fill="url(#gold-grad)" letter-spacing="-1" filter="url(#shadow)">
+    <!-- GRABIT COMPANY BRAND LOGO WITH SHINE -->
+    <g transform="translate(0, 205)">
+      <!-- Main Brand Text -->
+      <text x="0" y="0" font-family="'Inter', system-ui, sans-serif" font-size="64" font-weight="900" fill="url(#gold-foil)" letter-spacing="-1.5" filter="url(#super-shadow)">
         Grabit
       </text>
-      <!-- Sparkle Icon next to brand -->
-      <path d="M175 -35 L180 -20 L195 -15 L180 -10 L175 5 L170 -10 L155 -15 L170 -20 Z" fill="#FFE082"/>
+      <!-- Plus Badge -->
+      <tspan font-family="'Inter', system-ui, sans-serif" font-size="52" font-weight="900" fill="#FFD700">+</tspan>
+
+      <!-- Shimmer Sparkle Star Icon -->
+      <g transform="translate(225, -55) scale(1.3)">
+        <path d="M15 0 L19 11 L30 15 L19 19 L15 30 L11 19 L0 15 L11 11 Z" fill="#FFE082" filter="url(#intense-glow)"/>
+      </g>
     </g>
 
-    <!-- Main Festive Heading -->
-    <text x="0" y="245" font-family="'Inter', system-ui, sans-serif" font-size="44" font-weight="800" fill="#FFFFFF" letter-spacing="0.5">
+    <!-- MAIN FESTIVE HEADING: HAPPY DIWALI -->
+    <text x="0" y="275" font-family="'Inter', system-ui, sans-serif" font-size="52" font-weight="900" fill="#FFFFFF" letter-spacing="0.5" filter="url(#super-shadow)">
       Happy Diwali
     </text>
 
-    <!-- Subtitle / Tagline -->
-    <text x="0" y="285" font-family="'Inter', system-ui, sans-serif" font-size="18" font-weight="600" fill="#F9E79F" letter-spacing="3">
+    <!-- FESTIVE TAGLINE -->
+    <text x="0" y="320" font-family="'Inter', system-ui, sans-serif" font-size="20" font-weight="800" fill="#FFE58F" letter-spacing="3.5">
       FESTIVAL OF LIGHTS &amp; DELIGHTS
     </text>
 
-    <!-- CTA Button Mockup -->
-    <g transform="translate(0, 318)" class="cta-btn">
-      <rect x="0" y="0" width="240" height="48" rx="24" fill="url(#gold-grad)" filter="url(#shadow)"/>
-      <text x="120" y="30" text-anchor="middle" font-family="'Inter', system-ui, sans-serif" font-size="15" font-weight="900" fill="#3B0209" letter-spacing="1">
+    <text x="0" y="350" font-family="'Inter', system-ui, sans-serif" font-size="14" font-weight="600" fill="#FFCDD2" letter-spacing="1">
+      Up to 60% OFF on Sweets, Dry Fruits, Gift Boxes &amp; Puja Essentials
+    </text>
+
+    <!-- SHOP NOW CTA BUTTON -->
+    <g transform="translate(0, 385)">
+      <!-- Button Outer Glow Box -->
+      <rect x="0" y="0" width="280" height="56" rx="28" fill="url(#gold-foil)" filter="url(#super-shadow)"/>
+      <!-- Button Text -->
+      <text x="140" y="35" text-anchor="middle" font-family="'Inter', system-ui, sans-serif" font-size="16" font-weight="900" fill="#4A000A" letter-spacing="1.5">
         SHOP DIWALI OFFERS &#8594;
       </text>
     </g>

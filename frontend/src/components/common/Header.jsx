@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Store, Truck, ShieldCheck, Lightbulb } from 'lucide-react';
+import { MapPin, ChevronDown, ChevronLeft, ArrowLeft, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Store, Truck, ShieldCheck, Lightbulb } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useDeliveryLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
