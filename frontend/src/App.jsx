@@ -88,8 +88,8 @@ function AnimatedRoutes() {
 
   const routes = (
     <Routes location={location}>
-      {/* Delivery Agent Portal Default Route */}
-      <Route path="/" element={<DeliveryPortalApp />} />
+      {/* Customer Home Page Route */}
+      <Route path="/" element={<HomePage />} />
       <Route path="/categories" element={<CategoriesOverviewPage />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/product/:id" element={<ProductDetailPage />} />
