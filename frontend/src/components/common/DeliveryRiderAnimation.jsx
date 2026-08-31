@@ -50,19 +50,19 @@ export default function DeliveryRiderAnimation() {
 
         .scooter-driver-container {
           position: absolute;
-          bottom: 0;
+          bottom: 4px;
           left: 0;
-          width: 210px;
-          height: 138px;
+          width: 155px;
+          height: 102px;
           animation: driveAcross 5.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
           will-change: transform;
         }
 
         .mounted-3d-flag {
           position: absolute;
-          top: -38px;
-          left: -40px;
-          width: 90px;
+          top: -28px;
+          left: -30px;
+          width: 68px;
           height: auto;
           z-index: 2;
           animation: flagWave 1.4s ease-in-out infinite;
