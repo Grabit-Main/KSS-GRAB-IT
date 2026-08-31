@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Star, Heart, ChevronLeft, ChevronRight, Zap, MapPin, Plus, Minus, ShoppingCart, Tag, Shield, ShoppingBag, Truck, CheckCircle2, Clock, Share2, ThumbsUp, HelpCircle, Award, Check } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Star, Heart, ChevronLeft, ChevronRight, Zap, MapPin, Plus, Minus, ShoppingCart, Tag, Shield, ShoppingBag, Truck, CheckCircle2, Clock, Share2, ThumbsUp, HelpCircle, Award, Check, ArrowLeft } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import { products, getProductById } from '../data/products';
@@ -58,6 +58,7 @@ const getProductVariants = (p) => {
 };
 
 export default function ProductDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const product = getProductById(id) || products[0];
   const { addItem, updateQty, getItemQty } = useCart();
@@ -170,7 +171,62 @@ export default function ProductDetailPage() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: isMobile ? '24px' : '24px', paddingBottom: isMobile ? '145px' : '60px' }}>
+    <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', paddingBottom: isMobile ? '145px' : '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Sticky Top Header Bar with ONLY Back Arrow & Product Title */}
+      <div style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E2E8F0',
+        padding: isMobile ? '12px 0' : '14px 0',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        marginBottom: isMobile ? '16px' : '24px'
+      }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Go Back"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '38px', height: '38px', borderRadius: '12px',
+                background: '#F1F5F9', color: '#0F172A',
+                border: '1px solid #E2E8F0',
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.transform = 'translateX(-2px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <ArrowLeft size={20} color="#0F172A" />
+            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h1 style={{
+                margin: 0,
+                fontSize: isMobile ? '15px' : '18px',
+                fontWeight: 800,
+                color: '#0F172A',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: isMobile ? '230px' : '500px'
+              }}>
+                {product.name}
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#64748B', fontWeight: 500 }}>
+                {product.brand || 'Grabit Store'} • {product.weight || 'Standard Unit'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container">
       
       {/* ── MAIN ADVANCED PRODUCT SHOWCASE ── */}
       <div style={{
@@ -933,8 +989,6 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-      </div>
-
       {/* ── RELATED PRODUCTS ROW ── */}
       <div style={{ marginTop: '20px', marginBottom: isMobile ? '30px' : '0px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -948,6 +1002,8 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+    </div>
+    </div>
     </div>
   );
 }

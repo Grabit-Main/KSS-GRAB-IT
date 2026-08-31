@@ -25,6 +25,7 @@ import PharmacyPage from './pages/PharmacyPage';
 import ChickenMeatPage from './pages/ChickenMeatPage';
 import ExclusiveDealsPage from './pages/ExclusiveDealsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
+import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import './styles/global.css';
 import './styles/components.css';
 
@@ -148,7 +149,12 @@ function AppContent() {
     location.pathname.startsWith('/delivery') ||
     location.pathname.startsWith('/admin');
 
-  const hideHeader = location.pathname === '/exclusive-deals';
+  const hideHeader =
+    location.pathname === '/exclusive-deals' ||
+    location.pathname === '/fresh-produce' ||
+    location.pathname === '/pharmacy' ||
+    location.pathname === '/chicken-meat' ||
+    location.pathname.startsWith('/product/');
 
   if (isPortalOrAuth) {
     return <AnimatedRoutes />;
@@ -161,6 +167,7 @@ function AppContent() {
         <AnimatedRoutes />
       </main>
       <FloatingCartBar />
+      <DeliveryRiderAnimation />
       <Footer />
     </div>
   );

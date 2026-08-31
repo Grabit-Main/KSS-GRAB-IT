@@ -81,8 +81,9 @@ export function CartProvider({ children }) {
       localStorage.setItem(storageKey, JSON.stringify(items));
     } catch {}
 
-    // Cloud DB & Redis sync — use env-aware api.js helper
-    if (currentPhone) {
+    // Cloud DB & Redis sync — only sync if user is logged in with active auth token
+    const hasToken = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_jwt');
+    if (currentPhone && hasToken) {
       post('/cart/sync', { phone: currentPhone, items }).catch(() => {});
     }
   }, [items]);
@@ -91,7 +92,8 @@ export function CartProvider({ children }) {
   useEffect(() => {
     const initCloudCart = async () => {
       const currentPhone = getUserPhone();
-      if (!currentPhone) return;
+      const hasToken = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_jwt');
+      if (!currentPhone || !hasToken) return;
       const local = loadStoredCart(currentPhone);
       // If local cart is explicitly empty, do not re-populate from stale cloud cart
       if (Array.isArray(local) && local.length === 0) return;
@@ -112,10 +114,11 @@ export function CartProvider({ children }) {
   useEffect(() => {
     const handleAuthChange = async () => {
       const newPhone = getUserPhone();
+      const hasToken = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_jwt');
       const local = loadStoredCart(newPhone);
       setItems(local || []);
 
-      if (newPhone && (!local || local.length > 0)) {
+      if (newPhone && hasToken && (!local || local.length > 0)) {
         try {
           const data = await get(`/cart/user/${newPhone}`);
           const localCheck = loadStoredCart(newPhone);

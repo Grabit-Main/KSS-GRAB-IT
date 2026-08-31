@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, ShieldCheck, HeartPulse, Clock, ChevronRight, Search, FileText, CheckCircle2, PhoneCall, Award } from 'lucide-react';
+import { ArrowLeft, Gift } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -8,21 +8,21 @@ import useWindowWidth from '../hooks/useWindowWidth';
 export default function PharmacyPage() {
   const w = useWindowWidth();
   const isMobile = w <= 640;
+  const isTablet = w <= 1024;
   const [selectedSubcat, setSelectedSubcat] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [prescriptionUploaded, setPrescriptionUploaded] = useState(false);
 
   // Pharmacy & Wellness items
   const pharmacyProducts = useMemo(() => {
     const base = products.filter(p => p.category === 'personal-care' || p.name.toLowerCase().includes('dettol') || p.name.toLowerCase().includes('soap') || p.name.toLowerCase().includes('toothpaste'));
     
-    // Add specific pharmacy items
     const extraPharmacyItems = [
-      { id: 201, name: "Vicks VapoRub Balm 50g Relief from Cold", weight: "50g", price: 155, mrp: 175, discount: 11, rating: 4.9, reviews: 1240, image: "dettol-handwash-real.jpg", category: "pharmacy", subcat: "cold", brand: "Vicks", inStock: true, stock_quantity: 60 },
-      { id: 202, name: "Moov Fast Pain Relief Ointment 50g", weight: "50g", price: 165, mrp: 190, discount: 13, rating: 4.8, reviews: 980, image: "dettol-handwash-real.jpg", category: "pharmacy", subcat: "pain", brand: "Moov", inStock: true, stock_quantity: 45 },
-      { id: 203, name: "Eno Fizzy Lemon Fast Relief Sachets (Pack of 6)", weight: "30g", price: 60, mrp: 72, discount: 17, rating: 4.9, reviews: 1450, image: "dettol-handwash-real.jpg", category: "pharmacy", subcat: "digestive", brand: "Eno", inStock: true, stock_quantity: 80 },
-      { id: 204, name: "Revital H Daily Health Supplement 30 Capsules", weight: "30 Caps", price: 310, mrp: 360, discount: 14, rating: 4.8, reviews: 760, image: "dettol-handwash-real.jpg", category: "pharmacy", subcat: "vitamins", brand: "Revital", inStock: true, stock_quantity: 35 },
-      { id: 205, name: "Hansaplast Waterproof First Aid Bandages (20 Pcs)", weight: "20 Pcs", price: 75, mrp: 90, discount: 17, rating: 4.9, reviews: 1120, image: "dettol-handwash-real.jpg", category: "pharmacy", subcat: "firstaid", brand: "Hansaplast", inStock: true, stock_quantity: 90 }
+      { id: 201, name: "Vicks VapoRub Balm 50g Relief from Cold & Cough", weight: "50g", price: 155, mrp: 175, discount: 11, rating: 4.9, reviews: 1240, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "cold", brand: "Vicks", inStock: true, stock_quantity: 60 },
+      { id: 202, name: "Moov Fast Pain Relief Ointment 50g Tube", weight: "50g", price: 165, mrp: 190, discount: 13, rating: 4.8, reviews: 980, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "pain", brand: "Moov", inStock: true, stock_quantity: 45 },
+      { id: 203, name: "Eno Fizzy Lemon Fast Relief Sachets (Pack of 6)", weight: "30g", price: 60, mrp: 72, discount: 17, rating: 4.9, reviews: 1450, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "digestive", brand: "Eno", inStock: true, stock_quantity: 80 },
+      { id: 204, name: "Revital H Daily Health Supplement 30 Capsules", weight: "30 Caps", price: 310, mrp: 360, discount: 14, rating: 4.8, reviews: 760, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "vitamins", brand: "Revital", inStock: true, stock_quantity: 35 },
+      { id: 205, name: "Hansaplast Waterproof First Aid Bandages (20 Pcs)", weight: "20 Pcs", price: 75, mrp: 90, discount: 17, rating: 4.9, reviews: 1120, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "firstaid", brand: "Hansaplast", inStock: true, stock_quantity: 90 },
+      { id: 206, name: "Volini Pain Relief Spray 100g Instant Relief", weight: "100g", price: 215, mrp: 260, discount: 17, rating: 4.9, reviews: 1310, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "pain", brand: "Volini", inStock: true, stock_quantity: 50 },
+      { id: 207, name: "Dettol Antiseptic Liquid 550ml", weight: "550ml", price: 210, mrp: 245, discount: 14, rating: 4.9, reviews: 2100, image: "banner-exclusive-deals.png", category: "pharmacy", subcat: "firstaid", brand: "Dettol", inStock: true, stock_quantity: 85 }
     ];
 
     const combined = [...base];
@@ -34,53 +34,81 @@ export default function PharmacyPage() {
   }, []);
 
   const subcategories = [
-    { id: 'all', label: '🏥 All Pharmacy & Wellness', icon: '💊' },
-    { id: 'cold', label: '🤧 Cold, Cough & Flu', icon: '🧊' },
-    { id: 'pain', label: '⚡ Pain Relief & Ointments', icon: '🩹' },
-    { id: 'digestive', label: '🍋 Antacids & Digestion', icon: '🧪' },
-    { id: 'firstaid', label: '🩹 First Aid & Hygiene', icon: '🧼' },
-    { id: 'vitamins', label: '💊 Vitamins & Supplements', icon: '🌿' }
+    { id: 'all', label: '💊 All Pharmacy & Wellness' },
+    { id: 'cold', label: '🤧 Cold, Cough & Flu' },
+    { id: 'pain', label: '⚡ Pain Relief' },
+    { id: 'digestive', label: '🍋 Antacids & Digestion' },
+    { id: 'firstaid', label: '🩹 First Aid & Hygiene' },
+    { id: 'vitamins', label: '🌿 Vitamins & Health' }
   ];
 
   const filteredProducts = useMemo(() => {
     return pharmacyProducts.filter(p => {
-      const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      if (selectedSubcat === 'all') return matchSearch;
-      if (selectedSubcat === 'cold') return matchSearch && (p.name.toLowerCase().includes('vicks') || p.subcat === 'cold');
-      if (selectedSubcat === 'pain') return matchSearch && (p.name.toLowerCase().includes('moov') || p.subcat === 'pain');
-      if (selectedSubcat === 'digestive') return matchSearch && (p.name.toLowerCase().includes('eno') || p.subcat === 'digestive');
-      if (selectedSubcat === 'firstaid') return matchSearch && (p.name.toLowerCase().includes('dettol') || p.name.toLowerCase().includes('hansaplast') || p.subcat === 'firstaid');
-      if (selectedSubcat === 'vitamins') return matchSearch && (p.name.toLowerCase().includes('revital') || p.subcat === 'vitamins');
-      return matchSearch;
+      if (selectedSubcat === 'all') return true;
+      if (selectedSubcat === 'cold') return (p.name.toLowerCase().includes('vicks') || p.subcat === 'cold');
+      if (selectedSubcat === 'pain') return (p.name.toLowerCase().includes('moov') || p.name.toLowerCase().includes('volini') || p.subcat === 'pain');
+      if (selectedSubcat === 'digestive') return (p.name.toLowerCase().includes('eno') || p.subcat === 'digestive');
+      if (selectedSubcat === 'firstaid') return (p.name.toLowerCase().includes('dettol') || p.name.toLowerCase().includes('hansaplast') || p.subcat === 'firstaid');
+      if (selectedSubcat === 'vitamins') return (p.name.toLowerCase().includes('revital') || p.subcat === 'vitamins');
+      return true;
     });
-  }, [pharmacyProducts, selectedSubcat, searchQuery]);
+  }, [pharmacyProducts, selectedSubcat]);
 
   return (
-    <div style={{ backgroundColor: '#FBF9FE', minHeight: '100vh', paddingBottom: '60px' }}>
-      {/* Breadcrumb Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E9D5FF', padding: '12px 0' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#666' }}>
-          <Link to="/" style={{ color: '#6B21A8', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-          <ChevronRight size={14} color="#999" />
-          <span style={{ color: '#1F2937', fontWeight: 700 }}>Pharmacy at your Doorstep</span>
+    <div style={{ backgroundColor: '#FBF9FE', color: '#4C1D95', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Sticky Top Header Bar */}
+      <div style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E9D5FF',
+        padding: isMobile ? '12px 0' : '14px 0',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link to="/" aria-label="Back to Store" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: '#F3E8FF', color: '#6B21A8',
+              textDecoration: 'none', transition: 'all 0.2s ease',
+              border: '1px solid #E9D5FF',
+              boxShadow: '0 2px 8px rgba(107, 33, 168, 0.08)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E9D5FF'; e.currentTarget.style.transform = 'translateX(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F3E8FF'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <ArrowLeft size={20} color="#6B21A8" />
+            </Link>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h1 style={{
+                margin: 0,
+                fontSize: isMobile ? '17px' : '20px',
+                fontWeight: 900,
+                color: '#4C1D95',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2
+              }}>
+                Pharmacy at your Doorstep
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                100% Genuine Medicines & Health • Express 10-Min Delivery
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Emergency Delivery Alert Bar */}
-      <div style={{ background: 'linear-gradient(90deg, #6B21A8 0%, #4C1D95 100%)', color: '#FFFFFF', padding: '10px 0', fontSize: '13px', fontWeight: 600 }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textAlign: 'center' }}>
-          <Clock size={18} color="#FDE047" />
-          <span>⚡ Emergency Medicines Needed? <strong>10-Minute Express Delivery Available 24/7</strong></span>
-        </div>
-      </div>
-
-      {/* Hero Banner Section */}
-      <div className="container" style={{ marginTop: isMobile ? '12px' : '24px' }}>
+      {/* Commercial Banner Card */}
+      <div className="container" style={{ marginTop: isMobile ? '12px' : '20px' }}>
         <div style={{
-          borderRadius: isMobile ? '16px' : '24px',
+          borderRadius: isMobile ? '20px' : '28px',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(107, 33, 168, 0.14)',
-          border: '1.5px solid rgba(168, 85, 247, 0.25)',
+          boxShadow: '0 16px 40px rgba(107, 33, 168, 0.12)',
+          border: '1.5px solid #E9D5FF',
           background: '#FFFFFF'
         }}>
           <img
@@ -91,170 +119,79 @@ export default function PharmacyPage() {
         </div>
       </div>
 
-      {/* Prescription & Help Cards Row */}
-      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px' }}>
+      {/* Filter Pills Bar */}
+      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px', marginBottom: isMobile ? '20px' : '28px' }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-          gap: '16px'
+          display: 'flex',
+          gap: '10px',
+          overflowX: 'auto',
+          paddingBottom: '4px'
         }}>
-          {/* Prescription Upload Card */}
-          <div style={{
-            background: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            border: '1px solid #D8B4FE',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px'
-          }}>
-            <div style={{
-              width: '48px', height: '48px', borderRadius: '12px',
-              background: '#6B21A8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>
-              <FileText color="#FFFFFF" size={24} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#4C1D95' }}>Have a Prescription?</h3>
-              <p style={{ margin: '4px 0 10px', fontSize: '12.5px', color: '#6B21A8' }}>Upload your doctor's note and we'll dispense your exact medicines.</p>
-              <button
-                onClick={() => setPrescriptionUploaded(true)}
-                style={{
-                  background: '#6B21A8',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '7px 16px',
-                  borderRadius: '8px',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                {prescriptionUploaded ? '✓ Uploaded Successfully!' : '📷 Upload Prescription'}
-              </button>
-            </div>
-          </div>
-
-          {/* Pharmacist Consultation Card */}
-          <div style={{
-            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            border: '1px solid #BFDBFE',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px'
-          }}>
-            <div style={{
-              width: '48px', height: '48px', borderRadius: '12px',
-              background: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>
-              <PhoneCall color="#FFFFFF" size={24} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1E40AF' }}>Free Pharmacist Consultation</h3>
-              <p style={{ margin: '4px 0 8px', fontSize: '12.5px', color: '#1E3A8A' }}>Speak to licensed pharmacists for dosage guidance & advice.</p>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#1D4ED8' }}>📞 Toll-Free: 1800-419-8080</span>
-            </div>
-          </div>
+          {subcategories.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedSubcat(tab.id)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '20px',
+                border: selectedSubcat === tab.id ? '1.5px solid #6B21A8' : '1px solid #E9D5FF',
+                background: selectedSubcat === tab.id ? 'linear-gradient(135deg, #6B21A8 0%, #7C3AED 100%)' : '#FFFFFF',
+                color: selectedSubcat === tab.id ? '#FFFFFF' : '#374151',
+                fontSize: '13px',
+                fontWeight: selectedSubcat === tab.id ? 800 : 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: selectedSubcat === tab.id ? '0 4px 14px rgba(107, 33, 168, 0.22)' : '0 2px 6px rgba(0,0,0,0.02)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="container" style={{ marginTop: '28px' }}>
-        {/* Category Header & Filters */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: isMobile ? '16px' : '20px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-          border: '1px solid #F3E8FF',
-          marginBottom: '24px'
-        }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: '16px',
-            marginBottom: '20px'
-          }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: '#581C87', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                💊 Pharmacy & Health Essentials
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
-                100% Genuine OTC medicines, syrups, pain relief & wellness delivered with care.
-              </p>
-            </div>
-
-            <div style={{ position: 'relative', minWidth: '220px' }}>
-              <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                placeholder="Search medicines or products..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px 8px 36px',
-                  borderRadius: '10px',
-                  border: '1px solid #D8B4FE',
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Subcategory Pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {subcategories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedSubcat(cat.id)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: selectedSubcat === cat.id ? '2px solid #6B21A8' : '1px solid #E9D5FF',
-                  background: selectedSubcat === cat.id ? '#F3E8FF' : '#FFFFFF',
-                  color: selectedSubcat === cat.id ? '#6B21A8' : '#4B5563',
-                  fontSize: '13px',
-                  fontWeight: selectedSubcat === cat.id ? 700 : 500,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Product Grid */}
+      {/* Direct Pharmacy Products Grid */}
+      <div className="container">
         {filteredProducts.length > 0 ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: isMobile ? '12px' : '18px'
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '12px' : '20px'
           }}>
             {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                badge={product.discount ? `${product.discount}% OFF` : 'GENUINE'}
+                badgeColor="#7C3AED"
+              />
             ))}
           </div>
         ) : (
           <div style={{
             background: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '48px 24px',
+            borderRadius: '20px',
+            padding: '60px 24px',
             textAlign: 'center',
-            border: '1px solid #F3E8FF'
+            border: '1.5px solid #E9D5FF'
           }}>
-            <ShoppingBag size={48} color="#6B21A8" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#1F2937' }}>No medicines found in this filter</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: '#6B7280' }}>Try searching for another product or reset your search query.</p>
+            <Gift size={54} color="#6B21A8" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <h3 style={{ margin: '0 0 8px', fontSize: '20px', color: '#4C1D95' }}>No items found in this category</h3>
+            <button
+              onClick={() => setSelectedSubcat('all')}
+              style={{
+                padding: '10px 24px',
+                background: 'linear-gradient(135deg, #6B21A8 0%, #7C3AED 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '12px',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Show All Pharmacy Products
+            </button>
           </div>
         )}
       </div>

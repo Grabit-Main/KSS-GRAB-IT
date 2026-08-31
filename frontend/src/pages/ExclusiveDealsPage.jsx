@@ -54,6 +54,7 @@ export default function ExclusiveDealsPage() {
 
   return (
     <div style={{ background: '#FAF9FF', color: '#1E1B4B', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
       {/* Top Header Bar */}
       <div style={{
         background: '#FFFFFF',
@@ -99,8 +100,8 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* Clean Hero Commercial Banner Card */}
-      <div className="container" style={{ marginTop: isMobile ? '12px' : '20px' }}>
+      {/* 🔮 1. Main Hero Commercial Banner Card */}
+      <div className="container" style={{ marginTop: isMobile ? '12px' : '20px', marginBottom: isMobile ? '16px' : '24px' }}>
         <div style={{
           borderRadius: isMobile ? '20px' : '28px',
           overflow: 'hidden',
@@ -122,36 +123,70 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 🍿 SECTION 1: SNACKS & MUNCHIES (WITH BANNER DIRECTLY ABOVE) */}
-      <div id="snacks-section" className="container" style={{ marginTop: isMobile ? '20px' : '28px' }}>
-        {/* Banner 1: Midnight Flash */}
+      {/* 🌟 SLIM, ELEGANT ANIMATED DEAL HIGHLIGHTS TICKER */}
+      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px', marginBottom: isMobile ? '24px' : '36px' }}>
+        <style>{`
+          @keyframes tickerMove {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
         <div style={{
-          background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
-          borderRadius: '20px',
-          padding: '24px',
-          border: '1.5px solid #FECDD3',
-          boxShadow: '0 8px 24px rgba(225, 29, 72, 0.08)',
-          marginBottom: '20px',
+          background: 'linear-gradient(90deg, #6B21A8 0%, #7C3AED 50%, #8B5CF6 100%)',
+          color: '#FFFFFF',
+          borderRadius: '16px',
+          padding: '10px 16px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px rgba(107, 33, 168, 0.15)',
           display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px'
+          alignItems: 'center'
         }}>
-          <div>
-            <span style={{ background: '#E11D48', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              ⚡ Midnight Flash Sale
-            </span>
-            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#881337' }}>
-              Flat 50% OFF Snacks & Munchies
-            </h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#9F1239' }}>
-              Instant savings on Lay's, Kurkure, Doritos, Pringles, Kellogg's & Cadbury chocolates!
-            </p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '32px',
+            whiteSpace: 'nowrap',
+            animation: 'tickerMove 20s linear infinite',
+            width: '200%'
+          }}>
+            {[1, 2].map(loop => (
+              <div key={loop} style={{ display: 'inline-flex', alignItems: 'center', gap: '32px', fontSize: '13px', fontWeight: 800, letterSpacing: '0.3px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>⚡ FLAT 50% OFF SNACKS &amp; MUNCHIES</span>
+                <span style={{ color: '#DDD6FE', opacity: 0.6 }}>✦</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>🎁 BUY 2 GET 1 FREE GROCERY FEST</span>
+                <span style={{ color: '#DDD6FE', opacity: 0.6 }}>✦</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>✨ MIN 40% OFF BODY &amp; SKINCARE</span>
+                <span style={{ color: '#DDD6FE', opacity: 0.6 }}>✦</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>🚚 10-MINUTE EXPRESS DOORSTEP DELIVERY</span>
+                <span style={{ color: '#DDD6FE', opacity: 0.6 }}>✦</span>
+              </div>
+            ))}
           </div>
-          <span style={{ background: '#FFE4E6', color: '#BE185D', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
-            🍿 {snackProducts.length} Items Available
-          </span>
+        </div>
+      </div>
+
+      {/* 🍿 SECTION 1: SNACKS & MUNCHIES */}
+      <div id="snacks-section" className="container" style={{ marginBottom: isMobile ? '36px' : '48px' }}>
+        {/* Commercial Banner Graphic 1: Midnight Flash Snacks */}
+        <div style={{
+          borderRadius: isMobile ? '20px' : '24px',
+          overflow: 'hidden',
+          border: '1.5px solid #FECDD3',
+          boxShadow: '0 12px 32px rgba(225, 29, 72, 0.12)',
+          marginBottom: '20px',
+          background: '#FFFFFF'
+        }}>
+          <img
+            src="/banner-snacks-munchies.png"
+            alt="Flat 50% OFF Snacks & Munchies - Lay's, Kurkure, Doritos, Pringles, Kellogg's & Cadbury"
+            style={{
+              width: '100%',
+              height: isMobile ? 'auto' : '320px',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              display: 'block'
+            }}
+          />
         </div>
 
         {/* Snacks Products Grid */}
@@ -166,36 +201,28 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 🌾 SECTION 2: GROCERY & STAPLES (WITH BANNER DIRECTLY ABOVE) */}
-      <div id="grocery-section" className="container" style={{ marginTop: isMobile ? '36px' : '48px' }}>
-        {/* Banner 2: Weekend Grocery Fest */}
+      {/* 🌾 SECTION 2: GROCERY & STAPLES */}
+      <div id="grocery-section" className="container" style={{ marginBottom: isMobile ? '36px' : '48px' }}>
+        {/* Commercial Banner Graphic 2: Weekend Grocery Fest */}
         <div style={{
-          background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-          borderRadius: '20px',
-          padding: '24px',
+          borderRadius: isMobile ? '20px' : '24px',
+          overflow: 'hidden',
           border: '1.5px solid #BFDBFE',
-          boxShadow: '0 8px 24px rgba(37, 99, 235, 0.08)',
+          boxShadow: '0 12px 32px rgba(37, 99, 235, 0.12)',
           marginBottom: '20px',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px'
+          background: '#FFFFFF'
         }}>
-          <div>
-            <span style={{ background: '#2563EB', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              🎁 Buy 2 Get 1 FREE
-            </span>
-            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#1E3A8A' }}>
-              Grocery & Staples Fest
-            </h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#1E40AF' }}>
-              Unbeatable prices on Aashirvaad Sharbati Atta, Tata Toor Dal, Fortune Oil & Basmati Rice!
-            </p>
-          </div>
-          <span style={{ background: '#DBEAFE', color: '#1D4ED8', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
-            🌾 {groceryProducts.length} Items Available
-          </span>
+          <img
+            src="/banner-grocery-staples.png"
+            alt="Grocery & Staples Fest - Buy 2 Get 1 FREE on Aashirvaad Atta, Tata Toor Dal, Fortune Oil & Basmati Rice"
+            style={{
+              width: '100%',
+              height: isMobile ? 'auto' : '320px',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              display: 'block'
+            }}
+          />
         </div>
 
         {/* Grocery Products Grid */}
@@ -210,36 +237,28 @@ export default function ExclusiveDealsPage() {
         </div>
       </div>
 
-      {/* 💄 SECTION 3: BODY & SKINCARE (WITH BANNER DIRECTLY ABOVE) */}
-      <div id="skincare-section" className="container" style={{ marginTop: isMobile ? '36px' : '48px' }}>
-        {/* Banner 3: Personal Care Sale */}
+      {/* 💄 SECTION 3: BODY & SKINCARE */}
+      <div id="skincare-section" className="container" style={{ marginBottom: isMobile ? '36px' : '48px' }}>
+        {/* Commercial Banner Graphic 3: Personal Care Super Sale */}
         <div style={{
-          background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-          borderRadius: '20px',
-          padding: '24px',
+          borderRadius: isMobile ? '20px' : '24px',
+          overflow: 'hidden',
           border: '1.5px solid #DDD6FE',
-          boxShadow: '0 8px 24px rgba(124, 58, 237, 0.08)',
+          boxShadow: '0 12px 32px rgba(124, 58, 237, 0.12)',
           marginBottom: '20px',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px'
+          background: '#FFFFFF'
         }}>
-          <div>
-            <span style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase' }}>
-              ✨ Min 40% OFF
-            </span>
-            <h2 style={{ margin: '10px 0 4px', fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#4C1D95' }}>
-              Body & Skincare Sale
-            </h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#5B21B6' }}>
-              Deep nourishment with Dove Body Lotion, Dettol Soaps, Nivea Cream & Himalaya Care!
-            </p>
-          </div>
-          <span style={{ background: '#EDE9FE', color: '#6D28D9', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 800 }}>
-            💄 {skincareProducts.length} Items Available
-          </span>
+          <img
+            src="/banner-body-skincare.png"
+            alt="Body & Skincare Sale - Min 40% OFF on Dove Lotion, Dettol Soap, Nivea Cream & Himalaya Care"
+            style={{
+              width: '100%',
+              height: isMobile ? 'auto' : '320px',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              display: 'block'
+            }}
+          />
         </div>
 
         {/* Skincare Products Grid */}

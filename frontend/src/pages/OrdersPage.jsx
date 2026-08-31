@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { get } from '../api';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { getAllSystemOrders, subscribeOrderUpdates } from '../utils/orderSync';
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & payment verified', icon: '🛒' },
@@ -335,24 +336,36 @@ export default function OrdersPage() {
 
   const [ordersList, setOrdersList] = useState(loadFastCachedOrders);
 
-  // ─ Fetch all orders for this customer from cloud (no localStorage) ─
+  // ─ Fetch all orders for this customer in real time ─
   const fetchCloudOrders = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
       const currentPhone = getCurrentUserPhone();
-      const fetchPath = currentPhone ? `/orders/user/${currentPhone}` : '/orders/';
-      const apiOrders = await get(fetchPath).catch(() => []);
-      if (Array.isArray(apiOrders)) {
-        const valid = apiOrders.filter(isValidRealOrder);
-        const formatted = valid.map(formatApiOrder);
-        setOrdersList(formatted);
-        try {
-          sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify(formatted));
-        } catch {}
+      const hasToken = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_jwt');
+      const fetchPath = (currentPhone && hasToken) ? `/orders/user/${currentPhone}` : (hasToken ? '/orders/' : '');
+      const apiOrders = fetchPath ? await get(fetchPath).catch(() => []) : [];
+      const localOrders = getAllSystemOrders();
+
+      const combined = [...(Array.isArray(localOrders) ? localOrders : []), ...(Array.isArray(apiOrders) ? apiOrders : [])];
+      const seen = new Set();
+      const unique = [];
+
+      for (const o of combined) {
+        if (!isValidRealOrder(o)) continue;
+        const key = String(o.id || o.rawId || o.orderNumber || '').trim();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        unique.push(o);
       }
+
+      const formatted = unique.map(formatApiOrder);
+      setOrdersList(formatted);
+      try {
+        sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify(formatted));
+      } catch {}
     } catch (error) {
-      console.warn('Failed to fetch orders from cloud', error);
+      console.warn('Failed to fetch orders', error);
     } finally {
       isFetchingRef.current = false;
     }
@@ -364,8 +377,14 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchCloudOrders();
-    const interval = setInterval(fetchCloudOrders, 10000);
-    return () => clearInterval(interval);
+    const unsubscribe = subscribeOrderUpdates(() => {
+      fetchCloudOrders();
+    });
+    const interval = setInterval(fetchCloudOrders, 2000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [fetchCloudOrders]);
 
 
@@ -492,12 +511,12 @@ export default function OrdersPage() {
                 </Link>
               </div>
             ) : (
-              filtered.map(order => {
+              filtered.map((order, idx) => {
                 const itemList = safeParseItems(order.items);
                 const displayId = order.displayId || formatOrderId(order.id);
                 return (
                   <div
-                    key={order.id}
+                    key={`${order.id || order.rawId || 'order'}-${idx}`}
                     style={{
                       background: '#FFFFFF', borderRadius: '18px',
                       border: '1px solid #E2E8F0', padding: isMobile ? '14px 16px' : '20px',

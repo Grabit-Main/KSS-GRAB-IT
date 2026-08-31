@@ -1,266 +1,154 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Leaf, ShieldCheck, Truck, Sparkles, ChevronRight, Filter, Search, Award, RefreshCw, Star, Heart } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
-import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function FreshProducePage() {
   const w = useWindowWidth();
   const isMobile = w <= 640;
-  const [selectedSubcat, setSelectedSubcat] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('popular');
+  const isTablet = w <= 1024;
 
-  // Extended produce catalog for rich experience
-  const produceProducts = useMemo(() => {
-    const base = products.filter(p => p.category === 'produce' || p.category === 'fruits-veggies' || (p.name && (p.name.toLowerCase().includes('apple') || p.name.toLowerCase().includes('banana') || p.name.toLowerCase().includes('tomato') || p.name.toLowerCase().includes('capsicum') || p.name.toLowerCase().includes('onion'))));
-    
-    // Add extra curated produce items if list is small
-    const extraItems = [
-      { id: 101, name: "Fresh Hydroponic Baby Spinach 250g", weight: "250g", price: 45, mrp: 60, discount: 25, rating: 4.9, reviews: 340, image: "fresh-fruits-veggies-hero-transparent.png", category: "produce", subcat: "greens", brand: "Grabit Organic", inStock: true, stock_quantity: 40 },
-      { id: 102, name: "Organic Hass Avocado 2 Pcs (Imported)", weight: "2 Pcs (~300g)", price: 199, mrp: 260, discount: 23, rating: 4.8, reviews: 520, image: "fresh-fruits-veggies-hero-transparent.png", category: "produce", subcat: "exotic", brand: "Grabit Organic", inStock: true, stock_quantity: 25 },
-      { id: 103, name: "Fresh Seedless Green Grapes 500g", weight: "500g", price: 89, mrp: 120, discount: 25, rating: 4.9, reviews: 810, image: "fresh-fruits-veggies-hero-transparent.png", category: "produce", subcat: "fruits", brand: "Grabit Fresh", inStock: true, stock_quantity: 50 },
-      { id: 104, name: "Fresh Broccoli Exotic 250g", weight: "250g", price: 49, mrp: 70, discount: 30, rating: 4.7, reviews: 290, image: "fresh-fruits-veggies-hero-transparent.png", category: "produce", subcat: "vegetables", brand: "Grabit Fresh", inStock: true, stock_quantity: 35 },
-      { id: 105, name: "Fresh Mint & Coriander Combo Pack", weight: "200g", price: 25, mrp: 35, discount: 28, rating: 4.8, reviews: 670, image: "fresh-fruits-veggies-hero-transparent.png", category: "produce", subcat: "herbs", brand: "Grabit Organic", inStock: true, stock_quantity: 60 }
-    ];
+  // 🍎 ALL FRESH FRUITS
+  const fruitProducts = useMemo(() => [
+    { id: 507, name: "Royal Gala Crisp Apples 4 Pcs (~500g)", weight: "500g", price: 129, mrp: 180, discount: 28, rating: 4.9, reviews: 1150, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 65 },
+    { id: 508, name: "Fresh Robusta Bananas 6 Pcs (~800g)", weight: "6 Pcs", price: 45, mrp: 65, discount: 30, rating: 4.8, reviews: 1890, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 90 },
+    { id: 509, name: "Fresh Seedless Green Grapes 500g", weight: "500g", price: 89, mrp: 120, discount: 25, rating: 4.9, reviews: 810, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 50 },
+    { id: 510, name: "Fresh Ruby Red Pomegranate / Anar 1kg Pack", weight: "1kg", price: 185, mrp: 260, discount: 28, rating: 4.9, reviews: 740, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 45 },
+    { id: 511, name: "Fresh Semi-Ripe Papaya 1 Pc (~1kg)", weight: "1kg", price: 58, mrp: 80, discount: 27, rating: 4.8, reviews: 490, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 40 },
+    { id: 512, name: "Fresh Imported Zespri Green Kiwi 3 Pcs Pack", weight: "3 Pcs", price: 135, mrp: 180, discount: 25, rating: 4.9, reviews: 620, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 35 },
+    { id: 513, name: "Fresh Sweet Nagpur Oranges 1kg Pack", weight: "1kg", price: 95, mrp: 140, discount: 32, rating: 4.8, reviews: 890, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 60 },
+    { id: 514, name: "Fresh Ratnagiri Alphonso Mangoes 1kg Box", weight: "1kg", price: 349, mrp: 499, discount: 30, rating: 5.0, reviews: 2400, image: "fresh-fruits-veggies-hero-transparent.png", category: "fruits", brand: "Fresh Orchard", inStock: true, stock_quantity: 30 }
+  ], []);
 
-    const combined = [...base];
-    extraItems.forEach(item => {
-      if (!combined.some(p => p.id === item.id)) combined.push(item);
-    });
-
-    return combined;
-  }, []);
-
-  const subcategories = [
-    { id: 'all', label: '🥦 All Produce', icon: '🥗' },
-    { id: 'vegetables', label: '🥕 Fresh Vegetables', icon: '🌽' },
-    { id: 'fruits', label: '🍎 Organic Fruits', icon: '🍓' },
-    { id: 'exotic', label: '🥑 Exotic & Imported', icon: '🫐' },
-    { id: 'greens', label: '🥬 Leafy Greens', icon: '🌿' },
-    { id: 'herbs', label: '🧄 Herbs & Seasonings', icon: '🌶️' }
-  ];
-
-  const filteredProducts = useMemo(() => {
-    return produceProducts.filter(p => {
-      const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      if (selectedSubcat === 'all') return matchSearch;
-      if (selectedSubcat === 'vegetables') return matchSearch && (p.name.toLowerCase().includes('tomato') || p.name.toLowerCase().includes('capsicum') || p.name.toLowerCase().includes('onion') || p.name.toLowerCase().includes('broccoli') || p.subcat === 'vegetables');
-      if (selectedSubcat === 'fruits') return matchSearch && (p.name.toLowerCase().includes('apple') || p.name.toLowerCase().includes('banana') || p.name.toLowerCase().includes('grapes') || p.subcat === 'fruits');
-      if (selectedSubcat === 'exotic') return matchSearch && (p.name.toLowerCase().includes('avocado') || p.subcat === 'exotic');
-      if (selectedSubcat === 'greens') return matchSearch && (p.name.toLowerCase().includes('spinach') || p.subcat === 'greens');
-      if (selectedSubcat === 'herbs') return matchSearch && (p.name.toLowerCase().includes('mint') || p.name.toLowerCase().includes('coriander') || p.subcat === 'herbs');
-      return matchSearch;
-    }).sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
-      return (b.reviews || 0) - (a.reviews || 0);
-    });
-  }, [produceProducts, selectedSubcat, searchQuery, sortBy]);
+  // 🥕 ALL FRESH VEGETABLES
+  const vegetableProducts = useMemo(() => [
+    { id: 501, name: "Fresh Hybrid Red Tomatoes 1kg", weight: "1kg", price: 32, mrp: 45, discount: 28, rating: 4.9, reviews: 1420, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 80 },
+    { id: 502, name: "Fresh Green Capsicum / Shimla Mirch 500g", weight: "500g", price: 42, mrp: 60, discount: 30, rating: 4.8, reviews: 980, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 60 },
+    { id: 503, name: "Fresh Nashik Red Onions 1kg Pack", weight: "1kg", price: 38, mrp: 55, discount: 30, rating: 4.9, reviews: 2100, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 100 },
+    { id: 504, name: "Fresh Farm Potatoes / Aloo 1kg", weight: "1kg", price: 28, mrp: 40, discount: 30, rating: 4.8, reviews: 1750, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 120 },
+    { id: 505, name: "Fresh Green Broccoli 250g", weight: "250g", price: 49, mrp: 70, discount: 30, rating: 4.7, reviews: 310, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 40 },
+    { id: 506, name: "Fresh Crunchy Carrots / Gajar 500g", weight: "500g", price: 35, mrp: 50, discount: 30, rating: 4.8, reviews: 620, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 55 },
+    { id: 515, name: "Fresh White Cauliflower / Gobi 1 Pc (~500g)", weight: "1 Pc", price: 39, mrp: 55, discount: 29, rating: 4.8, reviews: 540, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 45 },
+    { id: 516, name: "Fresh Garlic / Lahsun 250g Pack", weight: "250g", price: 65, mrp: 95, discount: 31, rating: 4.9, reviews: 830, image: "fresh-fruits-veggies-hero-transparent.png", category: "vegetables", brand: "Farm Fresh", inStock: true, stock_quantity: 70 }
+  ], []);
 
   return (
-    <div style={{ backgroundColor: '#F8FAF5', minHeight: '100vh', paddingBottom: '60px' }}>
-      {/* Breadcrumb Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E9E0', padding: '12px 0' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#666' }}>
-          <Link to="/" style={{ color: '#166534', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-          <ChevronRight size={14} color="#999" />
-          <span style={{ color: '#1F2937', fontWeight: 700 }}>Fresh Vegetables & Fruits</span>
+    <div style={{ backgroundColor: '#F8FAF5', color: '#14532D', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Sticky Top Header Bar */}
+      <div style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E2E8F0',
+        padding: isMobile ? '12px 0' : '14px 0',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link to="/" aria-label="Back to Store" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: '#F0FDF4', color: '#166534',
+              textDecoration: 'none', transition: 'all 0.2s ease',
+              border: '1px solid #DCFCE7',
+              boxShadow: '0 2px 8px rgba(22, 101, 52, 0.08)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#DCFCE7'; e.currentTarget.style.transform = 'translateX(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F0FDF4'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <ArrowLeft size={20} color="#166534" />
+            </Link>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h1 style={{
+                margin: 0,
+                fontSize: isMobile ? '17px' : '20px',
+                fontWeight: 900,
+                color: '#14532D',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2
+              }}>
+                Fresh Fruits & Vegetables
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                100% Farm Fresh & Organic • Delivered in 10 mins
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Hero Banner Section */}
-      <div className="container" style={{ marginTop: isMobile ? '12px' : '24px' }}>
+      {/* 🍎 SECTION 1: FRESH FRUITS */}
+      <div id="fruits-section" className="container" style={{ marginTop: isMobile ? '16px' : '24px', marginBottom: isMobile ? '40px' : '52px' }}>
+        {/* Commercial Banner 1: Fresh Fruits & Goodness */}
         <div style={{
-          borderRadius: isMobile ? '16px' : '24px',
+          borderRadius: isMobile ? '20px' : '24px',
           overflow: 'hidden',
+          border: '1.5px solid #DCFCE7',
           boxShadow: '0 12px 32px rgba(22, 101, 52, 0.12)',
-          border: '1.5px solid rgba(34, 197, 94, 0.2)',
+          marginBottom: '20px',
           background: '#FFFFFF'
         }}>
           <img
-            src="/banner-fruits-veggies.png"
-            alt="Fresh Vegetables & Fruits - 100% Organic & Farm Fresh"
+            src="/banner-fresh-fruits.png"
+            alt="Fresh Fruits & Goodness - Handpicked & Farm Fresh Fruits Delivered to your Doorstep"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
         </div>
-      </div>
 
-      {/* Feature Badges Row */}
-      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px' }}>
+        {/* All Fruits Products Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-          gap: '12px'
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? '12px' : '20px'
         }}>
-          {[
-            { icon: <Leaf color="#166534" size={20} />, title: "100% Organic Certified", desc: "Sourced directly from verified farms" },
-            { icon: <ShieldCheck color="#166534" size={20} />, title: "Zero Pesticides", desc: "Ozone washed & safety tested" },
-            { icon: <Truck color="#166534" size={20} />, title: "10-Minute Express", desc: "Temperature controlled delivery" },
-            { icon: <Award color="#166534" size={20} />, title: "Farm Fresh Guarantee", desc: "100% refund if not fresh" }
-          ].map((item, i) => (
-            <div key={i} style={{
-              background: '#FFFFFF',
-              borderRadius: '14px',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-              border: '1px solid #E8EFE2'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '10px',
-                background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {item.icon}
-              </div>
-              <div>
-                <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#166534' }}>{item.title}</h4>
-                <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#6B7280' }}>{item.desc}</p>
-              </div>
-            </div>
+          {fruitProducts.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              badge={`${product.discount}% OFF`}
+              badgeColor="#15803D"
+            />
           ))}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="container" style={{ marginTop: '28px' }}>
-        {/* Category Header & Filters */}
+      {/* 🥕 SECTION 2: FRESH VEGETABLES */}
+      <div id="vegetables-section" className="container" style={{ marginBottom: isMobile ? '40px' : '52px' }}>
+        {/* Commercial Banner 2: Fresh Vegetables & Goodness */}
         <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: isMobile ? '16px' : '20px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-          border: '1px solid #E8EFE2',
-          marginBottom: '24px'
+          borderRadius: isMobile ? '20px' : '24px',
+          overflow: 'hidden',
+          border: '1.5px solid #DCFCE7',
+          boxShadow: '0 12px 32px rgba(22, 101, 52, 0.12)',
+          marginBottom: '20px',
+          background: '#FFFFFF'
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: '16px',
-            marginBottom: '20px'
-          }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: '#14532D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🥗 Farm Fresh Produce Store
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#4B5563' }}>
-                Handpicked farm-fresh vegetables & fruits delivered to your doorstep in 10 mins.
-              </p>
-            </div>
-
-            {/* Controls */}
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
-                <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="text"
-                  placeholder="Search produce..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 36px',
-                    borderRadius: '10px',
-                    border: '1px solid #D1D5DB',
-                    fontSize: '13px',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #D1D5DB',
-                  fontSize: '13px',
-                  background: '#FFFFFF',
-                  color: '#374151',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="popular">🔥 Most Popular</option>
-                <option value="rating">⭐ Highest Rated</option>
-                <option value="price-low">💰 Price: Low to High</option>
-                <option value="price-high">💎 Price: High to Low</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Subcategory Pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {subcategories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedSubcat(cat.id)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: selectedSubcat === cat.id ? '2px solid #166534' : '1px solid #E5E7EB',
-                  background: selectedSubcat === cat.id ? '#F0FDF4' : '#FFFFFF',
-                  color: selectedSubcat === cat.id ? '#166534' : '#4B5563',
-                  fontSize: '13px',
-                  fontWeight: selectedSubcat === cat.id ? 700 : 500,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
+          <img
+            src="/banner-fresh-vegetables.png"
+            alt="Fresh Vegetables & Goodness - Handpicked & Farm Fresh Vegetables Delivered to your Doorstep"
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+          />
         </div>
 
-        {/* Product Grid */}
-        {filteredProducts.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: isMobile ? '12px' : '18px'
-          }}>
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '48px 24px',
-            textAlign: 'center',
-            border: '1px solid #E8EFE2'
-          }}>
-            <Leaf size={48} color="#166534" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#1F2937' }}>No items found in this filter</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: '#6B7280' }}>Try searching for another produce item or clearing your filter.</p>
-            <button
-              onClick={() => { setSelectedSubcat('all'); setSearchQuery(''); }}
-              style={{
-                marginTop: '16px',
-                padding: '8px 20px',
-                background: '#166534',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+        {/* All Vegetables Products Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? '12px' : '20px'
+        }}>
+          {vegetableProducts.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              badge={`${product.discount}% OFF`}
+              badgeColor="#15803D"
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

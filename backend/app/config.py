@@ -7,16 +7,16 @@ class Settings(BaseSettings):
         env_file=[".env", "backend/.env", "../.env"],
         extra="ignore"
     )
-    supabase_url: str = os.getenv("SUPABASE_URL", "https://vhcmjwuhdcdxqmyjvqpz.supabase.co")
-    supabase_publishable_key: str = os.getenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable__liWsDpEneX70mTGaYabSQ_B8J-B3fy")
-    next_public_supabase_url: str = "https://vhcmjwuhdcdxqmyjvqpz.supabase.co"
-    next_public_supabase_publishable_key: str = "sb_publishable__liWsDpEneX70mTGaYabSQ_B8J-B3fy"
-    upstash_redis_rest_url: str = "https://right-elf-90042.upstash.io"
-    upstash_redis_rest_token: str = "gQAAAAAAAV-6AAIgcDE1Zjc1ZmVkNThiZjU0ODYyOGRkZDIzNGQ3YjBmYzdiZg"
-    cloudinary_url: str = "cloudinary://562757386132896:gTGcPuy7hpkPtqzpRiNazSkfh04@hmx3azp6"
-    jwt_secret: str = "grabit-super-secure-jwt-secret-key-2026"
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    next_public_supabase_url: str = ""
+    next_public_supabase_publishable_key: str = ""
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
+    cloudinary_url: str = ""
+    jwt_secret: str = ""
     cors_origins: str = "https://grabit-main.vercel.app,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
-    otp_debug: bool = True
+    otp_debug: bool = False
 
     @property
     def origins(self):
