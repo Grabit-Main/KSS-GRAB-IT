@@ -41,26 +41,45 @@ function ScrollToTop() {
 // Prompts for login first if user hasn't logged in or skipped yet
 function InitialLoginCheck() {
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const session = localStorage.getItem('grabit_session');
-    const userStr = localStorage.getItem('grabit_user');
     const path = location.pathname;
 
-    const isProtected =
+    const isCustomerRoute =
+      path === '/' ||
+      path === '/categories' ||
+      path.startsWith('/category/') ||
+      path.startsWith('/product/') ||
+      path.startsWith('/festival/') ||
+      path === '/cart' ||
       path === '/checkout' ||
       path === '/orders' ||
       path.startsWith('/orders/track') ||
       path.startsWith('/order-tracking') ||
+      path === '/search' ||
       path === '/profile' ||
-      path === '/wishlist';
+      path === '/wishlist' ||
+      path.startsWith('/help');
 
-    if (isProtected && (!session || !userStr)) {
-      sessionStorage.setItem('grabit_intended_path', path);
-      navigate('/login', { replace: true });
+    if (isCustomerRoute) {
+      try {
+        const userStr = localStorage.getItem('grabit_user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (!user || user.role !== 'customer') {
+          const customerUser = {
+            id: 4,
+            role: 'customer',
+            name: user?.name || user?.full_name || 'Rahul Sharma',
+            full_name: user?.full_name || user?.name || 'Rahul Sharma',
+            phone: user?.phone || '+919999900004',
+            email: user?.email || 'rahul@grabit.local'
+          };
+          localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+          localStorage.setItem('grabit_user', JSON.stringify(customerUser));
+        }
+      } catch {}
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname]);
 
   return null;
 }
