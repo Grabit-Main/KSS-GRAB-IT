@@ -19,6 +19,7 @@ import CategoriesOverviewPage from './pages/CategoriesOverviewPage';
 import WishlistPage from './pages/WishlistPage';
 import FestivalPage from './pages/FestivalPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
+import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import './styles/global.css';
 import './styles/components.css';
 
@@ -70,6 +71,7 @@ export default function App() {
                   <AnimatedRoutes />
                 </main>
                 <FloatingCartBar />
+                <DeliveryRiderAnimation />
                 <Footer />
               </div>
             </CartProvider>
