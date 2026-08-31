@@ -1934,10 +1934,10 @@ export function AdminPortalApp() {
                       <thead>
                         <tr style={{ borderBottom: '1.5px solid #E2E8F0', color: '#64748B', background: '#F8FAFC' }}>
                           <th style={{ padding: '10px 12px', fontWeight: 800 }}>PARTNER NAME</th>
-                          <th style={{ padding: '10px 12px', fontWeight 800 }}>PHONE NUMBER</th>
-                          <th style={{ padding: '10px 12px', fontWeight 800 }}>ROLE</th>
-                          <th style={{ padding: '10px 12px', fontWeight 800 }}>STATUS</th>
-                          <th style={{ padding: '10px 12px', fontWeight 800, textAlign: 'right' }}>ACTION</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>PHONE NUMBER</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>ROLE</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>STATUS</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800, textAlign: 'right' }}>ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2067,13 +2067,13 @@ export function AdminPortalApp() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '18px' }}>🛵</span>
                           <div>
-                            <h3 style={{ fontSize: '15px', fontWeight 900, color: '#0F172A', margin: 0 }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                               Delivery Fleet &amp; Riders ({ridersList.length})
                             </h3>
                             <div style={{ fontSize: '11px', color: '#64748B' }}>Express delivery agents &amp; logistics fleet</div>
                           </div>
                         </div>
-                        <span style={{ background: '#F0FDF4', color: '#16A34A', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight 800 }}>
+                        <span style={{ background: '#F0FDF4', color: '#16A34A', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800 }}>
                           {ridersList.length} Active Riders
                         </span>
                       </div>
