@@ -69,22 +69,6 @@ export const PerformanceScreen: React.FC = () => {
           </span>
         </div>
 
-        {/* Customer Rating */}
-        <div className="glass-card" style={{ padding: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-soft-gray)' }}>Customer Rating</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '9px', backgroundColor: 'rgba(255, 214, 10, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Star size={16} color="#D4A000" fill="#FFD60A" />
-            </div>
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '2px' }}>
-            {stats.rating.toFixed(2)} <span style={{ fontSize: '14px', color: 'var(--color-soft-gray)', fontWeight: '500' }}>★</span>
-          </div>
-          <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>
-            Based on {stats.totalDeliveries} completed deliveries
-          </span>
-        </div>
-
         {/* On-Time SLA */}
         <div className="glass-card" style={{ padding: '18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -169,12 +153,19 @@ export const PerformanceScreen: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--glass-border-subtle)' }}>
               <span style={{ color: 'var(--color-soft-gray)' }}>Average Delivery Duration</span>
-              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>17.4 mins</span>
+              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>
+                {(() => {
+                  const completed = (state.history || []).filter(h => h.status === 'DELIVERED');
+                  if (completed.length === 0) return '0 mins';
+                  const avg = completed.reduce((sum, h) => sum + (h.estimatedTimeMins || 15), 0) / completed.length;
+                  return `${avg.toFixed(1)} mins`;
+                })()}
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--glass-border-subtle)' }}>
               <span style={{ color: 'var(--color-soft-gray)' }}>Order Acceptance Rate</span>
-              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>97.8%</span>
+              <span style={{ fontWeight: '700', color: 'var(--color-graphite)' }}>100%</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--glass-border-subtle)' }}>

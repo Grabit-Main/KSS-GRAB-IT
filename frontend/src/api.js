@@ -15,17 +15,9 @@ export async function api(path, options = {}) {
   const token = getAuthToken();
   const isGet = !options.method || options.method === 'GET';
 
-  // Public or auth endpoints that do not require a JWT token
-  const isAuthOrPublic =
-    path.includes('/auth/') ||
-    path.includes('/products') ||
-    path.includes('/categories') ||
-    path.includes('/stores') ||
-    path.includes('/product-suggestions') ||
-    path === '/' ||
-    path === '/health';
-
-  if (!token && !isAuthOrPublic) return null;
+  // For public endpoints (orders, products, categories), allow GET requests even without auth token
+  const isPublicGet = isGet && (path.includes('/orders') || path.includes('/products') || path.includes('/categories'));
+  if (isGet && !token && !isPublicGet) return null;
 
   // ✅ FIX: Abort hung requests after 8 seconds so a slow backend response can't
   // block subsequent poll cycles from starting.
@@ -44,22 +36,10 @@ export async function api(path, options = {}) {
     });
     clearTimeout(timeoutId);
     if (response.status === 204) return null;
-    // Treat 401/403 on GET or /cart/sync as non-fatal — fall back silently
-    if (response.status === 401 || response.status === 403) {
-      if (token) {
-        try {
-          localStorage.removeItem('grabit_session');
-          localStorage.removeItem('grabit_seller_access');
-          localStorage.removeItem('grabit_jwt');
-          localStorage.removeItem('grabit_auth_token');
-        } catch {}
-      }
-      if (isGet || path.includes('/cart/sync')) return null;
-    }
+    // Treat 401/403 on GET as empty response — fall back to localStorage silently
+    if ((response.status === 401 || response.status === 403) && isGet) return null;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.detail || 'Something went wrong. Please try again.');
-    }
+    if (!response.ok) throw new Error(data.detail || 'Something went wrong. Please try again.');
     return data;
   } catch (err) {
     clearTimeout(timeoutId);

@@ -35,13 +35,12 @@ export const DashboardAvailable: React.FC = () => {
       return {};
     }
   })();
-  const rawName = loggedInUser.name || loggedInUser.full_name || loggedInUser.username;
-  const agentName = (rawName && rawName !== 'Speedy Express Delivery' && rawName !== 'Delivery Partner')
-    ? rawName
-    : 'Alex Mercer';
+  const agentName = loggedInUser.full_name || loggedInUser.name || loggedInUser.username || 'Delivery Partner';
 
-  const isUnavailable = agentStatus === 'UNAVAILABLE';
-  const isOnDelivery = agentStatus === 'ON_DELIVERY' && currentOrder !== null;
+  const isVerifiedRider = true;
+
+  const isUnavailable = agentStatus === 'UNAVAILABLE' || !isVerifiedRider;
+  const isOnDelivery = isVerifiedRider && agentStatus === 'ON_DELIVERY' && currentOrder !== null;
 
   const getStepText = (status: string) => {
     switch (status) {
@@ -64,6 +63,69 @@ export const DashboardAvailable: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+
+      {/* 🔒 Unverified Rider Alert Banner */}
+      {!isVerifiedRider && (
+        <div
+          className="glass-card"
+          style={{
+            padding: '18px 20px',
+            backgroundColor: '#FFFBEB',
+            border: '1.5px solid #FDE68A',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            boxShadow: '0 4px 18px rgba(245, 158, 11, 0.12)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '14px',
+                backgroundColor: '#FEF3C7',
+                border: '1px solid #FCD34D',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <ShieldCheck size={24} color="#D97706" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#92400E', margin: '0 0 2px' }}>
+                🔒 Verification Required to Accept Deliveries
+              </h3>
+              <p style={{ fontSize: '12.5px', color: '#B45309', margin: 0, fontWeight: '600' }}>
+                Your account clearance documents are under review or pending upload. Complete verification to receive orders.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/delivery/profile')}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '14px',
+              backgroundColor: '#D97706',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: '800',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(217, 119, 6, 0.35)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Complete Profile Verification →
+          </button>
+        </div>
+      )}
 
       {/* Dashboard Greeting Header */}
       <div
@@ -518,32 +580,6 @@ export const DashboardAvailable: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer Rating */}
-          <div className="glass-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                backgroundColor: 'rgba(255, 214, 10, 0.15)',
-                border: '1px solid rgba(255, 214, 10, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Star size={24} color="#D4A000" fill="#FFD60A" />
-            </div>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-soft-gray)', display: 'block' }}>
-                Customer Rating
-              </span>
-              <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', letterSpacing: '-0.4px' }}>
-                {stats.rating.toFixed(2)} <span style={{ fontSize: '13px', color: 'var(--color-soft-gray)', fontWeight: '500' }}>★</span>
-              </span>
-            </div>
-          </div>
 
           {/* On-Time SLA */}
           <div className="glass-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>

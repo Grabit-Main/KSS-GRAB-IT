@@ -1,6 +1,6 @@
-# GrabIt
+# GrabIt - Delivery Agent Portal (Branch: Thabeethal)
 
-GrabIt is a single, mobile-first marketplace application with role-aware customer, seller, delivery-agent, and admin portals. The original three prototypes remain in this repository as design/reference material; the deployable application is now split cleanly into `frontend/` and `backend/`.
+GrabIt Delivery Agent Portal is a mobile-first delivery management application for riders. Dedicated branch: `Thabeethal`.
 
 ## Run locally
 

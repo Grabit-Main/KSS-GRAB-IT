@@ -15,7 +15,11 @@ import {
 
 export const Sidebar: React.FC = () => {
   const { state, unreadCount } = useDelivery();
-  const { agentStatus } = state;
+  const { agentStatus, currentOrder } = state;
+
+  const isVerifiedRider = true;
+
+  const isOnDeliveryWithOrder = isVerifiedRider && agentStatus === 'ON_DELIVERY' && currentOrder !== null;
 
   const navItems = [
     { to: '/delivery/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,17 +27,15 @@ export const Sidebar: React.FC = () => {
       to: '/delivery/active-delivery',
       label: 'Active Delivery',
       icon: Navigation,
-      hasActiveOrder: agentStatus === 'ON_DELIVERY'
+      hasActiveOrder: isOnDeliveryWithOrder
     },
     { to: '/delivery/delivery-history', label: 'History', icon: History },
-    { to: '/delivery/performance', label: 'Performance', icon: BarChart2 },
     {
       to: '/delivery/notifications',
       label: 'Notifications',
       icon: Bell,
       badge: unreadCount > 0 ? unreadCount : undefined
     },
-    { to: '/delivery/support', label: 'Support', icon: HelpCircle },
     { to: '/delivery/settings', label: 'Settings', icon: Settings },
     { to: '/delivery/profile', label: 'Profile', icon: User }
   ];
@@ -85,8 +87,8 @@ export const Sidebar: React.FC = () => {
                     <span
                       style={{
                         position: 'absolute',
-                        top: '-2px',
-                        right: '-2px',
+                        top: '-3px',
+                        right: '-3px',
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
