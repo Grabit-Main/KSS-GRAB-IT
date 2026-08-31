@@ -19,13 +19,7 @@ import HelpPage from './pages/HelpPage';
 import CategoriesOverviewPage from './pages/CategoriesOverviewPage';
 import WishlistPage from './pages/WishlistPage';
 import FestivalPage from './pages/FestivalPage';
-import DiwaliBannerPage from './pages/DiwaliBannerPage';
-import FreshProducePage from './pages/FreshProducePage';
-import PharmacyPage from './pages/PharmacyPage';
-import ChickenMeatPage from './pages/ChickenMeatPage';
-import ExclusiveDealsPage from './pages/ExclusiveDealsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
-import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import './styles/global.css';
 import './styles/components.css';
 
@@ -47,39 +41,45 @@ function ScrollToTop() {
 // Prompts for login first if user hasn't logged in or skipped yet
 function InitialLoginCheck() {
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const session = localStorage.getItem('grabit_session');
-    const userStr = localStorage.getItem('grabit_user');
     const path = location.pathname;
 
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        // Only redirect rider on root '/' initial load if not intentionally navigating elsewhere
-        if (user && user.role === 'delivery_agent' && path === '/' && !sessionStorage.getItem('grabit_skipped_login')) {
-          navigate('/delivery/dashboard', { replace: true });
-          return;
-        }
-      } catch {
-        // safe JSON parse check
-      }
-    }
-
-    const isProtected =
+    const isCustomerRoute =
+      path === '/' ||
+      path === '/categories' ||
+      path.startsWith('/category/') ||
+      path.startsWith('/product/') ||
+      path.startsWith('/festival/') ||
+      path === '/cart' ||
       path === '/checkout' ||
       path === '/orders' ||
       path.startsWith('/orders/track') ||
       path.startsWith('/order-tracking') ||
+      path === '/search' ||
       path === '/profile' ||
-      path === '/wishlist';
+      path === '/wishlist' ||
+      path.startsWith('/help');
 
-    if (isProtected && (!session || !userStr)) {
-      sessionStorage.setItem('grabit_intended_path', path);
-      navigate('/login', { replace: true });
+    if (isCustomerRoute) {
+      try {
+        const userStr = localStorage.getItem('grabit_user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (!user || user.role !== 'customer') {
+          const customerUser = {
+            id: 4,
+            role: 'customer',
+            name: user?.name || user?.full_name || 'Rahul Sharma',
+            full_name: user?.full_name || user?.name || 'Rahul Sharma',
+            phone: user?.phone || '+919999900004',
+            email: user?.email || 'rahul@grabit.local'
+          };
+          localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+          localStorage.setItem('grabit_user', JSON.stringify(customerUser));
+        }
+      } catch {}
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname]);
 
   return null;
 }
@@ -94,17 +94,12 @@ function AnimatedRoutes() {
 
   const routes = (
     <Routes location={location}>
-      {/* Customer Portal Routes */}
+      {/* Customer Home Page Route */}
       <Route path="/" element={<HomePage />} />
       <Route path="/categories" element={<CategoriesOverviewPage />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/product/:id" element={<ProductDetailPage />} />
       <Route path="/festival/:festivalId" element={<FestivalPage />} />
-      <Route path="/diwali-banner" element={<DiwaliBannerPage />} />
-      <Route path="/fresh-produce" element={<FreshProducePage />} />
-      <Route path="/pharmacy" element={<PharmacyPage />} />
-      <Route path="/chicken-meat" element={<ChickenMeatPage />} />
-      <Route path="/exclusive-deals" element={<ExclusiveDealsPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders" element={<OrdersPage />} />
@@ -149,25 +144,17 @@ function AppContent() {
     location.pathname.startsWith('/delivery') ||
     location.pathname.startsWith('/admin');
 
-  const hideHeader =
-    location.pathname === '/exclusive-deals' ||
-    location.pathname === '/fresh-produce' ||
-    location.pathname === '/pharmacy' ||
-    location.pathname === '/chicken-meat' ||
-    location.pathname.startsWith('/product/');
-
   if (isPortalOrAuth) {
     return <AnimatedRoutes />;
   }
 
   return (
     <div className="page-wrapper">
-      {!hideHeader && <Header />}
+      <Header />
       <main className="page-content">
         <AnimatedRoutes />
       </main>
       <FloatingCartBar />
-      <DeliveryRiderAnimation />
       <Footer />
     </div>
   );

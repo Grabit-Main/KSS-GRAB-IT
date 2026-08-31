@@ -779,14 +779,14 @@ a {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(29, 29, 31, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(29, 29, 31, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 36px 16px 16px;
+  z-index: 9999;
+  padding: 16px;
   overflow-y: auto;
   animation: backdrop-fade-in 0.22s ease-out forwards;
 }

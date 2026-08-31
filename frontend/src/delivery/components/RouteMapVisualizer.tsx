@@ -246,9 +246,18 @@ export const RouteMapVisualizer: React.FC<RouteMapVisualizerProps> = ({
       .addTo(map)
       .bindPopup(`<b>${customerName}</b><br/>${customerAddress}`);
 
+    const loggedRiderName = (() => {
+      try {
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        return u.full_name || u.name || 'Thabee';
+      } catch {
+        return 'Thabee';
+      }
+    })();
+
     const driverMarker = L.marker([hubCoords.lat, hubCoords.lng], { icon: driverIcon, zIndexOffset: 1000 })
       .addTo(map)
-      .bindPopup(`<b>Delivery Agent Alex Mercer</b><br/>Status: ${orderStatus}`);
+      .bindPopup(`<b>Delivery Agent ${loggedRiderName}</b><br/>Status: ${orderStatus}`);
 
     hubMarkerRef.current = hubMarker;
     customerMarkerRef.current = customerMarker;

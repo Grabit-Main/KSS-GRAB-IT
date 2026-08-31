@@ -23,7 +23,6 @@ import {
   grabitSupermarket
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
-import { subscribeOrderUpdates, notifyOrderUpdate } from '../../utils/orderSync';
 import { get, patch, post } from '../../api';
 
 const parseItems = (raw: any) => {
@@ -131,9 +130,68 @@ const getDistanceWithin5Km = (idStr: string | number): number => {
   };
 };
 
+const isTodayHistoryEntry = (h: DeliveryHistoryEntry): boolean => {
+  if (!h) return false;
+  const isoStr = h.completedAtISO || (h as any).dateIso || (h as any).created_at;
+  if (isoStr) {
+    try {
+      const entryDate = new Date(isoStr);
+      if (!isNaN(entryDate.getTime())) {
+        return entryDate.toDateString() === new Date().toDateString();
+      }
+    } catch {}
+  }
+  if (h.timestamp === 'Just now' || /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test((h.timestamp || '').trim())) {
+    return true;
+  }
+  return false;
+};
+
+const deriveStatsFromHistory = (history: DeliveryHistoryEntry[], baseStats: DeliveryStats): DeliveryStats => {
+  const completedToday = history.filter((h) => h.status === 'DELIVERED' && isTodayHistoryEntry(h)).length;
+  const totalDeliveries = history.length;
+
+  return {
+    ...baseStats,
+    totalDeliveries,
+    completedToday
+  };
+};
+
+const mergeHistoryEntries = (local: DeliveryHistoryEntry[], cloud: DeliveryHistoryEntry[]): DeliveryHistoryEntry[] => {
+  const map = new Map<string, DeliveryHistoryEntry>();
+
+  const getDedupeKey = (e: DeliveryHistoryEntry, idx: number): string => {
+    const numKey = formatOrderId(e.orderNumber || e.orderId).toLowerCase().trim();
+    if (numKey) return `num:${numKey}`;
+    const idKey = String(e.orderId || '').toLowerCase().trim();
+    if (idKey) return `id:${idKey}`;
+    return `idx:${idx}_${Date.now()}`;
+  };
+
+  (local || []).forEach((entry, i) => {
+    const key = getDedupeKey(entry, i);
+    map.set(key, entry);
+  });
+
+  (cloud || []).forEach((entry, i) => {
+    const key = getDedupeKey(entry, i);
+    if (!map.has(key)) {
+      map.set(key, entry);
+    } else {
+      const existing = map.get(key)!;
+      map.set(key, { ...existing, ...entry });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 // Map a raw delivered Supabase order to a DeliveryHistoryEntry
 const mapApiOrderToHistoryEntry = (o: any): DeliveryHistoryEntry => {
   const dist = o.distance_km || o.distanceKm || getDistanceWithin5Km(o.id || o.orderNumber || o.created_at || 'hist');
+  const tot = Number(o.total_amount || o.total || 0);
+  const earn = Number(o.earning || (tot > 0 ? 55 + dist * 10 : 65));
   return {
     orderId: o.id || o.rawId || '',
     orderNumber: formatOrderId(o.id || o.orderNumber || o.rawId),
@@ -142,10 +200,12 @@ const mapApiOrderToHistoryEntry = (o: any): DeliveryHistoryEntry => {
     deliveryLocation: o.delivery_address || o.address || 'Delivery Address',
     status: 'DELIVERED',
     timestamp: o.created_at ? new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Delivered',
-    totalAmount: Number(o.total_amount || o.total || 0),
+    completedAtISO: o.created_at ? new Date(o.created_at).toISOString() : new Date().toISOString(),
+    totalAmount: tot,
     paymentMethod: (o.payment_method === 'COD' || String(o.payment_method || '').toUpperCase().includes('COD') ? 'COD' : 'PREPAID') as any,
     distanceKm: dist,
-    durationMinutes: Math.min(18, Math.round(dist * 3 + 5))
+    durationMinutes: Math.min(18, Math.round(dist * 3 + 5)),
+    earning: earn
   };
 };
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,7 +260,15 @@ type DeliveryAction =
 
 const getSavedPayouts = (): PayoutTransfer[] => {
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_payout_transfers') : null;
+    let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+    try {
+      const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
+      if (u.id) riderId = String(u.id);
+      else if (u.phone) riderId = String(u.phone);
+    } catch {}
+
+    const key = `grabit_payout_transfers_${riderId}`;
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -226,20 +294,24 @@ const getSavedNotifications = (): AppNotification[] => {
 
 const getSavedRedeemedCampaigns = (): string[] => {
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_redeemed_incentives') : null;
+    let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+    try {
+      const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
+      if (u.id) riderId = String(u.id);
+      else if (u.phone) riderId = String(u.phone);
+    } catch {}
+
+    const key = `grabit_redeemed_incentives_${riderId}`;
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
-    const defaultRedeemed = ['INC-2026-SURGE'];
-    try {
-      localStorage.setItem('grabit_redeemed_incentives', JSON.stringify(defaultRedeemed));
-    } catch {}
-    return defaultRedeemed;
+    return [];
   } catch {
-    return ['INC-2026-SURGE'];
+    return [];
   }
 };
 
@@ -254,21 +326,28 @@ const getSavedSupportTickets = (): SupportTicket[] => {
 
 const getSavedHistory = (): DeliveryHistoryEntry[] => {
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_delivery_history') : null;
+    let riderId = 'default';
+    try {
+      const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
+      if (u.id) riderId = String(u.id);
+      else if (u.phone) riderId = String(u.phone);
+    } catch {}
+
+    const key = `grabit_delivery_history_${riderId}`;
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length >= 24) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
-    try {
-      localStorage.setItem('grabit_delivery_history', JSON.stringify(initialHistory));
-    } catch {}
-    return initialHistory;
+    return [];
   } catch {
-    return initialHistory;
+    return [];
   }
 };
+
+const initialHistoryEntries = getSavedHistory();
 
 const initialDeliveryState: DeliveryState = {
   agentStatus: 'AVAILABLE',
@@ -277,9 +356,9 @@ const initialDeliveryState: DeliveryState = {
   incomingOrder: null,
   incomingCountdown: 0,
   orderPool: initialOrdersPool,
-  history: getSavedHistory(),
+  history: initialHistoryEntries,
   payoutTransfers: getSavedPayouts(),
-  stats: {
+  stats: deriveStatsFromHistory(initialHistoryEntries, {
     completedToday: 0,
     totalDeliveries: 0,
     failedToday: 0,
@@ -289,7 +368,7 @@ const initialDeliveryState: DeliveryState = {
     completionRate: 100,
     totalDistanceKm: 0,
     activeShiftMinutes: 0
-  },
+  }),
   notifications: getSavedNotifications(),
   supportTickets: getSavedSupportTickets(),
   settings: { ...initialSettings },
@@ -448,6 +527,7 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         proofOfDelivery: action.payload.pod
       };
 
+      const completedEarning = completedOrder.totalAmount > 0 ? Math.round(55 + (completedOrder.distanceKm || 2) * 10) : 65;
       const newHistoryEntry: DeliveryHistoryEntry = {
         orderId: completedOrder.id,
         orderNumber: completedOrder.orderNumber,
@@ -456,10 +536,12 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         deliveryLocation: completedOrder.customer.address,
         status: 'DELIVERED',
         timestamp: 'Just now',
+        completedAtISO: new Date().toISOString(),
         totalAmount: completedOrder.totalAmount,
         paymentMethod: completedOrder.paymentMethod,
         distanceKm: completedOrder.distanceKm,
-        durationMinutes: completedOrder.estimatedMinutes || 18
+        durationMinutes: completedOrder.estimatedMinutes || 18,
+        earning: completedEarning
       };
 
       const successNotif: AppNotification = {
@@ -472,12 +554,28 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       };
 
       const newHistory = [newHistoryEntry, ...state.history];
-      const newStats = {
-        ...state.stats,
-        completedToday: state.stats.completedToday + 1,
-        totalDeliveries: state.stats.totalDeliveries + 1,
-        totalDistanceKm: +(state.stats.totalDistanceKm + completedOrder.distanceKm).toFixed(1)
-      };
+      const newStats = deriveStatsFromHistory(newHistory, state.stats);
+
+      try {
+        let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        if (u.id) riderId = String(u.id);
+        else if (u.phone) riderId = String(u.phone);
+        localStorage.setItem(`grabit_delivery_history_${riderId}`, JSON.stringify(newHistory));
+
+        // Immediately persist to delivered ids set so background polling never re-assigns
+        const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+        const deliveredSet = new Set(Array.isArray(deliveredList) ? deliveredList.map((x: any) => String(x).toLowerCase().trim()) : []);
+        if (completedOrder.id) {
+          deliveredSet.add(String(completedOrder.id).toLowerCase().trim());
+          deliveredSet.add(formatOrderId(completedOrder.id).toLowerCase().trim());
+        }
+        if (completedOrder.orderNumber) {
+          deliveredSet.add(String(completedOrder.orderNumber).toLowerCase().trim());
+          deliveredSet.add(formatOrderId(completedOrder.orderNumber).toLowerCase().trim());
+        }
+        localStorage.setItem('grabit_delivered_order_ids', JSON.stringify(Array.from(deliveredSet)));
+      } catch {}
 
       // ── Check if there are queued orders waiting for this rider ──
       let nextActive: Order | null = null;
@@ -547,6 +645,7 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         deliveryLocation: finalizedOrder.customer.address,
         status: terminalStatus,
         timestamp: 'Just now',
+        completedAtISO: new Date().toISOString(),
         totalAmount: finalizedOrder.totalAmount,
         paymentMethod: finalizedOrder.paymentMethod,
         distanceKm: finalizedOrder.distanceKm,
@@ -564,11 +663,11 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       };
 
       const newHistoryIssue = [newHistoryEntry, ...state.history];
-      const newStatsIssue = {
+      const newStatsIssue = deriveStatsFromHistory(newHistoryIssue, {
         ...state.stats,
         failedToday: terminalStatus === 'FAILED_DELIVERY' ? state.stats.failedToday + 1 : state.stats.failedToday,
         returnedToday: terminalStatus === 'RETURNED' ? state.stats.returnedToday + 1 : state.stats.returnedToday
-      };
+      });
 
       return {
         ...state,
@@ -668,11 +767,19 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
 
     case 'REDEEM_INCENTIVE': {
       const { campaignId, amount } = action.payload;
+      let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+      try {
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        if (u.id) riderId = String(u.id);
+        else if (u.phone) riderId = String(u.phone);
+      } catch {}
+
+      const key = `grabit_redeemed_incentives_${riderId}`;
       const redeemedIds = getSavedRedeemedCampaigns();
       if (!redeemedIds.includes(campaignId)) {
         redeemedIds.push(campaignId);
         try {
-          localStorage.setItem('grabit_redeemed_incentives', JSON.stringify(redeemedIds));
+          localStorage.setItem(key, JSON.stringify(redeemedIds));
         } catch {}
       }
 
@@ -726,7 +833,17 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
           const dSet = new Set(Array.isArray(dList) ? dList.map((x: any) => String(x).toLowerCase().trim()) : []);
           const aId = String(activeOrder.id || '').toLowerCase().trim();
           const aNum = String(activeOrder.orderNumber || '').toLowerCase().trim();
-          if (dSet.has(aId) || dSet.has(aNum)) isDelivered = true;
+          const aFmt = formatOrderId(activeOrder.orderNumber || activeOrder.id).toLowerCase().trim();
+
+          const inHistory = (state.history || []).some(h => {
+            const hNum = formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim();
+            const hId = String(h.orderId || '').toLowerCase().trim();
+            return (aFmt && hNum === aFmt) || (hId && hId === aId) || (hNum && hNum === aNum);
+          });
+
+          if (dSet.has(aId) || dSet.has(aNum) || (aFmt && dSet.has(aFmt)) || inHistory) {
+            isDelivered = true;
+          }
         } catch {}
 
         if (!isDelivered) {
@@ -741,6 +858,8 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       }
       return {
         ...state,
+        agentStatus: state.currentOrder ? state.agentStatus : 'AVAILABLE',
+        currentOrder: state.currentOrder && (state.history || []).some(h => formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim() === formatOrderId(state.currentOrder?.orderNumber || state.currentOrder?.id).toLowerCase().trim()) ? null : state.currentOrder,
         queuedOrders,
         orderPool: poolOrders
       };
@@ -754,30 +873,38 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
     }
 
     case 'SYNC_CLOUD_HISTORY': {
-      // Replace in-memory history with fresh data from cloud API & persist locally
-      const cloudEntries = action.payload;
+      let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
       try {
-        localStorage.setItem('grabit_delivery_history', JSON.stringify(cloudEntries));
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        if (u.id) riderId = String(u.id);
+        else if (u.phone) riderId = String(u.phone);
       } catch {}
 
-      const deliveredEntries = cloudEntries.filter(e => e.status === 'DELIVERED');
-      const deliveredCount = deliveredEntries.length;
-      const sumDistance = deliveredEntries.reduce((sum, e) => sum + (e.distanceKm || 3.2), 0);
-      const totalDistanceKm = +(sumDistance > 0 ? sumDistance : (deliveredCount > 0 ? deliveredCount * 3.2 : 0)).toFixed(1);
+      const key = `grabit_delivery_history_${riderId}`;
+      const cloudEntries = action.payload;
+      const mergedEntries = mergeHistoryEntries(state.history, cloudEntries);
+      try {
+        localStorage.setItem(key, JSON.stringify(mergedEntries));
+      } catch {}
+
+      const derivedStats = deriveStatsFromHistory(mergedEntries, state.stats);
 
       return {
         ...state,
-        history: cloudEntries,
-        stats: {
-          ...state.stats,
-          completedToday: deliveredCount,
-          totalDeliveries: cloudEntries.length,
-          totalDistanceKm
-        }
+        history: mergedEntries,
+        stats: derivedStats
       };
     }
 
     case 'TRANSFER_PAYOUT': {
+      let riderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+      try {
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        if (u.id) riderId = String(u.id);
+        else if (u.phone) riderId = String(u.phone);
+      } catch {}
+
+      const key = `grabit_payout_transfers_${riderId}`;
       const now = new Date();
       const newTransfer: PayoutTransfer = {
         id: `TXN-UPI-${Date.now()}`,
@@ -799,7 +926,7 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
 
       const nextTransfers = [newTransfer, ...(state.payoutTransfers || [])];
       try {
-        localStorage.setItem('grabit_payout_transfers', JSON.stringify(nextTransfers));
+        localStorage.setItem(key, JSON.stringify(nextTransfers));
       } catch {}
 
       return {
@@ -818,7 +945,7 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         orderPool: [],
         history: [],
         payoutTransfers: [],
-        stats: { ...initialStats },
+        stats: deriveStatsFromHistory([], initialStats),
         notifications: [],
         supportTickets: [],
         settings: { ...initialSettings }
@@ -881,6 +1008,12 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const rawId = String(deliveredOrder.id || '');
       const orderNum = String(deliveredOrder.orderNumber || '');
 
+      let loggedRiderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
+      try {
+        const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+        if (u.id) loggedRiderId = String(u.id);
+      } catch {}
+
       // 1. Mark in delivered IDs set so polling never brings it back
       try {
         const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
@@ -902,7 +1035,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const nLower = orderNum.toLowerCase().trim();
 
             if (oId === rLower || oId === nLower || oRaw === rLower || oRaw === nLower || oNum === rLower || oNum === nLower) {
-              return { ...o, status: 'delivered', delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' };
+              return { ...o, status: 'delivered', delivery_agent_id: loggedRiderId };
             }
             return o;
           });
@@ -924,7 +1057,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   const nLower = orderNum.toLowerCase().trim();
 
                   if (uId === rLower || uId === nLower || uRaw === rLower || uRaw === nLower || uNum === rLower || uNum === nLower) {
-                    return { ...uo, status: 'delivered', delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' };
+                    return { ...uo, status: 'delivered', delivery_agent_id: loggedRiderId };
                   }
                   return uo;
                 });
@@ -942,7 +1075,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (rawId) {
         patch(`/orders/${encodeURIComponent(rawId)}/status`, {
           status: 'delivered',
-          delivery_agent_id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a'
+          delivery_agent_id: loggedRiderId
         })
           .then(() => {
             // After backend confirms delivery, refetch history from cloud
@@ -976,6 +1109,15 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       soundEngine.playWarning();
       return;
     }
+    const isVerified = true;
+
+    if (!isVerified) {
+      soundEngine.playWarning();
+      alert('🔒 Verification Required: You cannot go Online until your clearance documents and facial biometrics are verified. Please check your Profile tab.');
+      dispatch({ type: 'SET_AGENT_STATUS', payload: 'UNAVAILABLE' });
+      return;
+    }
+
     if (state.agentStatus === 'AVAILABLE') {
       soundEngine.playStepAdvance();
       dispatch({ type: 'SET_AGENT_STATUS', payload: 'UNAVAILABLE' });
@@ -984,6 +1126,20 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       soundEngine.playIncomingOrderAlert();
       dispatch({ type: 'SET_AGENT_STATUS', payload: 'AVAILABLE' });
     }
+  }, [state.agentStatus]);
+
+  // Strict Verification Guard: Keep rider active when online
+  useEffect(() => {
+    try {
+      const isFullyVerified = true;
+
+      if (!isFullyVerified && state.agentStatus !== 'UNAVAILABLE') {
+        dispatch({ type: 'SET_AGENT_STATUS', payload: 'UNAVAILABLE' });
+        try {
+          localStorage.setItem('grabit_delivery_agent_status', 'UNAVAILABLE');
+        } catch {}
+      }
+    } catch {}
   }, [state.agentStatus]);
 
   const openModal = useCallback((modal: 'CALL' | 'CHAT' | 'MERCHANT_CALL' | 'SOS' | 'REPORT_ISSUE' | 'POD' | 'DELIVERY_SUCCESS' | 'INCENTIVE_DETAILS') => {
@@ -1002,6 +1158,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [state.settings.deliveryAlertSound]);
 
   const acceptOrder = useCallback(async (order: Order) => {
+    const isVerified = true;
+
+    if (!isVerified) {
+      alert('🔒 Verification Required: You must complete document upload and verification in Profile before accepting orders.');
+      return;
+    }
+
     const rawId = order.id;
     if (!rawId) return;
     try {
@@ -1058,14 +1221,27 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Combine unique orders, ensuring initial seller orders pool is always available
         const allRaw = [...localOrders, ...apiOrders, ...initialOrdersPool];
-        const seenKeys = new Set();
+        const seenKeys = new Set<string>();
         const uniqueOrders = [];
 
         for (const o of allRaw) {
           if (!isValidRealOrder(o)) continue;
-          const key = String(o.rawId || o.id || o.orderNumber || '').trim();
-          if (!key || seenKeys.has(key)) continue;
-          seenKeys.add(key);
+
+          const numKey = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
+          const idKey = String(o.id || '').toLowerCase().trim();
+          const rawIdKey = String(o.rawId || '').toLowerCase().trim();
+
+          if (
+            (numKey && seenKeys.has(numKey)) ||
+            (idKey && seenKeys.has(idKey)) ||
+            (rawIdKey && seenKeys.has(rawIdKey))
+          ) {
+            continue; // STRICTLY SKIP DUPLICATE ORDER!
+          }
+
+          if (numKey) seenKeys.add(numKey);
+          if (idKey) seenKeys.add(idKey);
+          if (rawIdKey) seenKeys.add(rawIdKey);
           uniqueOrders.push(o);
         }
 
@@ -1099,18 +1275,21 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const oid = String(o.id || '').toLowerCase().trim();
           const oraw = String(o.rawId || '').toLowerCase().trim();
           const onum = String(o.orderNumber || '').toLowerCase().trim();
+          const ofmt = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
 
-          if (deliveredIds.has(oid) || deliveredIds.has(oraw) || deliveredIds.has(onum)) {
+          if (
+            deliveredIds.has(oid) ||
+            deliveredIds.has(oraw) ||
+            deliveredIds.has(onum) ||
+            (ofmt && deliveredIds.has(ofmt))
+          ) {
             continue; // ALREADY DELIVERED! STRICTLY SKIP!
           }
 
           const agent = String(o.delivery_agent_id || '').trim();
           if (
-            agent === loggedRiderId ||
-            agent === loggedRiderPhone ||
-            agent === '+919999900003' ||
-            agent === '3' ||
-            agent === 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a'
+            agent &&
+            (agent === loggedRiderId || agent === loggedRiderPhone)
           ) {
             assignedRaw.push(o);
           } else if (!agent || agent === 'null' || agent === 'None') {
@@ -1118,14 +1297,38 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
 
-        const poolOrders = poolRaw.map(mapApiOrderToOrder);
-        const assignedOrders = assignedRaw.map(mapApiOrderToOrder);
+        let poolOrders = poolRaw.map(mapApiOrderToOrder);
+        let assignedOrders = assignedRaw.map(mapApiOrderToOrder);
+
+        // Check if current rider is verified
+        const isVerified = (() => {
+          try {
+            const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
+            if (u.partnerVerified === true) return true;
+            const clearances = u.clearances || {};
+            const ts = u.clearanceTimestamps || u.clearance_timestamps || {};
+            const ONE_HOUR = 60 * 60 * 1000;
+            const now = Date.now();
+            const biometricsDone = !!(u.biometricsDone || u.selfieImage || u.avatar_url || u.selfie_image);
+            const dlSubmitted = !!(u.drivingLicense || u.driving_license || u.vehicle || u.plate);
+            const dlTs = ts.dl;
+            const dlVerified = dlSubmitted && dlTs && (now - dlTs >= ONE_HOUR);
+            return biometricsDone && dlVerified;
+          } catch {
+            return false;
+          }
+        })();
 
         // Single active delivery rule:
         let activeOrder: Order | null = null;
         let queuedOrders: Order[] = [];
 
-        if (state.currentOrder) {
+        if (!isVerified || state.agentStatus === 'UNAVAILABLE') {
+          // Unverified or Inactive riders CANNOT get active or queued orders!
+          activeOrder = null;
+          queuedOrders = [];
+          poolOrders = [];
+        } else if (state.currentOrder) {
           // Rider is already working on an active delivery:
           // Any other assigned orders go into queuedOrders
           const currentId = state.currentOrder.id;
@@ -1188,11 +1391,10 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchHistory();
 
     // Poll active orders every 3 seconds for real-time responsiveness
-    const activeInterval = setInterval(fetchActiveOrders, 1500);
-    const historyInterval = setInterval(fetchHistory, 15000);
+    const activeInterval = setInterval(fetchActiveOrders, 3000);
+    const historyInterval = setInterval(fetchHistory, 30000);
 
     const handleStorageUpdate = () => fetchActiveOrders();
-    const unsubscribeBroadcast = subscribeOrderUpdates(handleStorageUpdate);
     window.addEventListener('storage', handleStorageUpdate);
     window.addEventListener('grabit_orders_updated', handleStorageUpdate);
 
@@ -1200,7 +1402,6 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isMounted = false;
       clearInterval(activeInterval);
       clearInterval(historyInterval);
-      unsubscribeBroadcast();
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
     };

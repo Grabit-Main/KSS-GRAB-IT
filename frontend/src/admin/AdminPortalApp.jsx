@@ -31,13 +31,13 @@ import {
   Clock,
   Flame,
   XCircle,
-  Lightbulb
+  Lightbulb,
+  LifeBuoy
 } from 'lucide-react';
 import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
 import { forceScrollToTop } from '../utils/scrollToTop';
-import { getAllSystemOrders } from '../utils/orderSync';
 
 // ── Window Width Hook ──
 const useWindowWidth = () => {
@@ -57,7 +57,7 @@ const safeParseItems = (raw) => {
     try {
       const p = JSON.parse(raw);
       if (Array.isArray(p)) return p;
-    } catch {}
+    } catch { }
   }
   return [];
 };
@@ -145,7 +145,7 @@ export function AdminPortalApp() {
         localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
         localStorage.setItem('grabit_user', JSON.stringify(adminUser));
       }
-    } catch {}
+    } catch { }
   }, [navigate]);
 
   // ── Core Navigation (Kept Clean & Focused) ──
@@ -163,10 +163,39 @@ export function AdminPortalApp() {
   const [partners, setPartners] = useState([]);
   const [products, setProducts] = useState(baseProducts);
   const [suggestionsList, setSuggestionsList] = useState([]);
+  const [ticketsList, setTicketsList] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [productSortBy, setProductSortBy] = useState('default');
   const [notice, setNotice] = useState('');
+
+  const fetchTickets = useCallback(async () => {
+    try {
+      const data = await get('/tickets');
+      if (Array.isArray(data)) {
+        setTicketsList(data);
+      }
+    } catch (e) {
+      console.warn('Tickets fetch failed:', e);
+    }
+  }, []);
+
+  const updateTicketStatus = async (ticketId, newStatus) => {
+    try {
+      await patch(`/tickets/${encodeURIComponent(ticketId)}`, { status: newStatus });
+      setTicketsList(prev => prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t));
+      setNotice(`✅ Ticket ${ticketId} status updated to ${newStatus}`);
+      setTimeout(() => setNotice(''), 4000);
+    } catch (e) {
+      alert('Failed to update ticket status');
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+    const interval = setInterval(fetchTickets, 5000);
+    return () => clearInterval(interval);
+  }, [fetchTickets]);
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -239,9 +268,9 @@ export function AdminPortalApp() {
 
       let localOrders = [];
       try {
-        localOrders = getAllSystemOrders();
+        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
         if (!Array.isArray(localOrders)) localOrders = [];
-      } catch {}
+      } catch { }
 
       const combinedRaw = [...localOrders, ...(Array.isArray(ordersRes) ? ordersRes : [])];
       const seenKeys = new Set();
@@ -332,7 +361,7 @@ export function AdminPortalApp() {
     if (!window.confirm('Are you sure you want to deactivate this partner?')) return;
     try {
       await del(`/users/${id}`);
-    } catch {}
+    } catch { }
     setPartners(prev => prev.filter(p => p.id !== id));
     setNotice('✅ Partner deactivated.');
   };
@@ -401,8 +430,8 @@ export function AdminPortalApp() {
     };
 
     try {
-      await patch(`/products/${targetId}`, updatedFields).catch(() => {});
-    } catch {}
+      await patch(`/products/${targetId}`, updatedFields).catch(() => { });
+    } catch { }
 
     setProducts(prev => prev.map(p => (String(p.id) === String(targetId) ? { ...p, ...updatedFields } : p)));
     setNotice(`✅ Updated SKU "${editProdName}".`);
@@ -412,8 +441,8 @@ export function AdminPortalApp() {
   const handleDeleteProduct = async (id, name) => {
     if (!window.confirm(`Are you sure you want to delete SKU "${name}"?`)) return;
     try {
-      await del(`/products/${id}`).catch(() => {});
-    } catch {}
+      await del(`/products/${id}`).catch(() => { });
+    } catch { }
     setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
     setNotice(`✅ Deleted SKU "${name}".`);
   };
@@ -449,11 +478,11 @@ export function AdminPortalApp() {
       const st = String(o.status || '').toLowerCase();
       const matchStatus =
         statusFilter === 'ALL' ? true :
-        statusFilter === 'PLACED' ? st === 'placed' :
-        statusFilter === 'PREPARING' ? (st === 'preparing' || st === 'confirmed') :
-        statusFilter === 'READY' ? (st === 'ready' || st === 'ready_for_pickup') :
-        statusFilter === 'DELIVERING' ? (st === 'out_for_delivery' || st === 'out-for-delivery') :
-        statusFilter === 'DELIVERED' ? st === 'delivered' : true;
+          statusFilter === 'PLACED' ? st === 'placed' :
+            statusFilter === 'PREPARING' ? (st === 'preparing' || st === 'confirmed') :
+              statusFilter === 'READY' ? (st === 'ready' || st === 'ready_for_pickup') :
+                statusFilter === 'DELIVERING' ? (st === 'out_for_delivery' || st === 'out-for-delivery') :
+                  statusFilter === 'DELIVERED' ? st === 'delivered' : true;
 
       return matchSearch && matchStatus;
     });
@@ -929,7 +958,7 @@ export function AdminPortalApp() {
                   }}
                 >
                   <Bell size={16} />
-                  {orders.filter(o => ['placed','confirmed'].includes(o.status)).length > 0 && (
+                  {orders.filter(o => ['placed', 'confirmed'].includes(o.status)).length > 0 && (
                     <span style={{
                       position: 'absolute', top: '-3px', right: '-3px',
                       minWidth: '16px', height: '16px', borderRadius: '50%',
@@ -937,7 +966,7 @@ export function AdminPortalApp() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '2px solid #FFFFFF', padding: '0 2px'
                     }}>
-                      {Math.min(orders.filter(o => ['placed','confirmed'].includes(o.status)).length, 9)}
+                      {Math.min(orders.filter(o => ['placed', 'confirmed'].includes(o.status)).length, 9)}
                     </span>
                   )}
                 </button>
@@ -965,7 +994,7 @@ export function AdminPortalApp() {
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>Notifications</div>
                           <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px' }}>
-                            {orders.filter(o => ['placed','confirmed'].includes(o.status)).length} pending orders need attention
+                            {orders.filter(o => ['placed', 'confirmed'].includes(o.status)).length} pending orders need attention
                           </div>
                         </div>
                         <button onClick={() => setNotificationsOpen(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: '13px', fontWeight: 900 }}>✕</button>
@@ -978,13 +1007,13 @@ export function AdminPortalApp() {
                           orders.slice(0, 8).map((o, i) => {
                             const statusColor = o.status === 'delivered' ? '#10B981' : o.status === 'out_for_delivery' ? '#0071E3' : o.status === 'preparing' ? '#F59E0B' : o.status === 'cancelled' ? '#EF4444' : '#8B5CF6';
                             const statusIcon = o.status === 'delivered' ? '✅' : o.status === 'out_for_delivery' ? '🚴' : o.status === 'preparing' ? '🍳' : o.status === 'cancelled' ? '❌' : '🛒';
-                            const isNew = ['placed','confirmed'].includes(o.status);
+                            const isNew = ['placed', 'confirmed'].includes(o.status);
                             return (
                               <div key={i} onClick={() => { setSelectedOrderModal(o); setNotificationsOpen(false); }} style={{ padding: '12px 16px', borderBottom: '1px solid #F8FAFC', cursor: 'pointer', background: isNew ? '#FAFBFF' : '#FFFFFF', display: 'flex', alignItems: 'center', gap: '12px', transition: 'background 0.15s' }}>
                                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${statusColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{statusIcon}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    Order #{(o.id || o.order_id || String(i+1)).toString().slice(-6)} — {(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
+                                    Order #{(o.id || o.order_id || String(i + 1)).toString().slice(-6)} — {(o.status || 'placed').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                                   </div>
                                   <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {o.customer_name || o.user?.name || 'Customer'} · ₹{parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}
@@ -1244,12 +1273,12 @@ export function AdminPortalApp() {
                     {/* Status rows */}
                     {(() => {
                       const statuses = [
-                        { key: 'placed',           label: 'New Orders',       icon: ShoppingBag,  color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' },
-                        { key: 'confirmed',         label: 'Confirmed',        icon: CheckCircle2, color: '#0071E3', bg: '#EFF6FF', border: '#BFDBFE' },
-                        { key: 'preparing',         label: 'Preparing',        icon: Flame,        color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
-                        { key: 'out_for_delivery',  label: 'Out for Delivery', icon: Truck,        color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
-                        { key: 'delivered',         label: 'Delivered',        icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
-                        { key: 'cancelled',         label: 'Cancelled',        icon: XCircle,      color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+                        { key: 'placed', label: 'New Orders', icon: ShoppingBag, color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' },
+                        { key: 'confirmed', label: 'Confirmed', icon: CheckCircle2, color: '#0071E3', bg: '#EFF6FF', border: '#BFDBFE' },
+                        { key: 'preparing', label: 'Preparing', icon: Flame, color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
+                        { key: 'out_for_delivery', label: 'Out for Delivery', icon: Truck, color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
+                        { key: 'delivered', label: 'Delivered', icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+                        { key: 'cancelled', label: 'Cancelled', icon: XCircle, color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
                       ];
                       const total = Math.max(periodOrders.length, 1);
                       return (
@@ -1447,56 +1476,56 @@ export function AdminPortalApp() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {(periodOrders.length > 0
                         ? periodOrders.slice(0, 5).map((o, i) => {
-                            const st = (o.status || 'placed').toLowerCase();
-                            const isDelivered = st === 'delivered';
-                            const isOut = st === 'out_for_delivery';
-                            const isPrep = st === 'preparing';
-                            const isCanc = st === 'cancelled';
+                          const st = (o.status || 'placed').toLowerCase();
+                          const isDelivered = st === 'delivered';
+                          const isOut = st === 'out_for_delivery';
+                          const isPrep = st === 'preparing';
+                          const isCanc = st === 'cancelled';
 
-                            const iconConfig = isDelivered
-                              ? { icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' }
-                              : isOut
+                          const iconConfig = isDelivered
+                            ? { icon: PackageCheck, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' }
+                            : isOut
                               ? { icon: Truck, color: '#0071E3', bg: '#EFF6FF', border: '#BFDBFE' }
                               : isPrep
-                              ? { icon: Flame, color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' }
-                              : isCanc
-                              ? { icon: XCircle, color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' }
-                              : { icon: ShoppingBag, color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' };
+                                ? { icon: Flame, color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' }
+                                : isCanc
+                                  ? { icon: XCircle, color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' }
+                                  : { icon: ShoppingBag, color: '#8B5CF6', bg: '#F3E8FF', border: '#DDD6FE' };
 
-                            const IconComp = iconConfig.icon;
-                            const timeStr = o.created_at
-                              ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-                              : 'Recent';
+                          const IconComp = iconConfig.icon;
+                          const timeStr = o.created_at
+                            ? new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                            : 'Recent';
 
-                            return (
-                              <div key={i} onClick={() => setSelectedOrderModal(o)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #F1F5F9', cursor: 'pointer', transition: 'background 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.background = '#F1F5F9'} onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}>
-                                <div style={{
-                                  width: '30px', height: '30px', borderRadius: '8px',
-                                  background: iconConfig.bg, border: `1px solid ${iconConfig.border}`,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  flexShrink: 0
-                                }}>
-                                  <IconComp size={14} color={iconConfig.color} />
+                          return (
+                            <div key={i} onClick={() => setSelectedOrderModal(o)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #F1F5F9', cursor: 'pointer', transition: 'background 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.background = '#F1F5F9'} onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}>
+                              <div style={{
+                                width: '30px', height: '30px', borderRadius: '8px',
+                                background: iconConfig.bg, border: `1px solid ${iconConfig.border}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0
+                              }}>
+                                <IconComp size={14} color={iconConfig.color} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Order #{formatOrderId(o.id || o.rawId)} — {(o.status || 'placed').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                                 </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    Order #{formatOrderId(o.id || o.rawId)} — {(o.status || 'placed').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
-                                  </div>
-                                  <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {o.customer_name || o.user?.name || 'Customer'} · <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}</span>
-                                  </div>
-                                </div>
-                                <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
-                                  {timeStr}
+                                <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {o.customer_name || o.user?.name || 'Customer'} · <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{parseFloat(o.total_amount || o.totalAmount || o.total || 0).toLocaleString('en-IN')}</span>
                                 </div>
                               </div>
-                            );
-                          })
-                        : [
-                            <div key="empty" style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
-                              No activity recorded for this period
+                              <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
+                                {timeStr}
+                              </div>
                             </div>
-                          ]
+                          );
+                        })
+                        : [
+                          <div key="empty" style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                            No activity recorded for this period
+                          </div>
+                        ]
                       )}
                     </div>
                   </div>
@@ -2302,13 +2331,15 @@ export function AdminPortalApp() {
               </div>
             )}
 
+
+
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ── TAB 5: DELIVERY FLEET & 5KM SUPERMARKET GEOFENCE (2 MAPS) ── */}
             {/* ══════════════════════════════════════════════════════════════════ */}
             {activeTab === 'security' && (
               <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                
+
                 {/* Header Banner */}
                 <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                   <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px 0' }}>
@@ -2330,6 +2361,19 @@ export function AdminPortalApp() {
                     initialTitle="Delivery Partner Fleet GPS Center (Live Rider Dispatch)"
                     initialRadius={250}
                     onSaveLocation={(data) => {
+                      const payload = {
+                        hub_name: data.title || 'GrabIt Supermarket (Koramangala Hub)',
+                        address: data.address,
+                        lat: data.lat,
+                        lng: data.lng,
+                        geofence_radius_meters: data.radius
+                      };
+                      try {
+                        localStorage.setItem('grabit_hub_config', JSON.stringify(payload));
+                        window.dispatchEvent(new Event('grabit_hub_config_updated'));
+                        window.dispatchEvent(new Event('storage'));
+                      } catch {}
+                      post('/store/settings', payload).catch(() => {});
                       setNotice(`✅ Delivery Partner Dispatch Center Saved: ${data.address} (${data.radius}m pickup radius)`);
                     }}
                   />
@@ -2346,7 +2390,20 @@ export function AdminPortalApp() {
                     initialTitle="GrabIt Supermarket — 5km Express Delivery Coverage Zone"
                     initialRadius={5000}
                     onSaveLocation={(data) => {
-                      setNotice(`✅ 5km Supermarket Delivery Geofence Saved: ${data.address} (${(data.radius/1000).toFixed(1)}km zone)`);
+                      const payload = {
+                        hub_name: data.title || 'GrabIt Supermarket (5km Geofence)',
+                        address: data.address,
+                        lat: data.lat,
+                        lng: data.lng,
+                        geofence_radius_meters: data.radius
+                      };
+                      try {
+                        localStorage.setItem('grabit_hub_config', JSON.stringify(payload));
+                        window.dispatchEvent(new Event('grabit_hub_config_updated'));
+                        window.dispatchEvent(new Event('storage'));
+                      } catch {}
+                      post('/store/settings', payload).catch(() => {});
+                      setNotice(`✅ 5km Supermarket Delivery Geofence Saved: ${data.address} (${(data.radius / 1000).toFixed(1)}km zone)`);
                     }}
                   />
                 </div>

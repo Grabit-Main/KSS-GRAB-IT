@@ -81,6 +81,7 @@ export function LoginPage() {
       '+919999900002': { name: 'GrabIt Supermarket', role: 'seller' },
       '+919999900003': { name: 'Speedy Express Delivery', role: 'delivery_agent' },
       '+919999900004': { name: 'Rahul Sharma', role: 'customer' },
+      '+919080841727': { name: 'Thabee', role: 'delivery_agent' },
     };
 
     const demoUser = knownDemoMap[fullPhone];
@@ -92,6 +93,12 @@ export function LoginPage() {
         if (v?.access_token) token = v.access_token;
       } catch {}
 
+      let existingUser = {};
+      try {
+        const existingStr = localStorage.getItem('grabit_user');
+        if (existingStr) existingUser = JSON.parse(existingStr);
+      } catch {}
+
       const userObj = {
         id: demoUser.role === 'admin' ? 1 : demoUser.role === 'seller' ? 2 : demoUser.role === 'delivery_agent' ? 3 : 4,
         role: demoUser.role,
@@ -99,6 +106,14 @@ export function LoginPage() {
         name: demoUser.name,
         phone: fullPhone,
         email: `${demoUser.role}@grabit.local`,
+        ...(existingUser.phone === fullPhone || existingUser.name === demoUser.name ? {
+          selfieImage: existingUser.selfieImage || existingUser.selfie_image || existingUser.avatar_url,
+          selfie_image: existingUser.selfie_image || existingUser.selfieImage || existingUser.avatar_url,
+          avatar_url: existingUser.avatar_url || existingUser.selfieImage || existingUser.selfie_image,
+          biometricsDone: existingUser.biometricsDone,
+          clearances: existingUser.clearances,
+          clearanceTimestamps: existingUser.clearanceTimestamps,
+        } : {})
       };
 
       localStorage.setItem('grabit_session', token);

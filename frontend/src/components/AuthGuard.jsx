@@ -30,6 +30,17 @@ export function AuthGuard({ children, allowedRoles }) {
 
       // If user has no role or role is not in allowedRoles list
       if (!userRole || !allowedRoles.includes(userRole)) {
+        if (allowedRoles.includes('customer')) {
+          const customerUser = {
+            ...user,
+            role: 'customer',
+            name: user?.name || user?.full_name || 'Customer',
+            full_name: user?.full_name || user?.name || 'Customer',
+          };
+          localStorage.setItem('grabit_user', JSON.stringify(customerUser));
+          return children;
+        }
+
         // Redirect strictly to their authorized home/portal
         if (userRole === 'admin') return <Navigate to="/admin" replace />;
         if (userRole === 'seller') return <Navigate to="/seller/dashboard" replace />;
