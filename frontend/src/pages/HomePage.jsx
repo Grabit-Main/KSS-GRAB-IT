@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, MapPin, Tag, Shield, ArrowRight, Sparkles, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
+import { Zap, MapPin, Tag, Shield, ArrowRight, Sparkles, ChevronLeft, ChevronRight, Lightbulb, ShoppingBag } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
@@ -667,42 +667,124 @@ export default function HomePage() {
 
       {/* ── 3. PROMO BANNERS ─────────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '10px' : '16px' }}>
-
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: isMobile ? '12px' : '16px'
+        }}>
           {[
-            { bg: '#EEF4FF', border: '#DBEAFE', title: 'Pharmacy at\nyour doorstep!', sub: 'Cough, syrups, pain relief.', btnColor: '#34C759', img: '/promo-pharmacy.png', link: '/category/personal-care' },
-            { bg: '#FFF9F0', border: '#FFEAD0', title: 'Pet care supplies\nat your door', sub: 'Food, treats, toys & more.', btnColor: '#FF9500', img: '/promo-petcare.png', link: '/category/household' },
-            { bg: '#F0FFF4', border: '#DCFCE7', title: 'No time for\na diaper run?', sub: 'Get baby care essentials.', btnColor: '#0071E3', img: '/promo-baby.png', link: '/category/personal-care' },
-          ].map((promo, i) => (
-            <div key={i} style={{
-              background: promo.bg, borderRadius: '14px',
-              padding: isMobile ? '16px' : '20px 18px',
-              border: `1px solid ${promo.border}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '120px',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <div style={{ maxWidth: '160px', zIndex: 2 }}>
-                <h3 style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: '#1D1D1F', marginBottom: '4px', whiteSpace: 'pre-line' }}>
-                  {promo.title}
-                </h3>
-                <p style={{ fontSize: '11px', color: '#86868B', marginBottom: '12px' }}>{promo.sub}</p>
-                <Link to={promo.link}>
-                  <button style={{
-                    background: 'white', border: `1px solid ${promo.btnColor}`, color: promo.btnColor,
-                    borderRadius: '6px', padding: '6px 14px', fontSize: '11px', fontWeight: 800, cursor: 'pointer'
-                  }}>
-                    Order Now
-                  </button>
-                </Link>
+            {
+              img: '/banner-fruits-veggies.png',
+              alt: 'Fresh Vegetables & Fruits',
+              link: '/fresh-produce',
+              btnBg: 'linear-gradient(135deg, #1C6B1C 0%, #115011 100%)',
+              btnShadow: 'rgba(28,107,28,0.35)',
+              btnHoverBg: 'linear-gradient(135deg, #228B22 0%, #166B16 100%)',
+              btnTopMobile: '72.5%',
+              btnTopDesktop: '73%',
+              icon: null
+            },
+            {
+              img: '/banner-pharmacy.png',
+              alt: 'Pharmacy at your doorstep',
+              link: '/pharmacy',
+              btnBg: 'linear-gradient(135deg, #6B21A8 0%, #4C1D95 100%)',
+              btnShadow: 'rgba(107,33,168,0.35)',
+              btnHoverBg: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+              btnTopMobile: '72.5%',
+              btnTopDesktop: '73%',
+              icon: 'bag'
+            },
+            {
+              img: '/banner-meat.png',
+              alt: 'Fresh Chicken & Meat',
+              link: '/chicken-meat',
+              btnBg: 'linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%)',
+              btnShadow: 'rgba(153,27,27,0.35)',
+              btnHoverBg: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+              btnTopMobile: '64.5%',
+              btnTopDesktop: '65.5%',
+              icon: null
+            }
+          ].map((banner, i) => (
+            <Link key={i} to={banner.link} style={{ textDecoration: 'none' }}>
+              <div style={{
+                borderRadius: isMobile ? '14px' : '18px',
+                overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(0,0,0,0.05)',
+                transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+                cursor: 'pointer',
+                height: '100%',
+                position: 'relative'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 16px 36px rgba(0,0,0,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; }}
+              onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+              onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onTouchCancel={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <img
+                  src={banner.img}
+                  alt={banner.alt}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+
+                {/* Real interactive code-rendered Order Now button overlay */}
+                <div style={{
+                  position: 'absolute',
+                  top: isMobile ? banner.btnTopMobile : banner.btnTopDesktop,
+                  transform: 'translateY(-50%)',
+                  left: isMobile ? '4.5%' : '4.5%',
+                  zIndex: 3
+                }}>
+                  <div
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: isMobile ? '4px' : '7px',
+                      background: banner.btnBg,
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: isMobile ? '5px 12px' : '9px 20px',
+                      borderRadius: isMobile ? '7px' : '9px',
+                      fontSize: isMobile ? '10px' : '13px',
+                      fontWeight: 800,
+                      boxShadow: `0 4px 14px ${banner.btnShadow}`,
+                      cursor: 'pointer',
+                      letterSpacing: '0.2px',
+                      transition: 'all 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                      userSelect: 'none',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = banner.btnHoverBg;
+                      e.currentTarget.style.transform = 'translateY(-2px) scale(1.04)';
+                      e.currentTarget.style.boxShadow = `0 8px 20px ${banner.btnShadow}`;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = banner.btnBg;
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = `0 4px 14px ${banner.btnShadow}`;
+                    }}
+                    onMouseDown={e => {
+                      e.currentTarget.style.transform = 'translateY(1px) scale(0.96)';
+                    }}
+                    onMouseUp={e => {
+                      e.currentTarget.style.transform = 'translateY(-2px) scale(1.04)';
+                    }}
+                  >
+                    {banner.icon === 'bag' && <ShoppingBag size={isMobile ? 12 : 15} color="#FFFFFF" />}
+                    <span>Order Now</span>
+                    <ArrowRight size={isMobile ? 12 : 15} color="#FFFFFF" />
+                  </div>
+                </div>
               </div>
-              <img src={promo.img} alt={promo.title} style={{ height: isMobile ? '90px' : '110px', width: 'auto', objectFit: 'contain' }} />
-            </div>
+            </Link>
           ))}
         </div>
       </div>
+
+
+
 
       {/* ── 4. POPULAR NEAR YOU ──────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px', position: 'relative', zIndex: 2 }}>
@@ -721,6 +803,212 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* ── 🌟 SPECIAL SNACKS CRAVING BANNER ─────────────────── */}
+      {isMobile ? (
+        /* Mobile: Full banner image with real tappable button overlay */
+        <div style={{ padding: '0 12px', marginBottom: '20px', position: 'relative', zIndex: 2 }}>
+          <Link to="/category/snacks-munchies" style={{ textDecoration: 'none' }}>
+            <div
+              style={{
+                borderRadius: '16px', overflow: 'hidden',
+                boxShadow: '0 10px 28px rgba(200,0,0,0.22)',
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                cursor: 'pointer',
+                position: 'relative'
+              }}
+              onTouchStart={e => {
+                e.currentTarget.style.transform = 'scale(0.975)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(200,0,0,0.18)';
+              }}
+              onTouchEnd={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 10px 28px rgba(200,0,0,0.22)';
+              }}
+              onTouchCancel={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 10px 28px rgba(200,0,0,0.22)';
+              }}
+            >
+              <img
+                src="/banner-snacks-cravings-full.png"
+                alt="Craving Something Crispy &amp; Crunchy"
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+
+
+            </div>
+          </Link>
+        </div>
+      ) : (
+        /* Desktop: Full-width code-based banner with text + image */
+        <div className="container" style={{ paddingTop: '4px', marginBottom: '32px', position: 'relative', zIndex: 2 }}>
+          <Link to="/category/snacks-munchies" style={{ textDecoration: 'none' }}>
+            <div style={{
+              background: 'linear-gradient(120deg, #C0000A 0%, #D80010 30%, #B00008 70%, #8B0000 100%)',
+              borderRadius: '20px',
+              padding: '0',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: '200px',
+              boxShadow: '0 16px 40px rgba(180, 0, 0, 0.35)',
+              cursor: 'pointer',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 22px 50px rgba(180,0,0,0.45)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(180,0,0,0.35)'; }}
+            >
+              {/* Decorative radial glow */}
+              <div style={{
+                position: 'absolute', top: '-60px', left: '35%', width: '340px', height: '340px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,180,0,0.18) 0%, transparent 65%)',
+                pointerEvents: 'none'
+              }} />
+              <div style={{
+                position: 'absolute', bottom: '-80px', right: '38%', width: '260px', height: '260px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,80,0,0.14) 0%, transparent 65%)',
+                pointerEvents: 'none'
+              }} />
+
+              {/* Left: Text content */}
+              <div style={{ padding: '30px 40px', zIndex: 2, flex: '0 0 auto', maxWidth: '480px' }}>
+                {/* Badge */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)',
+                  padding: '5px 14px', borderRadius: '30px',
+                  fontSize: '11px', fontWeight: 800, color: '#FFE066',
+                  letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: '14px'
+                }}>
+                  <Sparkles size={12} color="#FFE066" />
+                  <span>Midnight Cravings &amp; Party Snacks</span>
+                </div>
+
+                {/* Headline */}
+                <h2 style={{
+                  fontSize: '32px', fontWeight: 900, color: '#FFFFFF',
+                  margin: '0 0 4px', lineHeight: 1.15, letterSpacing: '-0.5px'
+                }}>
+                  Craving Something Crispy
+                </h2>
+                <h2 style={{
+                  fontSize: '32px', fontWeight: 900,
+                  color: '#FFD700',
+                  margin: '0 0 14px', lineHeight: 1.15, letterSpacing: '-0.5px'
+                }}>
+                  &amp; Crunchy? 🍿
+                </h2>
+
+                {/* Divider */}
+                <div style={{ width: '36px', height: '3px', background: '#FFD700', borderRadius: '2px', marginBottom: '14px' }} />
+
+                {/* Description */}
+                <p style={{
+                  fontSize: '14.5px', color: 'rgba(255,255,255,0.92)',
+                  margin: '0 0 20px', lineHeight: 1.55, fontWeight: 500
+                }}>
+                  Get Up To <span style={{ color: '#FFD700', fontWeight: 800 }}>40% OFF</span> on Chips, Nachos, Popcorn, Namkeen &amp; Chocolates.
+                </p>
+
+                {/* CTA Button */}
+                <button
+                  style={{
+                    background: 'linear-gradient(135deg, #FF2A2A 0%, #CC0000 100%)',
+                    color: '#FFFFFF',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    padding: '12px 28px',
+                    borderRadius: '50px',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    letterSpacing: '0.3px',
+                    transition: 'all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    userSelect: 'none'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #FF5555 0%, #EE1111 100%)';
+                    e.currentTarget.style.transform = 'translateY(-3px) scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 14px 32px rgba(200,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3)';
+                    e.currentTarget.style.border = '2px solid rgba(255,255,255,0.5)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #FF2A2A 0%, #CC0000 100%)';
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)';
+                    e.currentTarget.style.border = '2px solid rgba(255,255,255,0.3)';
+                  }}
+                  onMouseDown={e => {
+                    e.currentTarget.style.transform = 'translateY(1px) scale(0.98)';
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(200,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseUp={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px) scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 14px 32px rgba(200,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3)';
+                  }}
+                >
+                  <span>Shop Snacks Deals</span>
+                  <ArrowRight size={16} color="#FFD700" />
+                </button>
+
+                {/* Trust badges */}
+                <div style={{ display: 'flex', gap: '18px', marginTop: '18px' }}>
+                  {[
+                    { icon: '🛡️', label: 'Premium\nQuality' },
+                    { icon: '🌿', label: 'Fresh &\nHygienic' },
+                    { icon: '🚀', label: 'Fast\nDelivery' }
+                  ].map((badge, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.18)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+                        border: '1px solid rgba(255,255,255,0.3)'
+                      }}>
+                        {badge.icon}
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: 600, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
+                        {badge.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Flying chips image */}
+              <div style={{
+                flex: '1', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+                position: 'relative', zIndex: 2, alignSelf: 'stretch', overflow: 'hidden'
+              }}>
+                <img
+                  src="/snack-banner-cutout.png"
+                  alt="Flying Chips Bowl"
+                  style={{
+                    height: '240px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 12px 28px rgba(0,0,0,0.28))',
+                    transform: 'scale(1.08)',
+                    transformOrigin: 'right bottom',
+                    marginRight: '20px',
+                    marginBottom: '-4px'
+                  }}
+                />
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* ── 5. SNACKS & MUNCHIES ─────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px', position: 'relative', zIndex: 2 }}>
@@ -834,6 +1122,42 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── 🎁 SPECIAL DEALS & OFFERS BANNER ─────────────────── */}
+      <div className="container" style={{
+        paddingTop: '6px',
+        marginBottom: isMobile ? '24px' : '36px',
+        position: 'relative',
+        zIndex: 2
+      }}>
+        <Link to="/exclusive-deals" style={{ textDecoration: 'none' }}>
+          <div style={{
+            borderRadius: isMobile ? '18px' : '24px',
+            overflow: 'hidden',
+            boxShadow: '0 14px 38px rgba(100, 0, 200, 0.22)',
+            border: '1.5px solid rgba(160, 100, 255, 0.35)',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 22px 48px rgba(100,0,200,0.34)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 14px 38px rgba(100, 0, 200, 0.22)'; }}
+          onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+          onTouchEnd={e => { e.currentTarget.style.transform = 'none'; }}
+          onTouchCancel={e => { e.currentTarget.style.transform = 'none'; }}
+          >
+            <img
+              src="/banner-exclusive-deals.png"
+              alt="Exclusive Deals &amp; Offers - Up to 60% OFF"
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
+        </Link>
+      </div>
+
       {/* ── 7. WISHLIST ──────────────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px' }}>
         <div style={{
@@ -881,256 +1205,182 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* ── 8. PIXEL-PERFECT CLEAN TRUST BADGES SHOWCASE ──────────────────────── */}
-      <div className="container" style={{ paddingTop: isMobile ? '16px' : '36px' }}>
-        {isMobile ? (
-          /* Mobile View: 4-Column Fitted Grid Strip (Zero Cutoff, Zero Overflow) */
+      {/* ── 9. PIXEL-PERFECT VIP SAVINGS & COUPON CLAIM ─────────────────── */}
+      <div className="container" style={{ paddingTop: isMobile ? '16px' : '32px', paddingBottom: isMobile ? '85px' : '0px' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #F0F7FF 0%, #E0F0FE 50%, #EFF6FF 100%)',
+          borderRadius: isMobile ? '20px' : '28px',
+          border: '1.5px solid #BFDBFE',
+          boxShadow: '0 12px 36px rgba(0, 113, 227, 0.08)',
+          padding: isMobile ? '20px 16px' : '32px 40px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
           <div style={{
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '12px 6px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-          }}>
-            {[
-              { icon: <Zap size={16} color="#0066FF" fill="#0066FF" />, t1: 'Fast 30-Min', t2: 'Delivery' },
-              { icon: <MapPin size={16} color="#0F9D58" fill="#0F9D58" />, t1: 'Within 5 km', t2: 'Hyperlocal' },
-              { icon: <Shield size={16} color="#FF6B00" fill="#FF6B00" />, t1: '100% Quality', t2: 'Guaranteed' },
-              { icon: <Tag size={16} color="#7C3AED" fill="#7C3AED" />, t1: 'Instant 1-Tap', t2: 'Refunds' },
-            ].map((t, i) => (
-              <div key={i} style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                borderRight: i < 3 ? '1px solid #F1F5F9' : 'none',
-                padding: '0 2px'
-              }}>
-                <div style={{
-                  width: '30px', height: '30px', borderRadius: '50%',
-                  background: '#F8FAFC', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', marginBottom: '4px'
-                }}>
-                  {t.icon}
-                </div>
-                <div style={{ fontSize: '10px', fontWeight: 900, color: '#0F172A', lineHeight: 1.15 }}>{t.t1}</div>
-                <div style={{ fontSize: '9px', color: '#64748B', fontWeight: 500, marginTop: '1px' }}>{t.t2}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Desktop View: 4 High-Impact Glassmorphic Cards */
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-            {[
-              {
-                icon: <Zap size={22} color="#0066FF" fill="#0066FF" />,
-                bg: 'linear-gradient(135deg, #EEF4FF 0%, #DBEAFE 100%)',
-                border: '#BFDBFE',
-                title: 'Lightning 30-Min Delivery',
-                sub: 'Express dark store delivery',
-                glow: 'rgba(0,102,255,0.15)'
-              },
-              {
-                icon: <MapPin size={22} color="#0F9D58" fill="#0F9D58" />,
-                bg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-                border: '#A7F3D0',
-                title: 'Within 5 km Radius',
-                sub: 'Hyperlocal sourced fresh',
-                glow: 'rgba(15,157,88,0.15)'
-              },
-              {
-                icon: <Shield size={22} color="#FF6B00" fill="#FF6B00" />,
-                bg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-                border: '#FED7AA',
-                title: '100% Quality Checked',
-                sub: 'Hygienic cold storage',
-                glow: 'rgba(255,107,0,0.15)'
-              },
-              {
-                icon: <Tag size={22} color="#7C3AED" fill="#7C3AED" />,
-                bg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-                border: '#DDD6FE',
-                title: 'Secure & Instant Refund',
-                sub: 'PCI-DSS 256-bit encrypted',
-                glow: 'rgba(124,58,237,0.15)'
-              },
-            ].map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  background: t.bg,
-                  border: `1.5px solid ${t.border}`,
-                  borderRadius: '16px',
-                  padding: '18px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  cursor: 'default'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = `0 12px 28px ${t.glow}`;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
-                }}
-              >
-                <div style={{
-                  width: '44px', height: '44px', borderRadius: '12px',
-                  background: '#FFFFFF', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
-                }}>
-                  {t.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1.25 }}>{t.title}</div>
-                  <div style={{ fontSize: '11px', color: '#475569', marginTop: '3px', fontWeight: 500 }}>{t.sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── 9. PIXEL-PERFECT CLEAN VIP DEALS BANNER ────────────────────────── */}
-      <div className="container" style={{ paddingTop: isMobile ? '14px' : '32px', paddingBottom: isMobile ? '85px' : '0px' }}>
-        {isMobile ? (
-          /* Mobile View: Clean, Modern Light-Blue Quick Commerce Card */
-          <div style={{
-            background: '#EEF6FF',
-            border: '1px solid #D2D2D7',
-            borderRadius: '16px',
-            padding: '16px',
-            boxShadow: '0 2px 10px rgba(0,113,227,0.06)',
             display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
             alignItems: 'center',
-            gap: '14px'
+            justifyContent: 'space-between',
+            gap: isMobile ? '20px' : '36px'
           }}>
-            {/* 3D Isolated VIP Coupon Gift Box Image on Left (No Box Background) */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* 3D Gift Box Graphic on Left */}
+            <div style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
               <img
-                src="/vip-gift-box-cutout.jpg"
-                alt="VIP Coupon Gift Box Cutout"
+                src="/vip-gift-box-3d.png?v=transparent_large"
+                alt="VIP Coupon 3D Gift Box"
                 style={{
-                  width: '90px',
-                  height: '90px',
+                  width: isMobile ? '170px' : '280px',
+                  height: 'auto',
                   objectFit: 'contain',
-                  mixBlendMode: 'multiply'
+                  filter: 'drop-shadow(0 14px 32px rgba(0,113,227,0.25))'
                 }}
               />
             </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#0071E3', color: '#FFFFFF', fontSize: '9px', fontWeight: 900, padding: '3px 8px', borderRadius: '10px', marginBottom: '6px' }}>
+            {/* Content & Input Form in Middle/Right */}
+            <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#0071E3',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 900,
+                padding: '4px 12px',
+                borderRadius: '20px',
+                marginBottom: '10px',
+                letterSpacing: '0.5px'
+              }}>
                 🎁 VIP SAVINGS
               </div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#1D1D1F', margin: '0 0 4px 0' }}>
-                Get Flat ₹100 OFF Coupon
-              </h3>
-              <p style={{ fontSize: '11.5px', color: '#86868B', margin: '0 0 12px 0', lineHeight: 1.35 }}>
+
+              <h2 style={{
+                fontSize: isMobile ? '20px' : '28px',
+                fontWeight: 900,
+                color: '#0F172A',
+                margin: '0 0 6px 0',
+                letterSpacing: '-0.4px',
+                lineHeight: 1.2
+              }}>
+                Get Flat <span style={{ color: '#0071E3' }}>₹100 OFF</span> Coupon
+              </h2>
+
+              <p style={{
+                fontSize: isMobile ? '12.5px' : '14px',
+                color: '#64748B',
+                margin: '0 0 20px 0',
+                lineHeight: 1.45,
+                fontWeight: 500
+              }}>
                 Subscribe to get secret weekly flash deal alerts in your inbox.
               </p>
-              <form onSubmit={(e) => { e.preventDefault(); alert('🎉 Congratulations! ₹100 Coupon Code GRABIT100 sent to your email!'); }} style={{ display: 'flex', width: '100%' }}>
+
+              {/* Email Claim Form Bar */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  alert('🎉 Congratulations! ₹100 Coupon Code GRABIT100 sent to your email!');
+                }}
+                style={{
+                  display: 'flex',
+                  background: '#FFFFFF',
+                  borderRadius: '14px',
+                  padding: '4px',
+                  border: '1.5px solid #0071E3',
+                  boxShadow: '0 6px 20px rgba(0, 113, 227, 0.18)',
+                  maxWidth: '460px',
+                  alignItems: 'center'
+                }}
+              >
                 <input
                   type="email"
                   required
                   placeholder="Enter email address..."
                   style={{
-                    flex: 1, height: '38px', padding: '0 12px', minWidth: 0,
-                    borderRadius: '8px 0 0 8px', border: '1px solid #D2D2D7',
-                    fontSize: '12px', background: '#FFFFFF', outline: 'none', color: '#1D1D1F'
+                    flex: 1,
+                    height: isMobile ? '36px' : '44px',
+                    padding: '0 16px',
+                    minWidth: 0,
+                    borderRadius: '10px 0 0 10px',
+                    border: 'none',
+                    fontSize: isMobile ? '12px' : '14px',
+                    background: '#FFFFFF',
+                    outline: 'none',
+                    color: '#1D1D1F',
+                    fontWeight: 500
                   }}
                 />
                 <button
                   type="submit"
                   style={{
-                    height: '38px', padding: '0 14px', borderRadius: '0 8px 8px 0',
-                    fontSize: '12px', fontWeight: 900, background: '#0071E3',
-                    color: '#FFFFFF', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap'
+                    height: isMobile ? '36px' : '44px',
+                    padding: isMobile ? '0 16px' : '0 24px',
+                    borderRadius: '10px',
+                    fontSize: isMobile ? '12px' : '14px',
+                    fontWeight: 900,
+                    background: '#0071E3',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 12px rgba(0, 113, 227, 0.3)',
+                    transition: 'all 0.15s ease'
                   }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#005BB5'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#0071E3'}
                 >
                   Claim ₹100
                 </button>
               </form>
             </div>
           </div>
-        ) : (
-          /* Desktop View: Full-Fledged Glassmorphic VIP Banner */
-          <div style={{
-            background: 'linear-gradient(135deg, #0A2540 0%, #0043A8 50%, #0066FF 100%)',
-            borderRadius: '28px',
-            padding: '36px 48px',
-            border: '1.5px solid #003380',
-            boxShadow: '0 16px 40px rgba(0,67,168,0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '32px',
-            color: 'white'
-          }}>
-            <div style={{ maxWidth: '520px', zIndex: 2 }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(255, 255, 255, 0.15)', border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: '#FEF08A', fontSize: '11px', fontWeight: 900,
-                padding: '4px 12px', borderRadius: '20px', marginBottom: '10px'
-              }}>
-                🎁 VIP SAVINGS CLUB
-              </div>
-              <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.15, marginBottom: '8px' }}>
-                Claim Flat ₹100 OFF <span style={{ color: '#38BDF8' }}>+ Secret Deals!</span>
-              </h2>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5, fontWeight: 500 }}>
-                Join over 50,000+ happy shoppers! Get instant cashback coupons and weekly flash deal notifications straight to your inbox.
-              </p>
-            </div>
 
-            <div style={{ width: '380px', zIndex: 2, flexShrink: 0 }}>
-              <form onSubmit={(e) => { e.preventDefault(); alert('🎉 Congratulations! ₹100 Coupon Code GRABIT100 sent to your email!'); }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter your email address..."
-                    style={{
-                      flex: 1, height: '48px', padding: '0 18px',
-                      borderRadius: '12px', border: '2px solid #38BDF8',
-                      fontSize: '13px', background: '#FFFFFF', color: '#0F172A',
-                      outline: 'none', fontWeight: 600, boxShadow: '0 4px 14px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      height: '48px', padding: '0 24px', borderRadius: '12px',
-                      fontSize: '13px', fontWeight: 900,
-                      background: 'linear-gradient(135deg, #FF6B00 0%, #FF8800 100%)',
-                      color: 'white', border: 'none', cursor: 'pointer',
-                      whiteSpace: 'nowrap', boxShadow: '0 6px 18px rgba(255,107,0,0.4)',
-                      transition: 'transform 0.15s ease'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'none'}
-                  >
-                    Claim ₹100 Offer
-                  </button>
+          {/* Bottom Trust Badges Row */}
+          <div style={{
+            marginTop: isMobile ? '20px' : '28px',
+            paddingTop: isMobile ? '16px' : '20px',
+            borderTop: '1px solid rgba(0,113,227,0.12)',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '12px' : '16px'
+          }}>
+            {[
+              { icon: <Zap size={18} color="#0071E3" fill="#0071E3" />, t1: "Fast 30-Min", t2: "Delivery" },
+              { icon: <MapPin size={18} color="#0F9D58" fill="#0F9D58" />, t1: "Within 5 km", t2: "Hyperlocal" },
+              { icon: <Shield size={18} color="#FF6B00" fill="#FF6B00" />, t1: "100% Quality", t2: "Guaranteed" },
+              { icon: <Tag size={18} color="#7C3AED" fill="#7C3AED" />, t1: "Instant 1-Tap", t2: "Refunds" }
+            ].map((badge, idx) => (
+              <div key={idx} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: '#FFFFFF',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {badge.icon}
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', textAlign: 'center', fontWeight: 500 }}>
-                  🔒 100% Privacy Protected • No Spam • Unsubscribe Anytime
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>{badge.t1}</div>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>{badge.t2}</div>
                 </div>
-              </form>
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      </div>
 
         {/* 💡 CUSTOMER PRODUCT SUGGESTION BANNER CARD */}
         <div style={{
