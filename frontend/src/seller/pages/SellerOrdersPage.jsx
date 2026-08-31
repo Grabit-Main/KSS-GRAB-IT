@@ -30,6 +30,7 @@ import { useToast } from '../context/ToastContext';
 import { get, patch, post } from '../../api';
 import { PackingSlipModal } from '../components/orders/PackingSlipModal';
 import { playNewOrderChime } from '../utils/orderAudioAlert';
+import { getAllSystemOrders, notifyOrderUpdate, subscribeOrderUpdates } from '../../utils/orderSync';
 
 export const SellerOrdersPage = () => {
   const { seller } = useSellerAuth();
@@ -88,7 +89,7 @@ export const SellerOrdersPage = () => {
   // Seed from localStorage immediately
   const [orders, setOrders] = useState(() => {
     try {
-      const local = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const local = getAllSystemOrders();
       return Array.isArray(local) ? local.filter(isValidRealOrder).map(formatOrderObj) : [];
     } catch { return []; }
   });
@@ -140,14 +141,7 @@ export const SellerOrdersPage = () => {
 
       let localOrders = [];
       try {
-        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-        if (Array.isArray(localOrders)) {
-          const cleaned = localOrders.filter(isValidRealOrder);
-          if (cleaned.length !== localOrders.length) {
-            localStorage.setItem('grabit_orders', JSON.stringify(cleaned));
-          }
-          localOrders = cleaned;
-        }
+        localOrders = getAllSystemOrders();
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
@@ -319,8 +313,7 @@ export const SellerOrdersPage = () => {
         return o;
       });
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrderUpdate({ action: 'STATUS_UPDATE', nextStatus });
     } catch {}
 
     // 2. Persist to backend API
@@ -384,8 +377,7 @@ export const SellerOrdersPage = () => {
         return o;
       });
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrderUpdate({ action: 'RIDER_ASSIGNED', riderId, riderName });
     } catch {}
 
     // Post to backend
@@ -765,14 +757,14 @@ export const SellerOrdersPage = () => {
             </p>
           </Card>
         ) : (
-          displayedOrders.map((order) => {
+          displayedOrders.map((order, idx) => {
             const rawId = order.rawId || order.id;
             const isSelected = selectedOrderIds.has(rawId);
             const assignedRider = ridersWithLoad.find((r) => String(r.id) === String(order.delivery_agent_id) || (r.phone && String(r.phone) === String(order.delivery_agent_id)));
 
             return (
               <Card
-                key={rawId}
+                key={`${rawId || order.id}-${idx}`}
                 style={{
                   padding: 22,
                   borderRadius: '18px',
@@ -1042,9 +1034,9 @@ export const SellerOrdersPage = () => {
                 Orders for Dispatch:
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {assignModalOrders.map((o) => (
+                {assignModalOrders.map((o, idx) => (
                   <span
-                    key={o.id}
+                    key={`${o.id || o.rawId}-${idx}`}
                     style={{
                       background: '#FFFFFF',
                       border: '1px solid #CBD5E1',

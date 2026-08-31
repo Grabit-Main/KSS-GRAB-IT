@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Sparkles, Zap, Search, ShieldCheck, Clock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Search, Clock, ArrowRight } from 'lucide-react';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
 import { categories, getCanonicalSlug } from '../data/categories';
@@ -22,7 +22,7 @@ const CATEGORY_DETAILS = [
   {
     slug: 'snacks-munchies',
     name: 'Snacks & Munchies',
-    sub: 'Lay\'s, Doritos, Bingo & crispy munchies',
+    sub: "Lay's, Doritos, Bingo & crispy munchies",
     group: 'snacks',
     badgeColor: '#EA580C',
     badgeBg: '#FFF7ED',
@@ -238,69 +238,66 @@ export default function CategoriesOverviewPage() {
     <div style={{ background: '#F5F5F7', minHeight: '100vh', padding: isMobile ? '20px 10px 90px' : '24px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1240px', margin: '0 auto' }}>
         
-
-
-        {/* 👑 HEADER BANNER CARD WITH MATCHING ROYAL BLUE & ICE BLUE GRADIENT */}
+        {/* 👑 HIGH-RES COMMERCIAL HERO BANNER CARD WITH EMBEDDED SEARCH BAR */}
         <div style={{
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 45%, #DBEAFE 100%)',
           borderRadius: isMobile ? '20px' : '28px',
+          overflow: 'hidden',
           border: '1.5px solid #BFDBFE',
-          padding: isMobile ? '20px 16px' : '36px 44px',
+          boxShadow: '0 16px 40px rgba(0, 113, 227, 0.12)',
+          background: '#FFFFFF',
           marginBottom: isMobile ? '20px' : '28px',
-          boxShadow: '0 12px 36px rgba(0, 113, 227, 0.08)',
-          position: 'relative', overflow: 'hidden'
+          position: 'relative'
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column-reverse' : 'row', gap: '20px',
-            marginBottom: '16px'
-          }}>
-            {/* Left Content Column */}
-            <div style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
-              <h1 style={{ fontSize: isMobile ? '24px' : '38px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
-                All Categories
-              </h1>
-              
-              <p style={{ fontSize: isMobile ? '13px' : '14.5px', color: '#475569', margin: '0 0 18px', fontWeight: 500, lineHeight: 1.45 }}>
-                Explore 278+ daily groceries, fresh produce, cold beverages, electronics &amp; essentials
-              </p>
+          {/* Main 3D Commercial Banner Graphic */}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <img
+              src="/banner-all-categories.png"
+              alt="All Categories - Explore 278+ Daily Groceries, Fresh Produce, Cold Beverages, Electronics & Essentials"
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
 
-              {/* Instant Category Filter Search */}
-              <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
-                <Search size={17} color="#0071E3" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+            {/* Overlay Search Bar Centered Directly Inside the Light Blue Bottom Area */}
+            <div style={{
+              position: 'absolute',
+              bottom: isMobile ? '10%' : '14%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: isMobile ? '90%' : '82%',
+              maxWidth: '560px',
+              zIndex: 10
+            }}>
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                boxShadow: '0 10px 30px rgba(0, 113, 227, 0.22), 0 0 0 1px rgba(255,255,255,0.8)',
+                borderRadius: '16px'
+              }}>
+                <Search size={19} color="#0071E3" style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
-                  placeholder="Search categories (e.g. Snacks, Milk)..."
+                  placeholder="Search categories (e.g. Snacks, Milk, Dairy)..."
                   value={filterQuery}
                   onChange={e => setFilterQuery(e.target.value)}
                   style={{
-                    width: '100%', padding: '13px 14px 13px 42px', borderRadius: '14px',
-                    border: '1.5px solid #BFDBFE', background: '#FFFFFF',
-                    fontSize: '13.5px', color: '#0F172A', outline: 'none',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)', fontWeight: 600
+                    width: '100%',
+                    padding: isMobile ? '12px 14px 12px 48px' : '15px 18px 15px 52px',
+                    borderRadius: '16px',
+                    border: '2px solid #3B82F6',
+                    background: '#FFFFFF',
+                    fontSize: isMobile ? '13.5px' : '15px',
+                    color: '#0F172A',
+                    fontWeight: 700,
+                    outline: 'none',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
             </div>
-
-            {/* Right Hero Image Column (Clean Isolated Tote Bag on 100% Transparent Background) */}
-            <div style={{
-              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <img
-                src="/grabit-all-categories-hero-transparent.png"
-                alt="All Grabit Categories Hero"
-                style={{
-                  height: isMobile ? '170px' : '230px', width: 'auto', maxWidth: isMobile ? '100%' : '400px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 16px 32px rgba(0, 113, 227, 0.2))',
-                  transition: 'transform 0.3s ease'
-                }}
-              />
-            </div>
           </div>
-
         </div>
 
         {/* 📱 ZEPTO-STYLE NATIVE MOBILE & DESKTOP GRID */}
@@ -320,130 +317,132 @@ export default function CategoriesOverviewPage() {
                   key={`${cat.slug}-${cat.name}`}
                   to={`/category/${cat.slug}`}
                   style={{
-                    background: '#FFFFFF',
-                    borderRadius: '12px',
-                    border: '1px solid #E2E8F0',
-                    padding: '10px 8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justify: 'space-between',
                     textDecoration: 'none',
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'space-between',
-                    textAlign: 'center',
-                    minHeight: '135px',
+                    background: '#FFFFFF',
+                    borderRadius: '14px',
+                    padding: '10px 6px',
+                    border: '1px solid #E2E8F0',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                    position: 'relative', overflow: 'hidden'
+                    textAlign: 'center',
+                    minHeight: '115px'
                   }}
                 >
-                  {/* Center Graphic */}
                   <div style={{
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    gap: '4px', margin: '8px 0'
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '12px',
+                    background: cat.badgeBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    marginBottom: '6px',
+                    overflow: 'hidden',
+                    border: `1px solid ${cat.badgeColor}20`
                   }}>
-                    <ProductSvg name={cat.icons[0]} s={46} />
+                    {cat.icons && cat.icons[0] && cat.icons[0].startsWith('/') ? (
+                      <img src={cat.icons[0]} alt={cat.name} style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+                    ) : (
+                      <ProductSvg name={cat.icons[0]} size={36} />
+                    )}
                   </div>
-
-                  {/* Title */}
-                  <div>
-                    <h3 style={{
-                      fontSize: '12px', fontWeight: 800, color: '#0F172A',
-                      lineHeight: 1.2, margin: 0,
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                    }}>
-                      {cat.name}
-                    </h3>
-                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#0F172A', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {cat.name}
+                  </span>
                 </Link>
               );
             }
 
-            {/* DESKTOP PREMIUM STORE CARD DESIGN */}
+            {/* DESKTOP / TABLET PREMIUM CARD DESIGN */}
             return (
-              <div
+              <Link
                 key={`${cat.slug}-${cat.name}`}
+                to={`/category/${cat.slug}`}
                 style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  textDecoration: 'none',
                   background: '#FFFFFF',
                   borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
                   padding: '20px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-                  display: 'flex', flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '260px',
-                  position: 'relative', overflow: 'hidden',
-                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                  border: '1.5px solid #E2E8F0',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                  transition: 'all 0.25s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.transform = 'translateY(-4px)';
                   e.currentTarget.style.borderColor = cat.badgeColor;
-                  e.currentTarget.style.boxShadow = `0 16px 36px rgba(0,0,0,0.08)`;
+                  e.currentTarget.style.boxShadow = `0 12px 28px ${cat.badgeColor}20`;
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = 'none';
                   e.currentTarget.style.borderColor = '#E2E8F0';
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.03)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.04)';
                 }}
               >
-                <div>
-
-                  <Link to={`/category/${cat.slug}`} style={{ textDecoration: 'none' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', lineHeight: 1.2, margin: '0 0 4px' }}>
-                      {cat.name}
-                    </h3>
-                    <p style={{ fontSize: '11px', color: '#64748B', margin: 0, fontWeight: 500, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {cat.sub}
-                    </p>
-                  </Link>
-                </div>
-
-                <Link to={`/category/${cat.slug}`} style={{
-                  display: 'flex', justifyContent: 'center', alignItems: 'center',
-                  gap: '8px', margin: '14px 0', textDecoration: 'none',
-                  background: 'radial-gradient(circle, #F8FAFC 0%, rgba(255,255,255,0) 70%)',
-                  padding: '10px 0', borderRadius: '16px'
-                }}>
-                  {cat.icons.map((ic, i) => (
-                    <div key={i} style={{
-                      filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.14))',
-                      transform: i === 1 ? 'scale(0.88) translateY(4px)' : 'none'
-                    }}>
-                      <ProductSvg name={ic} s={64} />
-                    </div>
-                  ))}
-                </Link>
-
-                <div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '12px' }}>
-                    {cat.tags.map((tag, tIdx) => (
-                      <span key={tIdx} style={{ background: '#F1F5F9', color: '#475569', fontSize: '9px', fontWeight: 700, padding: '3px 7px', borderRadius: '6px' }}>
-                        {tag}
-                      </span>
-                    ))}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '16px',
+                    background: cat.badgeBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    border: `1px solid ${cat.badgeColor}25`
+                  }}>
+                    {cat.icons && cat.icons[0] && cat.icons[0].startsWith('/') ? (
+                      <img src={cat.icons[0]} alt={cat.name} style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+                    ) : (
+                      <ProductSvg name={cat.icons[0]} size={42} />
+                    )}
                   </div>
-
-                  <Link
-                    to={`/category/${cat.slug}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: '#F8FAFC', color: '#0F172A',
-                      padding: '8px 12px', borderRadius: '10px',
-                      fontSize: '12px', fontWeight: 800, textDecoration: 'none',
-                      border: '1px solid #E2E8F0', transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = cat.badgeColor;
-                      e.currentTarget.style.color = '#FFFFFF';
-                      e.currentTarget.style.borderColor = cat.badgeColor;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = '#F8FAFC';
-                      e.currentTarget.style.color = '#0F172A';
-                      e.currentTarget.style.borderColor = '#E2E8F0';
-                    }}
-                  >
-                    <span>Browse Category</span>
-                    <ArrowRight size={14} />
-                  </Link>
+                  <span style={{
+                    background: cat.badgeBg,
+                    color: cat.badgeColor,
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    border: `1px solid ${cat.badgeColor}30`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Clock size={12} /> {cat.sla}
+                  </span>
                 </div>
-              </div>
+
+                <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                  {cat.name}
+                </h3>
+                <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#64748B', lineHeight: 1.35, height: '34px', overflow: 'hidden' }}>
+                  {cat.sub}
+                </p>
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: cat.badgeColor }}>
+                    Explore Category
+                  </span>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: cat.badgeBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    color: cat.badgeColor
+                  }}>
+                    <ArrowRight size={15} />
+                  </div>
+                </div>
+              </Link>
             );
           })}
         </div>

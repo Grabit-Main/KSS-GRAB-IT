@@ -37,6 +37,7 @@ import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { getAllSystemOrders } from '../utils/orderSync';
 
 // ── Window Width Hook ──
 const useWindowWidth = () => {
@@ -238,7 +239,7 @@ export function AdminPortalApp() {
 
       let localOrders = [];
       try {
-        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        localOrders = getAllSystemOrders();
         if (!Array.isArray(localOrders)) localOrders = [];
       } catch {}
 

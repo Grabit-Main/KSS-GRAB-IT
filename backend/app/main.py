@@ -344,7 +344,7 @@ async def create_category(body: CategoryRequest, user=Depends(require_roles("adm
         # Update image URL if a new image was provided
         if body.image_url and body.image_url != cat.get("image_url"):
             try:
-                await store.patch("categories", cat["id"], {"image_url": body.image_url})
+                await store.patch("categories", {"image_url": body.image_url}, {"id": f"eq.{cat['id']}"})
                 cat["image_url"] = body.image_url
             except Exception:
                 pass
@@ -364,13 +364,13 @@ async def create_category(body: CategoryRequest, user=Depends(require_roles("adm
 
 @router.delete("/categories/{cat_id}")
 @router.delete("/categories/{cat_id}/")
-async def delete_category(cat_id: str):
+async def delete_category(cat_id: str, user=Depends(require_roles("admin", "seller"))):
     """Delete a category from Cloud DB and invalidate cache."""
     try:
         await store.delete("categories", {"id": f"eq.{cat_id}"})
     except Exception:
         pass
-    await cache_del("cache:categories:all")
+    await cache_del("cache:categories")
     return {"status": "ok", "message": "Category deleted successfully."}
 
 # ==============================================================================
@@ -506,7 +506,7 @@ async def nearby_stores(latitude: float = 12.9716, longitude: float = 77.5946, r
 # /cart/ (Redis Powered Real-time & Cloud Persistent State)
 # ==============================================================================
 @router.post("/cart/sync")
-async def sync_user_cart(body: CartSyncRequest):
+async def sync_user_cart(body: CartSyncRequest, user: dict = Depends(current_user)):
     """Save customer cart items to Cloud Redis & Persistent Store."""
     canonical_phone, _ = normalize_phone(body.phone)
     if not canonical_phone:
@@ -522,7 +522,7 @@ async def sync_user_cart(body: CartSyncRequest):
     return {"status": "ok", "phone": canonical_phone, "count": len(body.items)}
 
 @router.get("/cart/user/{phone}")
-async def get_user_cart(phone: str):
+async def get_user_cart(phone: str, user: dict = Depends(current_user)):
     """Retrieve customer's persistent cart from Cloud Redis."""
     canonical_phone, _ = normalize_phone(phone)
     if not canonical_phone:
@@ -578,7 +578,7 @@ async def clear_cart(user=Depends(require_roles("customer"))):
 # /orders/ (Cloud Database & Upstash Redis Real-time PubSub & Storage)
 # ==============================================================================
 @router.get("/orders/user/{phone}")
-async def get_user_orders(phone: str):
+async def get_user_orders(phone: str, user=Depends(current_user)):
     """Retrieve ONLY a specific customer's order history from Cloud Redis & Database."""
     canonical_phone, db_phone = normalize_phone(phone)
     if not canonical_phone:
@@ -966,7 +966,15 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
     return full_order
 
 @router.patch("/orders/{order_id}/status")
-async def order_status(order_id: str, body: StatusRequest, authorization: str | None = Header(default=None)):
+async def order_status(
+    order_id: str,
+    body: StatusRequest,
+    user: dict = Depends(require_roles("admin", "seller", "delivery_agent", "customer"))
+):
+    # Customers are only permitted to cancel their own orders, not alter workflow status
+    if user.get("role") == "customer" and body.status != "cancelled":
+        raise HTTPException(403, "Customers can only request order cancellation")
+
     # 1. Update single order cache and extract customer info
     single = None
     try:
@@ -1532,12 +1540,12 @@ async def create_suggestion(payload: dict):
 
 @router.get("/admin/product-suggestions")
 @router.get("/admin/product-suggestions/")
-async def list_suggestions():
+async def list_suggestions(user=Depends(require_roles("admin", "seller"))):
     return load_suggestions()
 
 @router.delete("/admin/product-suggestions/{sug_id}", status_code=204)
 @router.delete("/admin/product-suggestions/{sug_id}/", status_code=204)
-async def delete_suggestion(sug_id: str):
+async def delete_suggestion(sug_id: str, user=Depends(require_roles("admin", "seller"))):
     sugs = load_suggestions()
     updated = [s for s in sugs if s.get("id") != sug_id]
     save_suggestions(updated)

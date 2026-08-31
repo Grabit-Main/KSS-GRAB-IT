@@ -23,6 +23,7 @@ import {
   grabitSupermarket
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
+import { subscribeOrderUpdates, notifyOrderUpdate } from '../../utils/orderSync';
 import { get, patch, post } from '../../api';
 
 const parseItems = (raw: any) => {
@@ -1187,10 +1188,11 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchHistory();
 
     // Poll active orders every 3 seconds for real-time responsiveness
-    const activeInterval = setInterval(fetchActiveOrders, 3000);
-    const historyInterval = setInterval(fetchHistory, 30000);
+    const activeInterval = setInterval(fetchActiveOrders, 1500);
+    const historyInterval = setInterval(fetchHistory, 15000);
 
     const handleStorageUpdate = () => fetchActiveOrders();
+    const unsubscribeBroadcast = subscribeOrderUpdates(handleStorageUpdate);
     window.addEventListener('storage', handleStorageUpdate);
     window.addEventListener('grabit_orders_updated', handleStorageUpdate);
 
@@ -1198,6 +1200,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isMounted = false;
       clearInterval(activeInterval);
       clearInterval(historyInterval);
+      unsubscribeBroadcast();
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
     };

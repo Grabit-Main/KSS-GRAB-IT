@@ -1,239 +1,149 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Snowflake, Flame, ChevronRight, Search, Check, Award } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
-import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function ChickenMeatPage() {
   const w = useWindowWidth();
   const isMobile = w <= 640;
-  const [selectedSubcat, setSelectedSubcat] = useState('all');
-  const [selectedCut, setSelectedCut] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const isTablet = w <= 1024;
 
-  // Meat & Seafood catalog
-  const meatProducts = useMemo(() => {
-    const extraMeatItems = [
-      { id: 301, name: "Fresh Tender Chicken Curry Cut 500g", weight: "500g", price: 165, mrp: 195, discount: 15, rating: 4.9, reviews: 1420, image: "instant-noodles-hero-transparent.png", category: "meat", subcat: "chicken", cut: "curry", brand: "Grabit Meat", inStock: true, stock_quantity: 50 },
-      { id: 302, name: "Fresh Antibiotic-Free Chicken Breast Boneless 400g", weight: "400g", price: 220, mrp: 260, discount: 15, rating: 4.9, reviews: 980, image: "instant-noodles-hero-transparent.png", category: "meat", subcat: "chicken", cut: "boneless", brand: "Grabit Meat", inStock: true, stock_quantity: 40 },
-      { id: 303, name: "Fresh Rich Mutton Curry Cut (Rich Meat) 500g", weight: "500g", price: 449, mrp: 520, discount: 14, rating: 4.8, reviews: 670, image: "instant-noodles-hero-transparent.png", category: "meat", subcat: "mutton", cut: "curry", brand: "Grabit Meat", inStock: true, stock_quantity: 25 },
-      { id: 304, name: "Fresh Rohu Fish Steaks Cut 500g", weight: "500g", price: 195, mrp: 230, discount: 15, rating: 4.7, reviews: 540, image: "instant-noodles-hero-transparent.png", category: "meat", subcat: "fish", cut: "steaks", brand: "Grabit Seafood", inStock: true, stock_quantity: 30 },
-      { id: 305, name: "Farm Fresh Brown Protein Eggs (Pack of 12)", weight: "12 Eggs", price: 110, mrp: 130, discount: 15, rating: 4.9, reviews: 2150, image: "instant-noodles-hero-transparent.png", category: "meat", subcat: "eggs", cut: "whole", brand: "Grabit Farm", inStock: true, stock_quantity: 80 }
-    ];
+  // 🐓 1. ALL CHICKEN & EGGS PRODUCTS
+  const chickenAndEggProducts = useMemo(() => [
+    { id: 301, name: "Fresh Tender Chicken Curry Cut 500g", weight: "500g", price: 165, mrp: 195, discount: 15, rating: 4.9, reviews: 1420, image: "raw-chicken.jpg", category: "meat", subcat: "chicken", brand: "Grabit Meat", inStock: true, stock_quantity: 50 },
+    { id: 302, name: "Fresh Antibiotic-Free Chicken Breast Boneless 400g", weight: "400g", price: 220, mrp: 260, discount: 15, rating: 4.9, reviews: 980, image: "raw-chicken.jpg", category: "meat", subcat: "chicken", brand: "Grabit Meat", inStock: true, stock_quantity: 40 },
+    { id: 306, name: "Fresh Chicken Drumsticks / Tangdi 500g Pack", weight: "500g", price: 185, mrp: 220, discount: 16, rating: 4.9, reviews: 1120, image: "raw-chicken.jpg", category: "meat", subcat: "chicken", brand: "Grabit Meat", inStock: true, stock_quantity: 45 },
+    { id: 308, name: "Fresh Tender Chicken Wings 500g Pack", weight: "500g", price: 145, mrp: 175, discount: 17, rating: 4.8, reviews: 750, image: "raw-chicken.jpg", category: "meat", subcat: "chicken", brand: "Grabit Meat", inStock: true, stock_quantity: 60 },
+    { id: 305, name: "Farm Fresh Brown Protein Eggs (Pack of 12)", weight: "12 Eggs", price: 110, mrp: 130, discount: 15, rating: 4.9, reviews: 2150, image: "raw-chicken.jpg", category: "meat", subcat: "eggs", brand: "Grabit Farm", inStock: true, stock_quantity: 80 },
+    { id: 309, name: "Farm Fresh White Eggs Economy Tray (Pack of 30)", weight: "30 Eggs", price: 215, mrp: 250, discount: 14, rating: 4.9, reviews: 1680, image: "raw-chicken.jpg", category: "meat", subcat: "eggs", brand: "Grabit Farm", inStock: true, stock_quantity: 100 }
+  ], []);
 
-    return extraMeatItems;
-  }, []);
-
-  const subcategories = [
-    { id: 'all', label: '🍗 All Meat & Seafood', icon: '🥩' },
-    { id: 'chicken', label: '🐓 Fresh Chicken', icon: '🍗' },
-    { id: 'mutton', label: '🐐 Mutton & Lamb', icon: '🥩' },
-    { id: 'fish', label: '🐟 Fish & Seafood', icon: '🦐' },
-    { id: 'eggs', label: '🥚 Farm Eggs', icon: '🍳' }
-  ];
-
-  const cutTypes = [
-    { id: 'all', label: 'All Cuts' },
-    { id: 'curry', label: 'Curry Cut' },
-    { id: 'boneless', label: 'Boneless' },
-    { id: 'steaks', label: 'Fish Steaks' }
-  ];
-
-  const filteredProducts = useMemo(() => {
-    return meatProducts.filter(p => {
-      const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchSubcat = selectedSubcat === 'all' || p.subcat === selectedSubcat;
-      const matchCut = selectedCut === 'all' || p.cut === selectedCut;
-      return matchSearch && matchSubcat && matchCut;
-    });
-  }, [meatProducts, selectedSubcat, selectedCut, searchQuery]);
+  // 🥩 2. ALL FRESH MEAT & SEAFOOD PRODUCTS
+  const meatAndSeafoodProducts = useMemo(() => [
+    { id: 303, name: "Fresh Rich Mutton Curry Cut (Rich Meat) 500g", weight: "500g", price: 449, mrp: 520, discount: 14, rating: 4.8, reviews: 670, image: "raw-meat.jpg", category: "meat", subcat: "mutton", brand: "Grabit Meat", inStock: true, stock_quantity: 25 },
+    { id: 310, name: "Fresh Premium Mutton Ribs & Chops 500g", weight: "500g", price: 495, mrp: 580, discount: 15, rating: 4.9, reviews: 520, image: "raw-meat.jpg", category: "meat", subcat: "mutton", brand: "Grabit Meat", inStock: true, stock_quantity: 20 },
+    { id: 311, name: "Fresh Boneless Mutton Boti Cut 400g", weight: "400g", price: 520, mrp: 610, discount: 15, rating: 4.9, reviews: 410, image: "raw-meat.jpg", category: "meat", subcat: "mutton", brand: "Grabit Meat", inStock: true, stock_quantity: 15 },
+    { id: 304, name: "Fresh Rohu Fish Steaks Cut 500g", weight: "500g", price: 195, mrp: 230, discount: 15, rating: 4.7, reviews: 540, image: "raw-meat.jpg", category: "meat", subcat: "fish", brand: "Grabit Seafood", inStock: true, stock_quantity: 30 },
+    { id: 307, name: "Fresh Tiger Prawns Cleaned & Deveined 250g", weight: "250g", price: 299, mrp: 360, discount: 17, rating: 4.9, reviews: 830, image: "raw-meat.jpg", category: "meat", subcat: "fish", brand: "Grabit Seafood", inStock: true, stock_quantity: 35 }
+  ], []);
 
   return (
-    <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh', paddingBottom: '60px' }}>
-      {/* Breadcrumb Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #FED7AA', padding: '12px 0' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#666' }}>
-          <Link to="/" style={{ color: '#991B1B', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-          <ChevronRight size={14} color="#999" />
-          <span style={{ color: '#1F2937', fontWeight: 700 }}>Fresh Chicken & Meat</span>
+    <div style={{ backgroundColor: '#FFFDF9', color: '#991B1B', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Sticky Top Header Bar */}
+      <div style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #FED7AA',
+        padding: isMobile ? '12px 0' : '14px 0',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link to="/" aria-label="Back to Store" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: '#FEF2F2', color: '#991B1B',
+              textDecoration: 'none', transition: 'all 0.2s ease',
+              border: '1px solid #FEE2E2',
+              boxShadow: '0 2px 8px rgba(153, 27, 27, 0.08)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.transform = 'translateX(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <ArrowLeft size={20} color="#991B1B" />
+            </Link>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h1 style={{
+                margin: 0,
+                fontSize: isMobile ? '17px' : '20px',
+                fontWeight: 900,
+                color: '#991B1B',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2
+              }}>
+                Fresh Chicken & Meat
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                100% Antibiotic Free • Freshly Cut • Delivered Chilled in 10 mins
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Hero Banner Section */}
-      <div className="container" style={{ marginTop: isMobile ? '12px' : '24px' }}>
+      {/* 🐓 SECTION 1: FRESH CHICKEN & FARM EGGS */}
+      <div id="chicken-eggs-section" className="container" style={{ marginTop: isMobile ? '16px' : '24px', marginBottom: isMobile ? '40px' : '52px' }}>
+        {/* Commercial Banner 1: Fresh Chicken & Farm Eggs */}
         <div style={{
-          borderRadius: isMobile ? '16px' : '24px',
+          borderRadius: isMobile ? '20px' : '24px',
           overflow: 'hidden',
+          border: '1.5px solid #FEE2E2',
           boxShadow: '0 12px 32px rgba(153, 27, 27, 0.12)',
-          border: '1.5px solid rgba(239, 68, 68, 0.25)',
+          marginBottom: '20px',
           background: '#FFFFFF'
         }}>
           <img
-            src="/banner-meat.png"
-            alt="Fresh Chicken & Meat - Premium Quality 100% Fresh"
+            src="/banner-fresh-chicken-eggs.png"
+            alt="Fresh Chicken & Farm Eggs - Wholesome nutrition delivered fresh to your doorstep"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
         </div>
-      </div>
 
-      {/* Cold-Chain & Hygiene Feature Badges */}
-      <div className="container" style={{ marginTop: isMobile ? '16px' : '24px' }}>
+        {/* Chicken & Eggs Product Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-          gap: '12px'
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? '12px' : '20px'
         }}>
-          {[
-            { icon: <Snowflake color="#991B1B" size={20} />, title: "0 - 4°C Chilled Storage", desc: "Never frozen, always fresh" },
-            { icon: <ShieldCheck color="#991B1B" size={20} />, title: "100% Antibiotic Free", desc: "No added hormones or chemicals" },
-            { icon: <Flame color="#991B1B" size={20} />, title: "RO Water Cleaned", desc: "Hygienically cut & vacuum sealed" },
-            { icon: <Award color="#991B1B" size={20} />, title: "Halal & FSSAI Certified", desc: "100% safety & quality assured" }
-          ].map((item, i) => (
-            <div key={i} style={{
-              background: '#FFFFFF',
-              borderRadius: '14px',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-              border: '1px solid #FEE2E2'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '10px',
-                background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {item.icon}
-              </div>
-              <div>
-                <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#991B1B' }}>{item.title}</h4>
-                <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#6B7280' }}>{item.desc}</p>
-              </div>
-            </div>
+          {chickenAndEggProducts.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              badge={`${product.discount}% OFF`}
+              badgeColor="#B91C1C"
+            />
           ))}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="container" style={{ marginTop: '28px' }}>
-        {/* Category Header & Filters */}
+      {/* 🥩 SECTION 2: FRESH MEAT & GOODNESS */}
+      <div id="meat-section" className="container" style={{ marginBottom: isMobile ? '40px' : '52px' }}>
+        {/* Commercial Banner 2: Fresh Meat & Goodness */}
         <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: isMobile ? '16px' : '20px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-          border: '1px solid #FEE2E2',
-          marginBottom: '24px'
+          borderRadius: isMobile ? '20px' : '24px',
+          overflow: 'hidden',
+          border: '1.5px solid #FEE2E2',
+          boxShadow: '0 12px 32px rgba(153, 27, 27, 0.12)',
+          marginBottom: '20px',
+          background: '#FFFFFF'
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: '16px',
-            marginBottom: '20px'
-          }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: '#7F1D1D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🥩 Premium Meat & Seafood Market
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
-                100% Fresh, cut & tender chicken, mutton, fish & seafood delivered chilled in 10 mins.
-              </p>
-            </div>
-
-            <div style={{ position: 'relative', minWidth: '220px' }}>
-              <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                placeholder="Search chicken, mutton, fish..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px 8px 36px',
-                  borderRadius: '10px',
-                  border: '1px solid #FCA5A5',
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Subcategory Pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px' }}>
-            {subcategories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedSubcat(cat.id)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: selectedSubcat === cat.id ? '2px solid #991B1B' : '1px solid #FEE2E2',
-                  background: selectedSubcat === cat.id ? '#FEF2F2' : '#FFFFFF',
-                  color: selectedSubcat === cat.id ? '#991B1B' : '#4B5563',
-                  fontSize: '13px',
-                  fontWeight: selectedSubcat === cat.id ? 700 : 500,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Cut Type Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '10px', borderTop: '1px solid #FEE2E2' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter Cut:</span>
-            {cutTypes.map(cut => (
-              <button
-                key={cut.id}
-                onClick={() => setSelectedCut(cut.id)}
-                style={{
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: selectedCut === cut.id ? '#991B1B' : '#F3F4F6',
-                  color: selectedCut === cut.id ? '#FFFFFF' : '#4B5563',
-                  fontSize: '12px',
-                  fontWeight: selectedCut === cut.id ? 700 : 500,
-                  cursor: 'pointer'
-                }}
-              >
-                {cut.label}
-              </button>
-            ))}
-          </div>
+          <img
+            src="/banner-fresh-meat.png"
+            alt="Fresh Meat & Goodness - Premium quality meat hygienically cut & delivered"
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+          />
         </div>
 
-        {/* Product Grid */}
-        {filteredProducts.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: isMobile ? '12px' : '18px'
-          }}>
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '48px 24px',
-            textAlign: 'center',
-            border: '1px solid #FEE2E2'
-          }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#1F2937' }}>No meat products found</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: '#6B7280' }}>Try changing cut type or subcategory filter.</p>
-          </div>
-        )}
+        {/* Meat Products Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? '12px' : '20px'
+        }}>
+          {meatAndSeafoodProducts.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              badge={`${product.discount}% OFF`}
+              badgeColor="#B91C1C"
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
