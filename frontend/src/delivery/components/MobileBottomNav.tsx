@@ -10,7 +10,11 @@ import {
 
 export const MobileBottomNav: React.FC = () => {
   const { state } = useDelivery();
-  const { agentStatus } = state;
+  const { agentStatus, currentOrder } = state;
+
+  const isVerifiedRider = true;
+
+  const isOnDeliveryWithOrder = isVerifiedRider && agentStatus === 'ON_DELIVERY' && currentOrder !== null;
 
   const mainTabs = [
     { to: '/delivery/dashboard', label: 'Dashboard', icon: Home },
@@ -18,7 +22,7 @@ export const MobileBottomNav: React.FC = () => {
       to: '/delivery/active-delivery',
       label: 'Active Order',
       icon: Bike,
-      hasActiveOrder: agentStatus === 'ON_DELIVERY'
+      hasActiveOrder: isOnDeliveryWithOrder
     },
     { to: '/delivery/delivery-history', label: 'History', icon: History },
     { to: '/delivery/profile', label: 'Profile', icon: User }

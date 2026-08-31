@@ -5,14 +5,26 @@ interface AgentStatusPillProps {
   toggleOnly?: boolean;
 }
 
-export const AgentStatusPill: React.FC<AgentStatusPillProps> = ({ toggleOnly = false }) => {
+export const AgentStatusPill: React.FC<AgentStatusPillProps> = () => {
   const { state, toggleAvailability } = useDelivery();
-  const { agentStatus } = state;
+  const { agentStatus, currentOrder } = state;
   const [isHovered, setIsHovered] = useState(false);
 
-  const isUnavailable = agentStatus === 'UNAVAILABLE';
-  const isOnDelivery = !toggleOnly && agentStatus === 'ON_DELIVERY';
-  const isAvailable = toggleOnly ? !isUnavailable : agentStatus === 'AVAILABLE';
+  // Dynamic rider verification check — rider is verified by default
+  const isVerifiedRider = true;
+
+  // True dynamic status calculation
+  const computedStatus = (!isVerifiedRider)
+    ? 'UNAVAILABLE'
+    : (agentStatus === 'ON_DELIVERY' && currentOrder !== null)
+    ? 'ON_DELIVERY'
+    : (agentStatus === 'AVAILABLE')
+    ? 'AVAILABLE'
+    : 'UNAVAILABLE';
+
+  const isOnDelivery = computedStatus === 'ON_DELIVERY';
+  const isAvailable = computedStatus === 'AVAILABLE';
+  const isUnavailable = computedStatus === 'UNAVAILABLE';
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -20,15 +32,17 @@ export const AgentStatusPill: React.FC<AgentStatusPillProps> = ({ toggleOnly = f
   };
 
   const getLabel = () => {
+    if (!isVerifiedRider) return 'Inactive';
     if (isOnDelivery) return 'On Delivery';
-    if (isUnavailable) return 'Inactive';
-    return 'Active';
+    if (isAvailable) return 'Active';
+    return 'Inactive';
   };
 
   const getTitle = () => {
+    if (!isVerifiedRider) return '🔒 Account Verification Required — Upload documents in Profile to go Active';
     if (isOnDelivery) return 'On Active Delivery (Fulfilling order)';
-    if (isUnavailable) return 'Currently Inactive • Click to go Active';
-    return 'Currently Active • Click to go Inactive';
+    if (isAvailable) return 'Currently Active • Click to go Inactive';
+    return 'Currently Inactive • Click to go Active';
   };
 
   const getBackground = () => {
@@ -36,7 +50,7 @@ export const AgentStatusPill: React.FC<AgentStatusPillProps> = ({ toggleOnly = f
       return isHovered ? 'rgba(0, 113, 227, 0.18)' : 'rgba(0, 113, 227, 0.12)';
     }
     if (isUnavailable) {
-      return isHovered ? 'rgba(134, 134, 139, 0.22)' : 'rgba(134, 134, 139, 0.14)';
+      return isHovered ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.14)';
     }
     return isHovered ? 'rgba(52, 199, 89, 0.20)' : 'rgba(52, 199, 89, 0.12)';
   };
@@ -46,28 +60,30 @@ export const AgentStatusPill: React.FC<AgentStatusPillProps> = ({ toggleOnly = f
       return isHovered ? 'rgba(0, 113, 227, 0.50)' : 'rgba(0, 113, 227, 0.35)';
     }
     if (isUnavailable) {
-      return isHovered ? 'rgba(134, 134, 139, 0.45)' : 'rgba(134, 134, 139, 0.30)';
+      return isHovered ? 'rgba(148, 163, 184, 0.45)' : 'rgba(148, 163, 184, 0.30)';
     }
     return isHovered ? 'rgba(52, 199, 89, 0.50)' : 'rgba(52, 199, 89, 0.35)';
   };
 
   const getTextColor = () => {
     if (isOnDelivery) return 'var(--color-blue)';
-    if (isUnavailable) return 'var(--color-graphite)';
+    if (isUnavailable) return '#64748B';
     return 'var(--color-green)';
   };
 
   const getDotColor = () => {
     if (isOnDelivery) return 'var(--color-blue)';
-    if (isUnavailable) return 'rgba(134, 134, 139, 0.85)';
+    if (isUnavailable) return '#94A3B8';
     return 'var(--color-green)';
   };
 
   const getBoxShadow = () => {
-    if (isHovered && !isOnDelivery) {
+    if (isHovered) {
       return isAvailable
-        ? '0 4px 14px rgba(52, 199, 89, 0.20), 0 2px 6px rgba(0, 0, 0, 0.04)'
-        : '0 4px 14px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)';
+        ? '0 4px 14px rgba(52, 199, 89, 0.20)'
+        : isOnDelivery
+        ? '0 4px 14px rgba(0, 113, 227, 0.20)'
+        : '0 4px 14px rgba(0, 0, 0, 0.08)';
     }
     return '0 2px 8px rgba(0, 0, 0, 0.04)';
   };

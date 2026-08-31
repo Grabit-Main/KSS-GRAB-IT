@@ -46,14 +46,14 @@ function DeliveryAppLayout() {
     try {
       const userStr = localStorage.getItem('grabit_user');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || user.name === 'Speedy Express Delivery' || (user.role !== 'delivery_agent' && user.role !== 'admin')) {
+      if (!user) {
         const riderUser = {
-          id: 3,
+          id: 'thabee-rider-1',
           role: 'delivery_agent',
-          name: 'Alex Mercer',
-          full_name: 'Alex Mercer',
-          phone: '+91 98801 24492',
-          email: 'alex.partner@grabit.com'
+          name: 'Thabee',
+          full_name: 'Thabee',
+          phone: '+919080841727',
+          email: 'thabee.partner@grabit.com'
         };
         localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
         localStorage.setItem('grabit_user', JSON.stringify(riderUser));
@@ -169,9 +169,9 @@ function DeliveryAppLayout() {
             <Route path="dashboard" element={<DashboardScreen />} />
             <Route path="active-delivery" element={<ActiveDeliveryScreen />} />
             <Route path="delivery-history" element={<DeliveryHistoryScreen />} />
-            <Route path="performance" element={<PerformanceScreen />} />
+            <Route path="performance" element={<Navigate to="/delivery/dashboard" replace />} />
             <Route path="notifications" element={<NotificationsScreen />} />
-            <Route path="support" element={<SupportScreen />} />
+            <Route path="support" element={<Navigate to="/delivery/dashboard" replace />} />
             <Route path="profile" element={<ProfileScreen />} />
             <Route path="settings" element={<SettingsScreen />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />

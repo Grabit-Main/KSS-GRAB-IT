@@ -32,16 +32,37 @@ export const NewOrderPopup: React.FC = () => {
     const prevOrderId = prevOrderIdRef.current;
     const currentOrderId = currentOrder?.id ?? null;
 
-    // Fire popup when a brand-new order just arrived
+    const isVerifiedRider = (() => {
+      try {
+        const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
+        if (u.partnerVerified === true) return true;
+        const clearances = u.clearances || {};
+        const ts = u.clearanceTimestamps || u.clearance_timestamps || {};
+        const ONE_HOUR = 60 * 60 * 1000;
+        const now = Date.now();
+        const biometricsDone = !!(u.biometricsDone || u.selfieImage || u.avatar_url || u.selfie_image);
+        const dlSubmitted = !!(u.drivingLicense || u.driving_license || u.vehicle || u.plate);
+        const dlTs = ts.dl;
+        const dlVerified = dlSubmitted && dlTs && (now - dlTs >= ONE_HOUR);
+        return biometricsDone && dlVerified;
+      } catch {
+        return false;
+      }
+    })();
+
+    // Fire popup ONLY when rider is verified, active, and a brand-new order arrives
     const isNewOrder =
+      isVerifiedRider &&
       agentStatus === 'ON_DELIVERY' &&
       currentOrder !== null &&
       (prevStatus !== 'ON_DELIVERY' || prevOrderId !== currentOrderId);
 
     if (isNewOrder) {
       setVisible(true);
-      // Tiny delay to allow mount before animating in
       requestAnimationFrame(() => setAnimateIn(true));
+    } else if (!isVerifiedRider || agentStatus !== 'ON_DELIVERY' || !currentOrder) {
+      setVisible(false);
+      setAnimateIn(false);
     }
 
     prevStatusRef.current = agentStatus;

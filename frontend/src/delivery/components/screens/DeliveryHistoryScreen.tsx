@@ -31,6 +31,7 @@ export const DeliveryHistoryScreen: React.FC = () => {
 
   const [selectedMonthDate, setSelectedMonthDate] = useState<Date>(new Date());
   const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'DELIVERED' | 'FAILED_DELIVERY' | 'RETURNED'>('ALL');
@@ -42,12 +43,10 @@ export const DeliveryHistoryScreen: React.FC = () => {
   // Calculate gross shift earnings from delivered orders
   const deliveredOrders = history.filter((item) => item.status === 'DELIVERED');
   const grossEarningsFromHistory = deliveredOrders.reduce(
-    (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)),
+    (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? Math.round(55 + (item.distanceKm || 2) * 10) : 65)),
     0
   );
-  const baseEarnings = deliveredOrders.length > 0
-    ? grossEarningsFromHistory
-    : (stats.completedToday > 0 ? stats.completedToday * 65 : 142);
+  const baseEarnings = grossEarningsFromHistory;
 
   const redeemedIncentivesBonus = (incentiveCampaigns || [])
     .filter((c) => c.isRedeemed)
@@ -55,14 +54,12 @@ export const DeliveryHistoryScreen: React.FC = () => {
 
   const grossEarnings = baseEarnings + redeemedIncentivesBonus;
 
-  // Calculate total transferred payouts (Default to grossEarnings when already withdrawn)
-  const totalTransferred = payoutTransfers.length > 0
-    ? payoutTransfers.reduce((sum, t) => sum + t.amount, 0)
-    : grossEarnings;
+  // Calculate total transferred payouts (actual user cashout transfers)
+  const totalTransferred = (payoutTransfers || []).reduce((sum, t) => sum + t.amount, 0);
 
   // Available Shift Balance (deducted after payouts)
   const totalPayout = Math.max(0, grossEarnings - totalTransferred);
-  const deliveredCount = history.filter((item) => item.status === 'DELIVERED').length || stats.completedToday;
+  const deliveredCount = deliveredOrders.length || stats.completedToday;
 
   const handleCashout = () => {
     if (totalPayout <= 0) return;
@@ -113,6 +110,38 @@ export const DeliveryHistoryScreen: React.FC = () => {
     setSelectedDayNumber(null);
   };
 
+  const handlePrevWeek = () => {
+    setWeekOffset((prev) => prev - 1);
+  };
+
+  const handleNextWeek = () => {
+    setWeekOffset((prev) => Math.min(0, prev + 1));
+  };
+
+  const getWeekInfo = (offset: number) => {
+    const n = new Date();
+    const dayIdx = (n.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+    const monday = new Date(n);
+    monday.setDate(n.getDate() - dayIdx + (offset * 7));
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const formatWeekDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const startStr = formatWeekDate(monday);
+    const endStr = formatWeekDate(sunday);
+
+    let label = 'This Week';
+    if (offset === -1) label = 'Previous Week';
+    else if (offset === -2) label = '2 Weeks Ago';
+    else if (offset < -2) label = `${Math.abs(offset)} Weeks Ago`;
+    else if (offset > 0) label = `Week +${offset}`;
+
+    return { monday, sunday, startStr, endStr, label };
+  };
+
   const getMonthCalendarDays = () => {
     const year = selectedMonthDate.getFullYear();
     const month = selectedMonthDate.getMonth();
@@ -129,10 +158,20 @@ export const DeliveryHistoryScreen: React.FC = () => {
     return days;
   };
 
+  const parseEntryDate = (isoOrStr: string) => {
+    if (!isoOrStr) return new Date();
+    try {
+      const d = new Date(isoOrStr);
+      if (!isNaN(d.getTime())) return d;
+    } catch {}
+    return new Date();
+  };
+
   const filterByPeriod = (dateObj: Date) => {
     if (!dateObj || isNaN(dateObj.getTime())) return true;
     if (walletPeriod === 'THIS_WEEK') {
-      return dateObj >= sevenDaysAgo;
+      const weekInfo = getWeekInfo(weekOffset);
+      return dateObj >= weekInfo.monday && dateObj <= weekInfo.sunday;
     }
     if (walletPeriod === 'THIS_MONTH') {
       const matchesMonth =
@@ -150,7 +189,7 @@ export const DeliveryHistoryScreen: React.FC = () => {
   const selectedMonthGrossEarnings = (() => {
     const monthDelivered = history.filter((item) => {
       if (item.status !== 'DELIVERED') return false;
-      const d = new Date(item.timestamp);
+      const d = parseEntryDate(item.completedAtISO || item.timestamp);
       return d.getMonth() === selectedMonthDate.getMonth() && d.getFullYear() === selectedMonthDate.getFullYear();
     });
 
@@ -160,23 +199,16 @@ export const DeliveryHistoryScreen: React.FC = () => {
 
     if (monthDelivered.length > 0) {
       return monthDelivered.reduce(
-        (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)),
+        (sum, item) => sum + (item.earning || (item.totalAmount > 0 ? Math.round(55 + (item.distanceKm || 2) * 10) : 65)),
         0
       ) + (isCurrentMonth ? redeemedIncentivesBonus : 0);
     }
     return isCurrentMonth ? grossEarnings : 0;
   })();
 
-  const filteredPayoutTransfers = payoutTransfers.filter((t) => {
-    const d = new Date(t.timestamp);
+  const filteredPayoutTransfers = (payoutTransfers || []).filter((t) => {
+    const d = parseEntryDate(t.timestamp);
     return filterByPeriod(d);
-  });
-
-  // Calculate gross earnings strictly for the selected period / month
-  const filteredDeliveredOrders = history.filter((item) => {
-    if (item.status !== 'DELIVERED') return false;
-    const dateObj = new Date(item.timestamp);
-    return filterByPeriod(dateObj);
   });
 
   const isCurrentSelectedMonth =
@@ -185,21 +217,22 @@ export const DeliveryHistoryScreen: React.FC = () => {
 
   const periodDeliveredHistory = history
     .filter((h) => h.status === 'DELIVERED')
-    .filter((h) => filterByPeriod(new Date(h.timestamp)));
+    .filter((h) => filterByPeriod(parseEntryDate(h.completedAtISO || h.timestamp)));
 
   // Calculate Total Earned directly by summing every trip amount in the history list
   const periodTripEarningsSum = periodDeliveredHistory.reduce((sum, h) => {
-    const earningAmt = h.earning || (h.totalAmount > 0 ? 55 + (h.distanceKm || 2) * 10 : 65);
+    const earningAmt = h.earning || (h.totalAmount > 0 ? Math.round(55 + (h.distanceKm || 2) * 10) : 65);
     return sum + earningAmt;
   }, 0);
 
   const periodIncentiveBonus = (incentiveCampaigns || [])
+    .filter((c) => c.isRedeemed)
     .reduce((sum, c) => sum + c.bonusAmount, 0);
 
   const periodGrossEarnings = periodTripEarningsSum + ((isCurrentSelectedMonth || walletPeriod === 'ALL') ? periodIncentiveBonus : 0);
 
-  // Total Withdrawn dynamically matches Total Earned for the selected period
-  const periodTransferred = periodGrossEarnings;
+  // Total Withdrawn dynamically calculated from actual cashout transfers
+  const periodTransferred = filteredPayoutTransfers.reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -415,6 +448,75 @@ export const DeliveryHistoryScreen: React.FC = () => {
               </button>
             </div>
 
+          {/* 📅 Week-by-Week Selector Bar */}
+          {walletPeriod === 'THIS_WEEK' && (() => {
+            const weekInfo = getWeekInfo(weekOffset);
+            return (
+              <div
+                className="glass-card"
+                style={{
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handlePrevWeek}
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    backgroundColor: '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#0F172A'
+                  }}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <Calendar size={18} color="#0071E3" />
+                    <span style={{ fontSize: '17px', fontWeight: '800', color: '#1D1D1F' }}>
+                      {weekInfo.label}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600', marginTop: '2px', display: 'block' }}>
+                    Showing weekly earnings & withdrawal summary
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleNextWeek}
+                  disabled={weekOffset >= 0}
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    backgroundColor: weekOffset >= 0 ? '#F8FAFC' : '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: weekOffset >= 0 ? 'not-allowed' : 'pointer',
+                    color: weekOffset >= 0 ? '#94A3B8' : '#0F172A',
+                    opacity: weekOffset >= 0 ? 0.5 : 1
+                  }}
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            );
+          })()}
+
           {/* 🗓️ Month-by-Month Selector Bar */}
           {walletPeriod === 'THIS_MONTH' && (
             <div
@@ -582,7 +684,7 @@ export const DeliveryHistoryScreen: React.FC = () => {
 
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '16px', fontWeight: '900', color: '#DC2626' }}>
-                      -₹{periodTransferred.toFixed(2)}
+                      -₹{t.amount.toFixed(2)}
                     </span>
                     <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', marginTop: '2px' }}>
                       ✓ IMPS Success
@@ -590,64 +692,10 @@ export const DeliveryHistoryScreen: React.FC = () => {
                   </div>
                 </div>
               ))
-            ) : (periodTransferred > 0 && (walletPeriod === 'ALL' || isCurrentSelectedMonth)) ? (
-              <div
-                key="default-payout-entry"
-                className="glass-card"
-                style={{
-                  padding: '14px 18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  borderLeft: '4px solid #DC2626',
-                  backgroundColor: 'rgba(254, 242, 242, 0.7)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '12px',
-                      backgroundColor: '#FEE2E2',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#DC2626',
-                      flexShrink: 0
-                    }}
-                  >
-                    <Building size={20} color="#DC2626" />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#1D1D1F' }}>
-                        Instant Bank Payout (UPI)
-                      </span>
-                      <span className="badge badge-red" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                        Transferred Out
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                      To speed@okaxis (HDFC) • Today
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '16px', fontWeight: '900', color: '#DC2626' }}>
-                    -₹{periodTransferred.toFixed(2)}
-                  </span>
-                  <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', marginTop: '2px' }}>
-                    ✓ IMPS Success
-                  </div>
-                </div>
-              </div>
             ) : null}
 
-            {/* List ALL Incentive Campaigns (Credited / Active Reward Bonus) */}
-            {(walletPeriod === 'ALL' || isCurrentSelectedMonth) && (incentiveCampaigns || []).map((c) => (
+            {/* List ONLY REDEEMED Incentive Campaigns */}
+            {(walletPeriod === 'ALL' || isCurrentSelectedMonth) && (incentiveCampaigns || []).filter(c => c.isRedeemed).map((c) => (
               <div
                 key={`inc-${c.id}`}
                 className="glass-card"

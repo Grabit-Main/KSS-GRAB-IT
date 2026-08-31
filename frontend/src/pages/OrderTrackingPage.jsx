@@ -83,9 +83,8 @@ export default function OrderTrackingPage() {
         if (u) activeUserPhone = JSON.parse(u).phone || '';
       } catch {}
 
-      const hasToken = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_seller_access') || localStorage.getItem('grabit_jwt');
-      const fetchPath = (activeUserPhone && hasToken) ? `/orders/user/${activeUserPhone}` : (hasToken ? '/orders/' : '');
-      const apiOrders = fetchPath ? await get(fetchPath).catch(() => []) : [];
+      const fetchPath = activeUserPhone ? `/orders/user/${activeUserPhone}` : '/orders/';
+      const apiOrders = await get(fetchPath).catch(() => []);
       if (Array.isArray(apiOrders)) {
         const found = apiOrders.find(o => String(o.id) === String(orderId) || String(o.id).slice(0, 8) === String(orderId).slice(0, 8));
         if (found) {

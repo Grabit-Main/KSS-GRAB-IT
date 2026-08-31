@@ -135,11 +135,13 @@ export interface DeliveryHistoryEntry {
   deliveryLocation: string;
   status: 'DELIVERED' | 'FAILED_DELIVERY' | 'RETURNED';
   timestamp: string;
+  completedAtISO: string;
   totalAmount: number;
   paymentMethod: PaymentMethod;
   distanceKm: number;
   durationMinutes: number;
   failureReason?: string;
+  earning?: number;
 }
 
 export interface AppNotification {

@@ -33,7 +33,6 @@ import { useSellerAuth } from '../context/SellerAuthContext';
 import { useToast } from '../context/ToastContext';
 import { categoryService } from '../services/categoryService';
 import { productService } from '../services/productService';
-import { getAllSystemOrders, notifyOrderUpdate } from '../../utils/orderSync';
 import { mockDb } from '../services/mockData';
 import { resolveMediaUrl, DEFAULT_PRODUCT_FALLBACK } from '../utils/mediaResolver';
 import { get, patch } from '../../api';
@@ -137,7 +136,7 @@ export const SellerDashboardPage = () => {
 
   const [liveOrders, setLiveOrders] = useState(() => {
     try {
-      const local = getAllSystemOrders();
+      const local = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
       if (Array.isArray(local)) {
         const activeOnly = local.filter(isLivePackingQueueOrder).map(formatOrderObj);
         return activeOnly.slice(0, 3);
@@ -167,7 +166,14 @@ export const SellerDashboardPage = () => {
 
       let localOrders = [];
       try {
-        localOrders = getAllSystemOrders();
+        localOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        if (Array.isArray(localOrders)) {
+          const cleaned = localOrders.filter(isValidRealOrder);
+          if (cleaned.length !== localOrders.length) {
+            localStorage.setItem('grabit_orders', JSON.stringify(cleaned));
+          }
+          localOrders = cleaned;
+        }
       } catch {}
 
       const allRaw = [...localOrders, ...apiOrders];
@@ -523,7 +529,7 @@ export const SellerDashboardPage = () => {
                 <span style={{ fontSize: '12px', color: '#64748B', maxWidth: '280px' }}>Real-time orders placed by customers will appear here in your packing queue.</span>
               </div>
             ) : (
-              liveOrders.map((order, idx) => {
+              liveOrders.map((order) => {
                 const isDelivered = order.status === 'delivered';
                 const isPlaced = order.status === 'placed';
                 const isPreparing = order.status === 'preparing';
@@ -531,7 +537,7 @@ export const SellerDashboardPage = () => {
 
                 return (
                   <div
-                    key={`${order.id || order.rawId || 'live'}-${idx}`}
+                    key={order.id}
                     style={{
                       padding: '12px 14px',
                       backgroundColor: '#FFFFFF',
