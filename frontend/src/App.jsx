@@ -48,19 +48,6 @@ function InitialLoginCheck() {
     const userStr = localStorage.getItem('grabit_user');
     const path = location.pathname;
 
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        // Only redirect rider on root '/' initial load if not intentionally navigating elsewhere
-        if (user && user.role === 'delivery_agent' && path === '/' && !sessionStorage.getItem('grabit_skipped_login')) {
-          navigate('/delivery/dashboard', { replace: true });
-          return;
-        }
-      } catch {
-        // safe JSON parse check
-      }
-    }
-
     const isProtected =
       path === '/checkout' ||
       path === '/orders' ||
