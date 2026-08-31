@@ -46,7 +46,7 @@ function DeliveryAppLayout() {
     try {
       const userStr = localStorage.getItem('grabit_user');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user) {
+      if (!user || user.role !== 'delivery_agent') {
         const riderUser = {
           id: 'thabee-rider-1',
           role: 'delivery_agent',

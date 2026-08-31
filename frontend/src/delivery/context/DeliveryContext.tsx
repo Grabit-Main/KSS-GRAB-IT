@@ -162,10 +162,10 @@ const mergeHistoryEntries = (local: DeliveryHistoryEntry[], cloud: DeliveryHisto
   const map = new Map<string, DeliveryHistoryEntry>();
 
   const getDedupeKey = (e: DeliveryHistoryEntry, idx: number): string => {
-    const id = (e.orderId || '').trim().toLowerCase();
-    if (id) return `id:${id}`;
-    const num = (e.orderNumber || '').trim().toLowerCase();
-    if (num) return `num:${num}`;
+    const numKey = formatOrderId(e.orderNumber || e.orderId).toLowerCase().trim();
+    if (numKey) return `num:${numKey}`;
+    const idKey = String(e.orderId || '').toLowerCase().trim();
+    if (idKey) return `id:${idKey}`;
     return `idx:${idx}_${Date.now()}`;
   };
 
@@ -562,6 +562,19 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         if (u.id) riderId = String(u.id);
         else if (u.phone) riderId = String(u.phone);
         localStorage.setItem(`grabit_delivery_history_${riderId}`, JSON.stringify(newHistory));
+
+        // Immediately persist to delivered ids set so background polling never re-assigns
+        const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+        const deliveredSet = new Set(Array.isArray(deliveredList) ? deliveredList.map((x: any) => String(x).toLowerCase().trim()) : []);
+        if (completedOrder.id) {
+          deliveredSet.add(String(completedOrder.id).toLowerCase().trim());
+          deliveredSet.add(formatOrderId(completedOrder.id).toLowerCase().trim());
+        }
+        if (completedOrder.orderNumber) {
+          deliveredSet.add(String(completedOrder.orderNumber).toLowerCase().trim());
+          deliveredSet.add(formatOrderId(completedOrder.orderNumber).toLowerCase().trim());
+        }
+        localStorage.setItem('grabit_delivered_order_ids', JSON.stringify(Array.from(deliveredSet)));
       } catch {}
 
       // ── Check if there are queued orders waiting for this rider ──
@@ -820,7 +833,17 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
           const dSet = new Set(Array.isArray(dList) ? dList.map((x: any) => String(x).toLowerCase().trim()) : []);
           const aId = String(activeOrder.id || '').toLowerCase().trim();
           const aNum = String(activeOrder.orderNumber || '').toLowerCase().trim();
-          if (dSet.has(aId) || dSet.has(aNum)) isDelivered = true;
+          const aFmt = formatOrderId(activeOrder.orderNumber || activeOrder.id).toLowerCase().trim();
+
+          const inHistory = (state.history || []).some(h => {
+            const hNum = formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim();
+            const hId = String(h.orderId || '').toLowerCase().trim();
+            return (aFmt && hNum === aFmt) || (hId && hId === aId) || (hNum && hNum === aNum);
+          });
+
+          if (dSet.has(aId) || dSet.has(aNum) || (aFmt && dSet.has(aFmt)) || inHistory) {
+            isDelivered = true;
+          }
         } catch {}
 
         if (!isDelivered) {
@@ -835,6 +858,8 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
       }
       return {
         ...state,
+        agentStatus: state.currentOrder ? state.agentStatus : 'AVAILABLE',
+        currentOrder: state.currentOrder && (state.history || []).some(h => formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim() === formatOrderId(state.currentOrder?.orderNumber || state.currentOrder?.id).toLowerCase().trim()) ? null : state.currentOrder,
         queuedOrders,
         orderPool: poolOrders
       };
@@ -1196,14 +1221,27 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Combine unique orders, ensuring initial seller orders pool is always available
         const allRaw = [...localOrders, ...apiOrders, ...initialOrdersPool];
-        const seenKeys = new Set();
+        const seenKeys = new Set<string>();
         const uniqueOrders = [];
 
         for (const o of allRaw) {
           if (!isValidRealOrder(o)) continue;
-          const key = String(o.rawId || o.id || o.orderNumber || '').trim();
-          if (!key || seenKeys.has(key)) continue;
-          seenKeys.add(key);
+
+          const numKey = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
+          const idKey = String(o.id || '').toLowerCase().trim();
+          const rawIdKey = String(o.rawId || '').toLowerCase().trim();
+
+          if (
+            (numKey && seenKeys.has(numKey)) ||
+            (idKey && seenKeys.has(idKey)) ||
+            (rawIdKey && seenKeys.has(rawIdKey))
+          ) {
+            continue; // STRICTLY SKIP DUPLICATE ORDER!
+          }
+
+          if (numKey) seenKeys.add(numKey);
+          if (idKey) seenKeys.add(idKey);
+          if (rawIdKey) seenKeys.add(rawIdKey);
           uniqueOrders.push(o);
         }
 
@@ -1237,8 +1275,14 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const oid = String(o.id || '').toLowerCase().trim();
           const oraw = String(o.rawId || '').toLowerCase().trim();
           const onum = String(o.orderNumber || '').toLowerCase().trim();
+          const ofmt = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
 
-          if (deliveredIds.has(oid) || deliveredIds.has(oraw) || deliveredIds.has(onum)) {
+          if (
+            deliveredIds.has(oid) ||
+            deliveredIds.has(oraw) ||
+            deliveredIds.has(onum) ||
+            (ofmt && deliveredIds.has(ofmt))
+          ) {
             continue; // ALREADY DELIVERED! STRICTLY SKIP!
           }
 
