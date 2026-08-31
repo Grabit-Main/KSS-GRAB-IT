@@ -47,20 +47,6 @@ class BulkAssignRequest(BaseModel):
     order_ids: list[str]
     delivery_agent_id: str
     rider_name: str | None = None
+
 class ManagedUser(BaseModel): full_name: str; phone: str; role: Literal["seller", "delivery_agent"]
-class ProfileUpdate(BaseModel):
-    full_name: str | None = Field(default=None, min_length=2, max_length=100)
-    email: str | None = None
-    avatar_url: str | None = None
-    selfie_image: str | None = None
-    vehicle: str | None = None
-    plate: str | None = None
-    license_plate: str | None = None
-    driving_license: str | None = None
-    insurance_no: str | None = None
-    bg_check_ref: str | None = None
-    biometrics_done: bool | None = None
-    clearances: dict | None = None
-    clearance_timestamps: dict | None = None
-
-
+class ProfileUpdate(BaseModel): full_name: str | None = Field(default=None, min_length=2, max_length=100); email: str | None = None

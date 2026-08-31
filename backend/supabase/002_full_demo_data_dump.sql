@@ -20,17 +20,6 @@ create table if not exists public.profiles (
   phone text unique not null,
   full_name text not null,
   email text,
-  avatar_url text,
-  selfie_image text,
-  vehicle text,
-  plate text,
-  license_plate text,
-  driving_license text,
-  insurance_no text,
-  bg_check_ref text,
-  biometrics_done boolean default false,
-  clearances jsonb,
-  clearance_timestamps jsonb,
   role public.user_role not null default 'customer',
   created_at timestamptz not null default now()
 );
