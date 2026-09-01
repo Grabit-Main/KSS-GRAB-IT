@@ -1955,6 +1955,87 @@ async def get_biometrics(rider_id: str):
 
 
 # ==============================================================================
+# SELLER DASHBOARD MOCK ROUTES
+# ==============================================================================
+@router.get("/seller/dashboard/revenue")
+async def get_revenue_overview(period: str = "monthly"):
+    if period == "daily":
+        return {
+            "totalRevenue": 5000,
+            "percentageChange": 5.2,
+            "previousPeriodRevenue": 4750,
+            "data": [
+                {"label": "12 AM", "revenue": 100},
+                {"label": "6 AM", "revenue": 400},
+                {"label": "12 PM", "revenue": 1500},
+                {"label": "6 PM", "revenue": 2000},
+                {"label": "11 PM", "revenue": 1000}
+            ]
+        }
+    elif period == "weekly":
+        return {
+            "totalRevenue": 35000,
+            "percentageChange": -2.1,
+            "previousPeriodRevenue": 35750,
+            "data": [
+                {"label": "Mon", "revenue": 4500},
+                {"label": "Tue", "revenue": 5200},
+                {"label": "Wed", "revenue": 4800},
+                {"label": "Thu", "revenue": 6000},
+                {"label": "Fri", "revenue": 7500},
+                {"label": "Sat", "revenue": 4000},
+                {"label": "Sun", "revenue": 3000}
+            ]
+        }
+    elif period == "yearly":
+        return {
+            "totalRevenue": 1750000,
+            "percentageChange": 18.5,
+            "previousPeriodRevenue": 1476793,
+            "data": [
+                {"label": "Q1", "revenue": 400000},
+                {"label": "Q2", "revenue": 450000},
+                {"label": "Q3", "revenue": 380000},
+                {"label": "Q4", "revenue": 520000}
+            ]
+        }
+    else:
+        return {
+            "totalRevenue": 145000,
+            "percentageChange": 12.5,
+            "previousPeriodRevenue": 128000,
+            "data": [
+                {"label": "Week 1", "revenue": 35000},
+                {"label": "Week 2", "revenue": 42000},
+                {"label": "Week 3", "revenue": 38000},
+                {"label": "Week 4", "revenue": 30000}
+            ]
+        }
+
+@router.get("/seller/dashboard/top-products")
+async def get_top_products(period: str = "30days"):
+    return [
+        { "id": '1', "name": 'Fresh Royal Gala Red Apples (4 Pcs)', "sku": 'PROD-FR-01', "image": 'fresh-red-apples.jpg', "unitsSold": 142, "trend": '+12.5%', "revenue": 141858, "stock": 45 },
+        { "id": '6', "name": "Lay's American Style Cream & Onion 50g", "sku": 'SNK-LY-06', "image": 'lays-cream-onion.png', "unitsSold": 89, "trend": '+5.2%', "revenue": 88911, "stock": 12 },
+        { "id": '11', "name": 'Amul Pasteurised Salted Butter 100g', "sku": 'DRY-AM-11', "image": 'amul-butter-real.jpg', "unitsSold": 67, "trend": '-2.1%', "revenue": 40133, "stock": 4 },
+        { "id": '16', "name": 'Coca-Cola Original Taste Soft Drink 750ml', "sku": 'BEV-CC-16', "image": 'coca-cola-real.jpg', "unitsSold": 34, "trend": '+18.4%', "revenue": 204000, "stock": 8 }
+    ]
+
+@router.get("/seller/dashboard/payouts")
+async def get_payouts():
+    return {
+        "amountToReceive": 48750,
+        "pendingSettlement": 12500,
+        "nextPayoutDate": 'Sep 2026',
+        "lastPayoutAmount": 35200,
+        "lastPayoutDate": 'Aug 2026',
+        "recentTransactions": [
+            { "id": 'SET-9921', "date": 'Aug 2026', "type": 'Payout', "amount": 35200, "status": 'Completed' },
+            { "id": 'SET-9920', "date": 'Aug 2026', "type": 'Payout', "amount": 41100, "status": 'Completed' }
+        ]
+    }
+
+# ==============================================================================
 # MOUNT ROUTER DUAL-MODE (Both '/' and '/api/' paths)
 # ==============================================================================
 app.include_router(router, prefix="")
