@@ -265,6 +265,7 @@ export const SellerDashboardPage = () => {
         const q = parseInt(p.stock_quantity, 10);
         return isNaN(q) || q <= 5;
       });
+      setCriticalStockProducts(critical);
       const activeLiveQueue = validOrders.filter(isLivePackingQueueOrder);
       setLiveOrders(activeLiveQueue.slice(0, 3));
     } catch (err) {
