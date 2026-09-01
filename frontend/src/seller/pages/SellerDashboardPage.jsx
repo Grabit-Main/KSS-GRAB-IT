@@ -105,11 +105,10 @@ export const SellerDashboardPage = () => {
   const isLivePackingQueueOrder = (o) => {
     if (!isValidRealOrder(o)) return false;
     const st = String(o.status || '').toLowerCase();
-    if (st === 'delivered' || st === 'cancelled' || st === 'out_for_delivery' || st === 'out-for-delivery') {
+    if (st === 'delivered' || st === 'cancelled') {
       return false;
     }
-    if (o.delivery_agent_id) return false;
-    return ['placed', 'preparing', 'ready', 'ready_for_pickup'].includes(st);
+    return true;
   };
 
   const formatOrderObj = (o) => {
