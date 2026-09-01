@@ -108,8 +108,184 @@ async def redis_publish(channel: str, message: dict):
     """Publish real-time event to Upstash Redis pub/sub channel."""
     try:
         await redis_exec(["PUBLISH", channel, json.dumps(message)])
-    except Exception:
-        pass
+    except Exception as err:
+        import logging
+        logging.warning(f"redis_publish to channel {channel} failed: {err}")
+
+async def execute_with_retry(coro_func, max_attempts: int = 3, base_delay: float = 0.2, op_name: str = "operation", order_id: str = None):
+    """
+    Standardized retry helper for DB and Redis operations.
+    Max 3 attempts with exponential backoff (200ms, 400ms, 800ms).
+    Logs warnings on retry attempts and error on final exhaustion.
+    """
+    last_err = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            res = await coro_func()
+            return res, True
+        except Exception as err:
+            last_err = err
+            import logging
+            logging.warning(
+                f"Attempt {attempt}/{max_attempts} failed for {op_name}"
+                f"{f' (order_id={order_id})' if order_id else ''}: {err}"
+            )
+            if attempt < max_attempts:
+                await asyncio.sleep(base_delay * (2 ** (attempt - 1)))
+    import logging
+    logging.error(
+        f"All {max_attempts} attempts exhausted for {op_name}"
+        f"{f' (order_id={order_id})' if order_id else ''}: {last_err}"
+    )
+    return None, False
+
+def extract_order_suffix(order_id: any) -> str:
+    if not order_id:
+        return ""
+    s = str(order_id).strip().lower()
+    if s.startswith("gb-"):
+        s = s[3:]
+    if s.startswith("#"):
+        s = s[1:]
+    if "-" in s and len(s) > 15:
+        parts = s.split("-")
+        s = parts[-1]
+    return s.strip()
+
+def is_same_order_id(id1: any, id2: any) -> bool:
+    if not id1 or not id2:
+        return False
+    s1 = str(id1).strip().lower()
+    s2 = str(id2).strip().lower()
+    if s1 == s2:
+        return True
+    suf1 = extract_order_suffix(s1)
+    suf2 = extract_order_suffix(s2)
+    if suf1 and suf2 and suf1 == suf2:
+        return True
+    return False
+
+async def resolve_postgres_order_id(order_id: str) -> str:
+    """
+    Resolves any order identifier (full UUID, formatted 'GB-XXXXX', short code 'XXXXX')
+    to the actual exact Postgres primary key 'id'.
+    """
+    clean_id = str(order_id or "").strip()
+    if not clean_id:
+        return order_id
+
+    # 1. Direct query by exact ID
+    async def _direct_get():
+        return await store.get("orders", {"id": f"eq.{clean_id}", "select": "id"})
+
+    rows, ok = await execute_with_retry(_direct_get, max_attempts=2, base_delay=0.1, op_name="resolve_order_id_direct", order_id=clean_id)
+    if ok and isinstance(rows, list) and len(rows) > 0 and rows[0].get("id"):
+        return str(rows[0]["id"])
+
+    # Extract clean hex/digits suffix (e.g. "GB-2CA61" -> "2ca61")
+    short_suffix = clean_id
+    if short_suffix.lower().startswith("gb-"):
+        short_suffix = short_suffix[3:]
+    if short_suffix.startswith("#"):
+        short_suffix = short_suffix[1:]
+    short_suffix = short_suffix.lower().strip()
+
+    # 2. Query Postgres for matching ID ending with short_suffix
+    async def _suffix_get():
+        return await store.get("orders", {"id": f"ilike.*{short_suffix}", "select": "id"})
+
+    s_rows, s_ok = await execute_with_retry(_suffix_get, max_attempts=2, base_delay=0.1, op_name="resolve_order_id_suffix", order_id=clean_id)
+    if s_ok and isinstance(s_rows, list) and len(s_rows) > 0 and s_rows[0].get("id"):
+        return str(s_rows[0]["id"])
+
+    return clean_id
+
+async def resolve_valid_rider_id(rider_id: str) -> str | None:
+    if not rider_id:
+        return None
+    r_str = str(rider_id).strip()
+    if not r_str or r_str in ("None", "null", ""):
+        return None
+    
+    # 1. Direct query by ID in profiles
+    rows = await store.get("profiles", {"id": f"eq.{r_str}", "select": "id"})
+    if isinstance(rows, list) and len(rows) > 0 and rows[0].get("id"):
+        return str(rows[0]["id"])
+    
+    # 2. Query by phone or role
+    p_rows = await store.get("profiles", {"role": "eq.delivery_agent", "select": "id,phone"})
+    if isinstance(p_rows, list) and len(p_rows) > 0:
+        for pr in p_rows:
+            if pr.get("phone") and (r_str in pr["phone"] or pr["phone"] in r_str):
+                return str(pr["id"])
+        # Fallback to 1st delivery_agent profile in DB
+        return str(p_rows[0]["id"])
+    
+    return None
+
+async def idempotent_order_upsert(order_id: str, patch_data: dict, fallback_single: dict | None = None, op_name: str = "order_upsert"):
+    """
+    Idempotent status/assignment write into Postgres:
+    1. Resolve actual Postgres primary key ID.
+    2. Sanitize delivery_agent_id against valid profiles FK constraint.
+    3. Try store.patch with retry.
+    4. If 0 rows matched, re-check Postgres by ID before inserting to avoid duplicate rows from overlapping retries.
+    5. If row does not exist, insert fallback row with retry.
+    """
+    real_id = await resolve_postgres_order_id(order_id)
+    safe_patch = dict(patch_data)
+    if "delivery_agent_id" in safe_patch and safe_patch["delivery_agent_id"]:
+        valid_rider = await resolve_valid_rider_id(safe_patch["delivery_agent_id"])
+        if valid_rider:
+            safe_patch["delivery_agent_id"] = valid_rider
+        else:
+            safe_patch.pop("delivery_agent_id", None)
+
+    async def _patch_op():
+        return await store.patch("orders", safe_patch, {"id": f"eq.{real_id}"})
+
+    res, patch_ok = await execute_with_retry(_patch_op, max_attempts=3, base_delay=0.2, op_name=f"{op_name}_patch", order_id=real_id)
+    if patch_ok and res and isinstance(res, list) and len(res) > 0:
+        return True
+
+    # Check if row already exists in Postgres before fallback insertion
+    async def _check_op():
+        return await store.get("orders", {"id": f"eq.{real_id}", "select": "id"})
+
+    existing_rows, check_ok = await execute_with_retry(_check_op, max_attempts=3, base_delay=0.2, op_name=f"{op_name}_check_exists", order_id=real_id)
+    if check_ok and isinstance(existing_rows, list) and len(existing_rows) > 0:
+        # Row now exists in Postgres! Try patch again once
+        res_retry, retry_ok = await execute_with_retry(_patch_op, max_attempts=1, base_delay=0.2, op_name=f"{op_name}_patch_recheck", order_id=real_id)
+        if retry_ok and res_retry and isinstance(res_retry, list) and len(res_retry) > 0:
+            return True
+
+    # Fallback insertion
+    single = fallback_single or {}
+    cust_id = single.get("customer_id") or "b0cf5967-7bf0-4ce0-9d74-220c59bc6798"
+    store_id = single.get("store_id") or "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
+    total_val = float(single.get("total_amount") or single.get("total") or 199.0)
+    deliv_addr = single.get("delivery_address") or single.get("address") or "Delivery Address"
+    created_at_val = single.get("created_at") or datetime.now(timezone.utc).isoformat()
+    st_val = patch_data.get("status") or single.get("status") or "placed"
+    rider_val = patch_data.get("delivery_agent_id") or single.get("delivery_agent_id")
+
+    db_insert = {
+        "id": real_id,
+        "store_id": store_id,
+        "customer_id": cust_id,
+        "delivery_address": deliv_addr,
+        "status": st_val,
+        "total": total_val,
+        "created_at": created_at_val
+    }
+    if rider_val:
+        db_insert["delivery_agent_id"] = rider_val
+
+    async def _insert_op():
+        return await store.insert("orders", db_insert)
+
+    ins_res, ins_ok = await execute_with_retry(_insert_op, max_attempts=3, base_delay=0.2, op_name=f"{op_name}_insert", order_id=real_id)
+    return bool(ins_ok and ins_res)
 
 # ==============================================================================
 # ROOT & HEALTH & UPLOADS
@@ -862,7 +1038,7 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
     except Exception:
         pass
 
-    # 2. Insert into Supabase DB with valid schema columns
+    # 2. Insert into Supabase DB with valid schema columns (authoritative write)
     try:
         db_payload = {
             "id": full_order["id"],
@@ -873,9 +1049,13 @@ async def create_order(body: OrderRequest, authorization: str | None = Header(de
             "total": float(full_order["total_amount"]),
             "created_at": now_iso
         }
-        await store.insert("orders", db_payload)
-    except Exception:
-        pass
+        ins_res = await store.insert("orders", db_payload)
+        if not ins_res:
+            import logging
+            logging.warning(f"Postgres insert for new order {order_id} returned null or empty result")
+    except Exception as err:
+        import logging
+        logging.error(f"Postgres insert error for new order {order_id}: {err}")
 
     if user and user.get("sub"):
         await cache_del(f"cache:cart:{user.get('sub')}")
@@ -887,86 +1067,67 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
     single = None
     try:
         single = await cache_get(f"cloud:order:{order_id}")
-    except Exception:
-        pass
-
-    # 1. Update in Supabase DB first (authoritative write with self-healing fallback)
-    try:
-        patch_data = {"status": body.status}
-        if body.delivery_agent_id:
-            patch_data["delivery_agent_id"] = body.delivery_agent_id
-        res = await store.patch("orders", patch_data, {"id": f"eq.{order_id}"})
-        if not res or (isinstance(res, list) and len(res) == 0):
-            # Fallback insert into Postgres if row didn't exist (0 rows matched)
-            if single and isinstance(single, dict):
-                cust_id = single.get("customer_id") or "b0cf5967-7bf0-4ce0-9d74-220c59bc6798"
-                store_id = single.get("store_id") or "b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb"
-                total_val = float(single.get("total_amount") or single.get("total") or 199.0)
-                deliv_addr = single.get("delivery_address") or single.get("address") or "Delivery Address"
-                created_at_val = single.get("created_at") or datetime.now(timezone.utc).isoformat()
-
-                db_insert = {
-                    "id": order_id,
-                    "store_id": store_id,
-                    "customer_id": cust_id,
-                    "delivery_address": deliv_addr,
-                    "status": body.status,
-                    "total": total_val,
-                    "created_at": created_at_val
-                }
-                if body.delivery_agent_id:
-                    db_insert["delivery_agent_id"] = body.delivery_agent_id
-                elif single.get("delivery_agent_id"):
-                    db_insert["delivery_agent_id"] = single.get("delivery_agent_id")
-                await store.insert("orders", db_insert)
-            else:
-                import logging
-                logging.warning(f"Skipping Postgres fallback insert for order {order_id}: single cache entry missing")
     except Exception as err:
         import logging
-        logging.warning(f"Postgres write error for order {order_id}: {err}")
+        logging.warning(f"Cache get cloud:order:{order_id} failed in order_status: {err}")
+
+    # 1. Update in Supabase DB (idempotent write with fallback insert & retries)
+    patch_data = {"status": body.status}
+    if body.delivery_agent_id:
+        patch_data["delivery_agent_id"] = body.delivery_agent_id
+
+    await idempotent_order_upsert(order_id, patch_data, fallback_single=single, op_name="order_status")
 
     # 2. Update single order cache
-    try:
+    async def _sync_single():
         if single and isinstance(single, dict):
             single["status"] = body.status
             if body.delivery_agent_id:
                 single["delivery_agent_id"] = body.delivery_agent_id
             await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+        return True
+
+    await execute_with_retry(_sync_single, max_attempts=3, op_name="order_status_sync_single", order_id=order_id)
 
     # 3. Update Customer-specific cache
     if single and isinstance(single, dict):
         canonical_phone, _ = normalize_phone(single.get("customer_phone"))
         if canonical_phone:
-            try:
+            async def _sync_cust():
                 for key_phone in [canonical_phone, "".join(filter(str.isdigit, str(single.get("customer_phone") or "")))]:
                     if key_phone:
                         cust_key = f"cloud:customer_orders:{key_phone}"
                         cust_orders = await cache_get(cust_key) or []
                         if isinstance(cust_orders, list):
                             for o in cust_orders:
-                                if o.get("id") == order_id or o.get("rawId") == order_id:
+                                oid = o.get("id") or o.get("rawId")
+                                if is_same_order_id(oid, order_id):
                                     o["status"] = body.status
                                     if body.delivery_agent_id:
                                         o["delivery_agent_id"] = body.delivery_agent_id
                             await cache_set(cust_key, cust_orders, ttl_seconds=86400 * 30)
-            except Exception:
-                pass
+                return True
 
-    # 4. Update Store/Seller queue cache (re-fetch fresh right before writing to narrow race window)
-    try:
+            await execute_with_retry(_sync_cust, max_attempts=3, op_name="order_status_sync_cust", order_id=order_id)
+
+    # 4. Update Store/Seller queue cache
+    async def _sync_list():
         fresh_orders = await cache_get("cloud:orders_list") or []
         if isinstance(fresh_orders, list):
+            updated_list = []
             for o in fresh_orders:
-                if o.get("id") == order_id or o.get("rawId") == order_id:
+                oid = o.get("id") or o.get("rawId")
+                if is_same_order_id(oid, order_id):
                     o["status"] = body.status
                     if body.delivery_agent_id:
                         o["delivery_agent_id"] = body.delivery_agent_id
-            await cache_set("cloud:orders_list", fresh_orders, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+                # Only keep active non-terminal orders in the queue pool
+                if str(o.get("status") or "").lower() not in ("delivered", "cancelled", "returned", "failed_delivery"):
+                    updated_list.append(o)
+            await cache_set("cloud:orders_list", updated_list, ttl_seconds=86400 * 30)
+        return True
+
+    await execute_with_retry(_sync_list, max_attempts=3, op_name="order_status_sync_list", order_id=order_id)
 
     # 5. If delivered, invalidate rider history cache so next fetch is fresh
     if body.status == "delivered":
@@ -1079,16 +1240,23 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
             if str(o.get("delivery_agent_id")) == str(rider_id) and str(o.get("status")).lower() in ("out_for_delivery", "picked_up", "accepted"):
                 active_count += 1
 
-    # 1. Update in Supabase
+    single_cached = None
     try:
-        await store.patch("orders", {
-            "delivery_agent_id": rider_id
-        }, {"id": f"eq.{order_id}"})
-    except Exception:
-        pass
+        single_cached = await cache_get(f"cloud:order:{order_id}")
+    except Exception as err:
+        import logging
+        logging.warning(f"Cache lookup error in assign_order for order {order_id}: {err}")
+
+    # 1. Update in Supabase (idempotent write)
+    await idempotent_order_upsert(
+        order_id,
+        {"delivery_agent_id": rider_id},
+        fallback_single=single_cached,
+        op_name="assign_order"
+    )
 
     # 2. Update in single order cache
-    try:
+    async def _sync_single():
         single = await cache_get(f"cloud:order:{order_id}")
         if single and isinstance(single, dict):
             single["delivery_agent_id"] = rider_id
@@ -1109,11 +1277,12 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
                                 co["delivery_agent_id"] = rider_id
                                 co["rider_name"] = rider_name
                         await cache_set(cust_key, c_list, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+        return True
 
-    # 3. Update in store orders list (re-fetch fresh immediately before writing)
-    try:
+    await execute_with_retry(_sync_single, max_attempts=3, op_name="assign_order_sync_single", order_id=order_id)
+
+    # 3. Update in store orders list
+    async def _sync_list():
         fresh_redis_orders = await cache_get("cloud:orders_list") or []
         if isinstance(fresh_redis_orders, list):
             for qo in fresh_redis_orders:
@@ -1122,8 +1291,9 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
                     qo["rider_name"] = rider_name
                     qo["is_queued"] = (active_count > 0)
             await cache_set("cloud:orders_list", fresh_redis_orders, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+        return True
+
+    await execute_with_retry(_sync_list, max_attempts=3, op_name="assign_order_sync_list", order_id=order_id)
 
     await redis_exec(["DEL", f"cloud:rider_active:{rider_id}"])
     await redis_publish("orders:delivery", {
@@ -1165,20 +1335,30 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
 
     for idx, oid in enumerate(order_ids):
         is_q = (active_count > 0) or (idx > 0)
+        single_cached = None
         try:
-            await store.patch("orders", {"delivery_agent_id": rider_id}, {"id": f"eq.{oid}"})
-        except Exception:
-            pass
+            single_cached = await cache_get(f"cloud:order:{oid}")
+        except Exception as err:
+            import logging
+            logging.warning(f"Cache lookup error in bulk_assign for order {oid}: {err}")
 
-        try:
-            single = await cache_get(f"cloud:order:{oid}")
+        await idempotent_order_upsert(
+            oid,
+            {"delivery_agent_id": rider_id},
+            fallback_single=single_cached,
+            op_name="bulk_assign"
+        )
+
+        async def _sync_bulk_single(order_item_id=oid, queued=is_q):
+            single = await cache_get(f"cloud:order:{order_item_id}")
             if single and isinstance(single, dict):
                 single["delivery_agent_id"] = rider_id
                 single["rider_name"] = rider_name
-                single["is_queued"] = is_q
-                await cache_set(f"cloud:order:{oid}", single, ttl_seconds=86400 * 30)
-        except Exception:
-            pass
+                single["is_queued"] = queued
+                await cache_set(f"cloud:order:{order_item_id}", single, ttl_seconds=86400 * 30)
+            return True
+
+        await execute_with_retry(_sync_bulk_single, max_attempts=3, op_name="bulk_assign_sync_single", order_id=oid)
 
         for qo in fresh_redis_orders:
             if qo.get("id") == oid or qo.get("rawId") == oid:
@@ -1186,7 +1366,12 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
                 qo["rider_name"] = rider_name
                 qo["is_queued"] = is_q
 
-    await cache_set("cloud:orders_list", fresh_redis_orders, ttl_seconds=86400 * 30)
+    async def _sync_bulk_list():
+        await cache_set("cloud:orders_list", fresh_redis_orders, ttl_seconds=86400 * 30)
+        return True
+
+    await execute_with_retry(_sync_bulk_list, max_attempts=3, op_name="bulk_assign_sync_list")
+
     await redis_exec(["DEL", f"cloud:rider_active:{rider_id}"])
     await redis_publish("orders:delivery", {
         "order_ids": order_ids,
@@ -1208,6 +1393,7 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
     - Strictly 1 active order at a time (first in line)
     - Subsequent assigned orders marked in queue
     - Available unassigned orders
+    Postgres is authoritative over Redis cache when resolving status conflicts.
     """
     rider_id = user.get("sub")
     try:
@@ -1223,12 +1409,12 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
         }) or []
         available = await store.get("orders", {
             "delivery_agent_id": "is.null",
-            "status": "in.(placed,confirmed,preparing,ready_for_pickup,ready,out_for_delivery)",
+            "status": "in.(ready_for_pickup,ready,accepted)",
             "order": "created_at.desc",
             "limit": 50
         }) or []
 
-        # Fetch all terminal orders from Postgres to form a strict blacklist
+        # Fetch all terminal orders from Postgres as authoritative exclusion set
         terminal_rows = await store.get("orders", {
             "status": "in.(delivered,cancelled,failed_delivery,returned)",
             "select": "id"
@@ -1239,44 +1425,65 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
                 tid = tr.get("id")
                 if tid:
                     terminal_ids.add(str(tid).lower().strip())
+                    terminal_ids.add(extract_order_suffix(tid))
+
+        pg_assigned_map = {}
+        if isinstance(assigned, list):
+            for ao in assigned:
+                aid = ao.get("id")
+                if aid:
+                    pg_assigned_map[str(aid).lower().strip()] = ao
+
+        pg_available_map = {}
+        if isinstance(available, list):
+            for avo in available:
+                avid = avo.get("id")
+                if avid:
+                    pg_available_map[str(avid).lower().strip()] = avo
 
         redis_map = {}
         if isinstance(redis_orders, list):
             for ro in redis_orders:
                 rid = ro.get("id") or ro.get("rawId")
                 if rid and ro.get("items"):
-                    redis_map[rid] = ro
+                    redis_map[str(rid).lower().strip()] = ro
 
-        combined, seen = [], set()
-        # Sort assigned orders so oldest/first order is first
-        all_sources = (assigned if isinstance(assigned, list) else []) + (redis_orders if isinstance(redis_orders, list) else []) + (available if isinstance(available, list) else [])
-        
+        seen = set()
         assigned_to_rider = []
         unassigned_pool = []
 
+        all_sources = (assigned if isinstance(assigned, list) else []) + (redis_orders if isinstance(redis_orders, list) else []) + (available if isinstance(available, list) else [])
+
         for o in all_sources:
-            oid = o.get("id") or o.get("rawId")
-            if not oid or oid in seen:
+            raw_oid = o.get("id") or o.get("rawId")
+            if not raw_oid:
                 continue
+            oid_key = str(raw_oid).lower().strip()
+            oid_suf = extract_order_suffix(raw_oid)
+            
+            # Skip if terminal order or duplicate
+            if oid_key in seen or oid_suf in seen or oid_key in terminal_ids or oid_suf in terminal_ids:
+                continue
+
             st = str(o.get("status") or "").lower().strip()
             if st in ("delivered", "cancelled", "failed_delivery", "returned"):
                 continue
 
-            if str(oid).lower().strip() in terminal_ids:
-                continue
+            seen.add(oid_key)
+            if oid_suf:
+                seen.add(oid_suf)
 
-            seen.add(oid)
             order_data = dict(o)
             if "total" in order_data and "total_amount" not in order_data:
                 order_data["total_amount"] = float(order_data.get("total") or 0)
 
             if not order_data.get("items"):
-                if oid in redis_map:
-                    order_data["items"] = redis_map[oid].get("items")
+                if oid_key in redis_map:
+                    order_data["items"] = redis_map[oid_key].get("items")
                     if not order_data.get("customer_name"):
-                        order_data["customer_name"] = redis_map[oid].get("customer_name")
+                        order_data["customer_name"] = redis_map[oid_key].get("customer_name")
                     if not order_data.get("customer_phone"):
-                        order_data["customer_phone"] = redis_map[oid].get("customer_phone")
+                        order_data["customer_phone"] = redis_map[oid_key].get("customer_phone")
                 else:
                     order_data["items"] = [{
                         "id": 1,
@@ -1285,11 +1492,23 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
                         "price": float(order_data.get("total_amount") or 50)
                     }]
 
-            o_agent = str(order_data.get("delivery_agent_id") or "")
-            if o_agent == str(rider_id) or o_agent == "+919999900003" or o_agent == "3":
+            # Classification logic driven authoritatively by Postgres
+            if oid_key in pg_assigned_map or (oid_suf and oid_suf in pg_assigned_map):
+                matched = pg_assigned_map.get(oid_key) or pg_assigned_map.get(oid_suf)
+                order_data.update(matched)
                 assigned_to_rider.append(order_data)
-            elif not o_agent or o_agent == "None" or o_agent == "null":
+            elif oid_key in pg_available_map or (oid_suf and oid_suf in pg_available_map):
+                matched = pg_available_map.get(oid_key) or pg_available_map.get(oid_suf)
+                order_data.update(matched)
                 unassigned_pool.append(order_data)
+            else:
+                # Order only present in Redis cache or un-indexed source
+                o_agent = str(order_data.get("delivery_agent_id") or "")
+                if o_agent == str(rider_id) or o_agent == "+919999900003" or o_agent == "3":
+                    assigned_to_rider.append(order_data)
+                elif not o_agent or o_agent in ("None", "null", ""):
+                    if st in ("ready_for_pickup", "ready", "accepted"):
+                        unassigned_pool.append(order_data)
 
         # Mark 1st assigned order as active, and remainder as queued
         results = []
@@ -1301,7 +1520,9 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
 
         results.extend(unassigned_pool)
         return results
-    except Exception:
+    except Exception as err:
+        import logging
+        logging.error(f"Error fetching active delivery orders: {err}")
         return []
 
 @router.get("/delivery/history")
@@ -1376,48 +1597,101 @@ async def available_deliveries(user=Depends(require_roles("delivery_agent"))):
 async def accept_delivery(order_id: str, user=Depends(require_roles("delivery_agent"))):
     rider_id = user.get("sub")
     
-    try:
-        await store.patch("orders", {
-            "delivery_agent_id": rider_id,
-            "status": "out_for_delivery"
-        }, {"id": f"eq.{order_id}"})
-    except Exception:
-        pass
+    # 1. Double assignment race prevention check against Postgres and Redis
+    async def _check_race_pg():
+        return await store.get("orders", {"id": f"eq.{order_id}", "select": "delivery_agent_id,status"})
 
+    pg_order_rows, pg_check_ok = await execute_with_retry(_check_race_pg, max_attempts=3, op_name="check_accept_race_pg", order_id=order_id)
+    if pg_check_ok and isinstance(pg_order_rows, list) and len(pg_order_rows) > 0:
+        assigned_agent = str(pg_order_rows[0].get("delivery_agent_id") or "").strip()
+        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent != str(rider_id):
+            raise HTTPException(status_code=409, detail="Order already assigned to another rider")
+
+    single = None
     try:
         single = await cache_get(f"cloud:order:{order_id}")
-        if single and isinstance(single, dict):
-            single["status"] = "out_for_delivery"
-            single["delivery_agent_id"] = rider_id
-            await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
+    except Exception as err:
+        import logging
+        logging.warning(f"Cache lookup cloud:order:{order_id} error in accept_delivery: {err}")
 
-            phone = single.get("customer_phone")
-            canonical, _ = normalize_phone(phone)
-            for key_p in [canonical, "".join(filter(str.isdigit, str(phone or "")))]:
-                if key_p:
-                    cust_key = f"cloud:customer_orders:{key_p}"
-                    c_list = await cache_get(cust_key) or []
-                    if isinstance(c_list, list):
-                        for co in c_list:
-                            if co.get("id") == order_id or co.get("rawId") == order_id:
-                                co["status"] = "out_for_delivery"
-                                co["delivery_agent_id"] = rider_id
-                        await cache_set(cust_key, c_list, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+    if single and isinstance(single, dict):
+        assigned_agent = str(single.get("delivery_agent_id") or "").strip()
+        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent != str(rider_id):
+            raise HTTPException(status_code=409, detail="Order already assigned to another rider")
 
-    # Defense-in-depth: Re-fetch cloud:orders_list fresh right before writing to narrow write race window.
-    # Note: Upstash REST API lacks atomic CAS; Postgres exclusion set in GET /delivery/active and /delivery/available is the actual correctness backstop.
-    try:
+    if not single or not isinstance(single, dict):
+        try:
+            q_orders = await cache_get("cloud:orders_list") or []
+            if isinstance(q_orders, list):
+                for qo in q_orders:
+                    if str(qo.get("id") or qo.get("rawId")) == str(order_id):
+                        single = dict(qo)
+                        break
+        except Exception as err:
+            import logging
+            logging.warning(f"Cache lookup cloud:orders_list fallback error in accept_delivery: {err}")
+
+    # 2. Idempotent Postgres write
+    pg_success = await idempotent_order_upsert(
+        order_id,
+        {"delivery_agent_id": rider_id, "status": "out_for_delivery"},
+        fallback_single=single,
+        op_name="accept_delivery"
+    )
+
+    # 3. Synchronize single order cache
+    if not single or not isinstance(single, dict):
+        single = {
+            "id": order_id,
+            "rawId": order_id,
+            "status": "out_for_delivery",
+            "delivery_agent_id": rider_id,
+            "total_amount": 199.0,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    else:
+        single["status"] = "out_for_delivery"
+        single["delivery_agent_id"] = rider_id
+
+    async def _update_single_cache():
+        await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
+        phone = single.get("customer_phone")
+        canonical, _ = normalize_phone(phone)
+        for key_p in [canonical, "".join(filter(str.isdigit, str(phone or "")))]:
+            if key_p:
+                cust_key = f"cloud:customer_orders:{key_p}"
+                c_list = await cache_get(cust_key) or []
+                if isinstance(c_list, list):
+                    for co in c_list:
+                        if co.get("id") == order_id or co.get("rawId") == order_id:
+                            co["status"] = "out_for_delivery"
+                            co["delivery_agent_id"] = rider_id
+                    await cache_set(cust_key, c_list, ttl_seconds=86400 * 30)
+        return True
+
+    _, redis_single_success = await execute_with_retry(_update_single_cache, max_attempts=3, op_name="accept_update_single_cache", order_id=order_id)
+
+    # 4. Synchronize store queue list cache
+    async def _update_list_cache():
         q_orders = await cache_get("cloud:orders_list") or []
         if isinstance(q_orders, list):
+            found = False
             for qo in q_orders:
                 if qo.get("id") == order_id or qo.get("rawId") == order_id:
                     qo["status"] = "out_for_delivery"
                     qo["delivery_agent_id"] = rider_id
+                    found = True
+            if not found and single:
+                q_orders.insert(0, single)
             await cache_set("cloud:orders_list", q_orders, ttl_seconds=86400 * 30)
-    except Exception:
-        pass
+        return True
+
+    _, redis_list_success = await execute_with_retry(_update_list_cache, max_attempts=3, op_name="accept_update_list_cache", order_id=order_id)
+
+    if not pg_success and not redis_single_success:
+        import logging
+        logging.error(f"Failed to persist order accept assignment for order {order_id} in Postgres or Redis after retries")
+        raise HTTPException(status_code=500, detail="Failed to persist order assignment in database or cache")
 
     await redis_exec(["DEL", f"cloud:rider_active:{rider_id}"])
     await redis_publish("orders:delivery", {"order_id": order_id, "rider_id": rider_id, "status": "out_for_delivery"})
