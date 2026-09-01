@@ -100,8 +100,6 @@ export const SellerOrdersPage = () => {
   
   // ── Multi-Order Selection & Rider Assignment State ──
   const [selectedOrderIds, setSelectedOrderIds] = useState(new Set());
-  const [assignModalOrders, setAssignModalOrders] = useState(null); // array of orders being assigned
-  const [selectedRiderId, setSelectedRiderId] = useState('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a');
 
   // Fallback / Live Riders List
   const [ridersList, setRidersList] = useState([
@@ -276,6 +274,8 @@ export const SellerOrdersPage = () => {
     });
   }, [ridersList, orders]);
 
+
+
   // ── Handle Single Status Change ──
   const handleStatusChange = async (orderId, rawId, nextStatus, deliveryAgentId = null, riderName = null) => {
     const isMatch = (o) => {
@@ -343,14 +343,23 @@ export const SellerOrdersPage = () => {
     showToast({ type: 'success', message: `Order #${orderId} marked as ${nextStatus.replace(/_/g, ' ')}!` });
   };
 
-  // ── Handle Confirm Rider Assignment (Single or Bulk) ──
-  const handleConfirmAssignment = async () => {
-    if (!assignModalOrders || assignModalOrders.length === 0) return;
-    const chosenRider = ridersWithLoad.find((r) => String(r.id) === String(selectedRiderId)) || ridersWithLoad[0];
+
+  // ── Handle Auto Assign Rider (Single or Bulk) ──
+  const handleAutoAssign = async (ordersToAssign) => {
+    if (!ordersToAssign || ordersToAssign.length === 0) return;
+    
+    // Find available riders
+    let availableRiders = ridersWithLoad.filter(r => r.isFree);
+    if (availableRiders.length === 0) {
+      availableRiders = ridersWithLoad; // Fallback to all riders if none are free
+    }
+    
+    // Pick random available rider
+    const chosenRider = availableRiders[Math.floor(Math.random() * availableRiders.length)] || ridersWithLoad[0];
     const riderId = chosenRider.id;
     const riderName = chosenRider.displayName;
 
-    const orderRawIds = assignModalOrders.map((o) => o.rawId || o.id);
+    const orderRawIds = ordersToAssign.map((o) => o.rawId || o.id);
 
     // Optimistically update React state
     setOrders((prev) =>
@@ -408,11 +417,10 @@ export const SellerOrdersPage = () => {
 
     showToast({
       type: 'success',
-      message: `✅ Assigned ${orderRawIds.length} order(s) to ${riderName}! (1 Active, ${Math.max(0, orderRawIds.length - 1)} in queue)`
+      message: `✅ Automatically assigned ${orderRawIds.length} order(s) to ${riderName}! (1 Active, ${Math.max(0, orderRawIds.length - 1)} in queue)`
     });
 
-    // Clear modal & selection
-    setAssignModalOrders(null);
+    // Clear selection
     setSelectedOrderIds(new Set());
   };
 
@@ -667,7 +675,7 @@ export const SellerOrdersPage = () => {
                 type="button"
                 onClick={() => {
                   const selectedList = activeOrders.filter((o) => selectedOrderIds.has(o.rawId || o.id));
-                  setAssignModalOrders(selectedList);
+                  handleAutoAssign(selectedList);
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
@@ -888,7 +896,7 @@ export const SellerOrdersPage = () => {
 
                     <button
                       type="button"
-                      onClick={() => setAssignModalOrders([order])}
+                      onClick={() => handleAutoAssign([order])}
                       style={{
                         background: '#FFFFFF',
                         border: '1px solid #CBD5E1',
@@ -950,7 +958,7 @@ export const SellerOrdersPage = () => {
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setAssignModalOrders([order])}
+                        onClick={() => handleAutoAssign([order])}
                         style={{ background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)' }}
                       >
                         <Truck size={15} style={{ marginRight: 6 }} /> Assign to Rider
@@ -958,7 +966,7 @@ export const SellerOrdersPage = () => {
                     )}
 
                     {(order.status === 'ready' || order.status === 'ready_for_pickup') && order.delivery_agent_id && (
-                      <Button variant="outline" size="sm" onClick={() => setAssignModalOrders([order])}>
+                      <Button variant="outline" size="sm" onClick={() => handleAutoAssign([order])}>
                         <Clock size={15} style={{ marginRight: 6 }} /> Change Rider
                       </Button>
                     )}
@@ -971,194 +979,9 @@ export const SellerOrdersPage = () => {
         )}
       </div>
 
-      {/* ── 🏍️ ASSIGN RIDER MODAL (Single or Multi-Order) ── */}
-      {assignModalOrders && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          backdropFilter: 'blur(6px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '20px',
-            maxWidth: '540px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.25)',
-            border: '1px solid #E2E8F0',
-            animation: 'fadeIn 0.2s ease-out'
-          }}>
-            {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: '#EFF6FF',
-                  border: '1px solid #BFDBFE',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#0071E3'
-                }}>
-                  <Truck size={20} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                    Assign {assignModalOrders.length > 1 ? `${assignModalOrders.length} Orders` : 'Order'} to Rider
-                  </h3>
-                  <span style={{ fontSize: '12px', color: '#64748B' }}>
-                    Select an active delivery partner for fast 10-minute dispatch
-                  </span>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setAssignModalOrders(null)}
-                style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <X size={16} color="#64748B" />
-              </button>
-            </div>
 
-            {/* Selected Orders Summary Box */}
-            <div style={{
-              background: '#F8FAFC',
-              borderRadius: '12px',
-              padding: '12px 14px',
-              border: '1px solid #E2E8F0',
-              marginBottom: '18px',
-              fontSize: '12.5px'
-            }}>
-              <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
-                Orders for Dispatch:
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {assignModalOrders.map((o) => (
-                  <span
-                    key={o.id}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #CBD5E1',
-                      borderRadius: '6px',
-                      padding: '3px 8px',
-                      fontWeight: 700,
-                      color: '#0071E3'
-                    }}
-                  >
-                    #{o.id} (₹{o.total_amount})
-                  </span>
-                ))}
-              </div>
-            </div>
 
-            {/* Rider Selection List */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Choose Delivery Partner:
-              </label>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {ridersWithLoad.map((r) => {
-                  const isSelected = String(selectedRiderId) === String(r.id);
-                  return (
-                    <div
-                      key={r.id}
-                      onClick={() => setSelectedRiderId(r.id)}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
-                        background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: isSelected ? '#0071E3' : '#F1F5F9',
-                          color: isSelected ? '#FFFFFF' : '#475569',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '13px'
-                        }}>
-                          {r.displayName.charAt(0)}
-                        </div>
-                        <div>
-                          <strong style={{ fontSize: '13.5px', color: '#0F172A', display: 'block' }}>
-                            {r.displayName}
-                          </strong>
-                          <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-                            {r.phone}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: r.isFree ? '#ECFDF5' : '#FEF3C7',
-                          color: r.isFree ? '#047857' : '#B45309',
-                          border: r.isFree ? '1px solid #A7F3D0' : '1px solid #FDE68A'
-                        }}>
-                          {r.workloadLabel}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <Button variant="outline" onClick={() => setAssignModalOrders(null)}>
-                Cancel
-              </Button>
-              <button
-                type="button"
-                onClick={handleConfirmAssignment}
-                style={{
-                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px 20px',
-                  fontSize: '13.5px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(0, 113, 227, 0.3)'
-                }}
-              >
-                <CheckCircle2 size={16} /> Confirm Assignment
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* ── Packing Slip Modal ── */}
       {selectedSlipOrder && (
