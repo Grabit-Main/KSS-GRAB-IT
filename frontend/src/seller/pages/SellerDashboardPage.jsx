@@ -459,16 +459,6 @@ export const SellerDashboardPage = () => {
             Vendor Control Center • Fast grocery fulfillment & dispatch
           </p>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => navigate('/seller/products')}
-          >
-            Add Product
-          </Button>
-        </div>
       </div>
 
       {/* Today's Key Stats Section */}
