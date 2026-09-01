@@ -126,7 +126,7 @@ export const productService = {
               delivery_time: '10 mins',
               rating: p.rating || 4.8,
               reviews: p.reviews || 24,
-              stock_quantity: parseInt(p.stock, 10) || 50,
+              stock_quantity: !isNaN(parseInt(p.stock, 10)) ? parseInt(p.stock, 10) : 50,
               unit: p.unit || '1 unit',
               description: p.description || `${p.name} - Available at GrabIt.`,
               image: resolveMediaUrl(p.image_url, DEFAULT_PRODUCT_FALLBACK),
@@ -205,7 +205,7 @@ export const productService = {
       name: data.name?.trim(),
       category_id: isUUID(data.category) ? data.category : null,
       price: parseFloat(data.price) || 0,
-      stock: parseInt(data.stock_quantity, 10) || 50,
+      stock: !isNaN(parseInt(data.stock_quantity, 10)) ? parseInt(data.stock_quantity, 10) : 50,
       image_url: imageUrl || DEFAULT_PRODUCT_FALLBACK,
     };
 
