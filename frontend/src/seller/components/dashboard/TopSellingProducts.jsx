@@ -20,41 +20,12 @@ export const TopSellingProducts = () => {
       try {
         const data = await get(`/seller/dashboard/top-products?period=${period}`);
         
-        if (data && data.length > 0) {
-          if (isMounted) {
-            setProducts(data);
-          }
-        } else {
-          throw new Error("Empty data - trigger fallback");
+        if (isMounted) {
+          setProducts(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         if (isMounted) {
-          let realProducts = [];
-          try {
-            const res = await productService.getProducts();
-            realProducts = res.results || [];
-          } catch (e) {}
-
-          const getRealStock = (id, def) => {
-            const p = realProducts.find(x => String(x.id) === String(id));
-            return p && p.stock_quantity !== undefined ? p.stock_quantity : def;
-          };
-
-          // Fallback to rich mock data scaled appropriately for the period
-          const baseMock = [
-            { id: '1', name: 'Fresh Royal Gala Red Apples (4 Pcs)', sku: 'PROD-FR-01', image: 'fresh-red-apples.jpg', unitsSold: 142, trend: '+12.5%', revenue: 141858, stock: getRealStock('1', 45) },
-            { id: '6', name: "Lay's American Style Cream & Onion 50g", sku: 'SNK-LY-06', image: 'lays-cream-onion.png', unitsSold: 89, trend: '+5.2%', revenue: 88911, stock: getRealStock('6', 12) },
-            { id: '11', name: 'Amul Pasteurised Salted Butter 100g', sku: 'DRY-AM-11', image: 'amul-butter-real.jpg', unitsSold: 67, trend: '-2.1%', revenue: 40133, stock: getRealStock('11', 4) },
-            { id: '16', name: 'Coca-Cola Original Taste Soft Drink 750ml', sku: 'BEV-CC-16', image: 'coca-cola-real.jpg', unitsSold: 34, trend: '+18.4%', revenue: 204000, stock: getRealStock('16', 8) }
-          ];
-          const multiplier = period === 'today' ? 0.05 : period === '7days' ? 0.25 : 1;
-          const scaledMock = baseMock.map(p => ({
-            ...p,
-            unitsSold: Math.ceil(p.unitsSold * multiplier),
-            revenue: Math.ceil(p.revenue * multiplier),
-            trend: period === 'today' ? '+2.1%' : period === '7days' ? '+5.4%' : p.trend
-          }));
-          setProducts(scaledMock);
+          setProducts([]);
         }
       } finally {
         if (isMounted) setLoading(false);
