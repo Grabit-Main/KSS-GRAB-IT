@@ -168,6 +168,7 @@ export function AdminPortalApp() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [productSortBy, setProductSortBy] = useState('default');
   const [notice, setNotice] = useState('');
+  const [partnerFilter, setPartnerFilter] = useState('ALL');
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -1869,82 +1870,78 @@ export function AdminPortalApp() {
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ── TAB 3: PARTNERS MANAGEMENT ── */}
             {/* ══════════════════════════════════════════════════════════════════ */}
-            {activeTab === 'partners' && (
-              <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div>
-                    <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                      Partner Fleet (Sellers &amp; Riders)
-                    </h2>
-                    <div style={{ fontSize: '11.5px', color: '#64748B' }}>Authorized platform merchants and delivery agents</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddPartnerModal(true)}
-                    style={{
-                      background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
-                      color: '#FFFFFF', border: 'none', borderRadius: '8px',
-                      padding: '8px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer'
-                    }}
-                  >
-                    <Plus size={14} /> Add Partner
-                  </button>
-                </div>
+            {/* ── TAB 3: PARTNERS MANAGEMENT ── */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === 'partners' && (() => {
+              const sellersList = partners.filter(p => p.role === 'seller');
+              const ridersList = partners.filter(p => p.role !== 'seller');
 
-                {isMobile ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-                    {partners.map((p, idx) => {
-                      const isSeller = p.role === 'seller';
-                      return (
-                        <div key={idx} style={{
-                          background: '#F8FAFC', borderRadius: '12px', padding: '12px 14px',
-                          border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
-                                {p.full_name || p.name || 'Partner'}
-                              </span>
-                              <span style={{
-                                padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
-                                background: isSeller ? '#EFF6FF' : '#F0FDF4',
-                                color: isSeller ? '#0071E3' : '#16A34A'
-                              }}>
-                                {isSeller ? '🏪 SELLER' : '🛵 RIDER'}
-                              </span>
+              const renderPartnerTable = (list, typeLabel) => {
+                if (list.length === 0) {
+                  return (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748B', fontSize: '13px', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
+                      No {typeLabel.toLowerCase()} registered yet.
+                    </div>
+                  );
+                }
+                if (isMobile) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                      {list.map((p, idx) => {
+                        const isSeller = p.role === 'seller';
+                        return (
+                          <div key={idx} style={{
+                            background: '#F8FAFC', borderRadius: '12px', padding: '12px 14px',
+                            border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                          }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
+                                  {p.full_name || p.name || 'Partner'}
+                                </span>
+                                <span style={{
+                                  padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
+                                  background: isSeller ? '#EFF6FF' : '#F0FDF4',
+                                  color: isSeller ? '#0071E3' : '#16A34A'
+                                }}>
+                                  {isSeller ? '🏪 SELLER' : '🛵 RIDER'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '3px', fontWeight: 600 }}>
+                                📞 {p.phone || '+91 99999 00000'} • <span style={{ color: '#059669', fontWeight: 800 }}>Active</span>
+                              </div>
                             </div>
-                            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '3px', fontWeight: 600 }}>
-                              📞 {p.phone || '+91 99999 00000'} • <span style={{ color: '#059669', fontWeight: 800 }}>Active</span>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePartner(p.id)}
+                              style={{
+                                background: '#FFF1F2', border: '1px solid #FFE4E6', borderRadius: '6px',
+                                padding: '5px 10px', fontSize: '11px', fontWeight: 800, color: '#E11D48', cursor: 'pointer'
+                              }}
+                            >
+                              Deactivate
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePartner(p.id)}
-                            style={{
-                              background: '#FFF1F2', border: '1px solid #FFE4E6', borderRadius: '6px',
-                              padding: '5px 10px', fontSize: '11px', fontWeight: 800, color: '#E11D48', cursor: 'pointer'
-                            }}
-                          >
-                            Deactivate
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ overflowX: 'auto', borderRadius: '10px' }}>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                     <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ borderBottom: '1.5px solid #E2E8F0', color: '#64748B', background: '#F8FAFC' }}>
-                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>PARTNER</th>
-                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>PHONE</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>PARTNER NAME</th>
+                          <th style={{ padding: '10px 12px', fontWeight: 800 }}>PHONE NUMBER</th>
                           <th style={{ padding: '10px 12px', fontWeight: 800 }}>ROLE</th>
                           <th style={{ padding: '10px 12px', fontWeight: 800 }}>STATUS</th>
                           <th style={{ padding: '10px 12px', fontWeight: 800, textAlign: 'right' }}>ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {partners.map((p, idx) => {
+                        {list.map((p, idx) => {
                           const isSeller = p.role === 'seller';
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -1984,9 +1981,108 @@ export function AdminPortalApp() {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            )}
+                );
+              };
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Top Bar with Filter Pills & Add Partner button */}
+                  <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: isMobile ? '16px' : '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                          Partner Fleet Management
+                        </h2>
+                        <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+                          Separated view for platform store merchants and delivery riders
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* Filter Tabs */}
+                        <div style={{ display: 'flex', background: '#F1F5F9', padding: '3px', borderRadius: '10px' }}>
+                          {[
+                            { key: 'ALL', label: `All (${partners.length})` },
+                            { key: 'SELLERS', label: `🏪 Sellers (${sellersList.length})` },
+                            { key: 'RIDERS', label: `🛵 Riders (${ridersList.length})` }
+                          ].map(t => (
+                            <button
+                              key={t.key}
+                              type="button"
+                              onClick={() => setPartnerFilter(t.key)}
+                              style={{
+                                border: 'none',
+                                background: partnerFilter === t.key ? '#FFFFFF' : 'transparent',
+                                color: partnerFilter === t.key ? '#0F172A' : '#64748B',
+                                fontSize: '11.5px', fontWeight: 800,
+                                padding: '6px 12px', borderRadius: '8px', cursor: 'pointer',
+                                boxShadow: partnerFilter === t.key ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddPartnerModal(true)}
+                          style={{
+                            background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
+                            color: '#FFFFFF', border: 'none', borderRadius: '8px',
+                            padding: '8px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '5px'
+                          }}
+                        >
+                          <Plus size={14} /> Add Partner
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 🏪 SECTION 1: STORE SELLERS & MERCHANTS */}
+                  {(partnerFilter === 'ALL' || partnerFilter === 'SELLERS') && (
+                    <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px' }}>🏪</span>
+                          <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                              Store Sellers &amp; Merchants ({sellersList.length})
+                            </h3>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>Authorized grocery stores, supermarkets &amp; vendors</div>
+                          </div>
+                        </div>
+                        <span style={{ background: '#EFF6FF', color: '#0071E3', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800 }}>
+                          {sellersList.length} Active Stores
+                        </span>
+                      </div>
+                      {renderPartnerTable(sellersList, 'Sellers')}
+                    </div>
+                  )}
+
+                  {/* 🛵 SECTION 2: DELIVERY FLEET & RIDERS */}
+                  {(partnerFilter === 'ALL' || partnerFilter === 'RIDERS') && (
+                    <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: isMobile ? '16px' : '22px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px' }}>🛵</span>
+                          <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                              Delivery Fleet &amp; Riders ({ridersList.length})
+                            </h3>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>Express delivery agents &amp; logistics fleet</div>
+                          </div>
+                        </div>
+                        <span style={{ background: '#F0FDF4', color: '#16A34A', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800 }}>
+                          {ridersList.length} Active Riders
+                        </span>
+                      </div>
+                      {renderPartnerTable(ridersList, 'Riders')}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ══════════════════════════════════════════════════════════════════ */}
             {/* ══════════════════════════════════════════════════════════════════ */}

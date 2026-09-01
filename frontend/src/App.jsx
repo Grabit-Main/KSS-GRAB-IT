@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { CartProvider } from './context/CartContext';
 import { LocationProvider } from './context/LocationContext';
 import { ToastProvider } from './context/ToastContext';
@@ -19,6 +20,11 @@ import HelpPage from './pages/HelpPage';
 import CategoriesOverviewPage from './pages/CategoriesOverviewPage';
 import WishlistPage from './pages/WishlistPage';
 import FestivalPage from './pages/FestivalPage';
+import FreshProducePage from './pages/FreshProducePage';
+import PharmacyPage from './pages/PharmacyPage';
+import ChickenMeatPage from './pages/ChickenMeatPage';
+import DiwaliBannerPage from './pages/DiwaliBannerPage';
+import ExclusiveDealsPage from './pages/ExclusiveDealsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
 import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import './styles/global.css';
@@ -52,6 +58,10 @@ function InitialLoginCheck() {
       path.startsWith('/category/') ||
       path.startsWith('/product/') ||
       path.startsWith('/festival/') ||
+      path === '/fresh-produce' ||
+      path === '/pharmacy' ||
+      path === '/chicken-meat' ||
+      path === '/diwali-banner' ||
       path === '/cart' ||
       path === '/checkout' ||
       path === '/orders' ||
@@ -101,6 +111,12 @@ function AnimatedRoutes() {
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/product/:id" element={<ProductDetailPage />} />
       <Route path="/festival/:festivalId" element={<FestivalPage />} />
+      <Route path="/fresh-produce" element={<FreshProducePage />} />
+      <Route path="/pharmacy" element={<PharmacyPage />} />
+      <Route path="/chicken-meat" element={<ChickenMeatPage />} />
+      <Route path="/diwali-banner" element={<DiwaliBannerPage />} />
+      <Route path="/exclusive-deals" element={<ExclusiveDealsPage />} />
+      <Route path="/deals" element={<ExclusiveDealsPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders" element={<OrdersPage />} />
@@ -137,6 +153,50 @@ function AnimatedRoutes() {
   );
 }
 
+function CategoryHeader({ title }) {
+  const navigate = useNavigate();
+
+  return (
+    <header style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000,
+      background: '#FFFFFF',
+      borderBottom: '1px solid #E2E8F0',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: '#F1F5F9',
+            border: 'none',
+            borderRadius: '50%',
+            width: '38px',
+            height: '38px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#0F172A',
+            transition: 'all 0.15s ease'
+          }}
+          aria-label="Go Back"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+          {title}
+        </h1>
+      </div>
+    </header>
+  );
+}
+
 function AppContent() {
   const location = useLocation();
   const isPortalOrAuth =
@@ -149,9 +209,44 @@ function AppContent() {
     return <AnimatedRoutes />;
   }
 
+  const categoryTitles = {
+    '/fresh-produce': 'Fresh Vegetables & Fruits',
+    '/pharmacy': 'Pharmacy at your Doorstep',
+    '/chicken-meat': 'Fresh Chicken & Meat',
+    '/diwali-banner': 'Festival Special Offers',
+    '/exclusive-deals': 'Exclusive Deals & Offers',
+    '/deals': 'Exclusive Deals & Offers'
+  };
+
+  const slugTitleMap = {
+    'snacks-munchies': 'Snacks & Munchies',
+    'beverages': 'Cold Drinks & Juices',
+    'dairy-bakery': 'Dairy & Bakery',
+    'produce': 'Fresh Fruits & Vegetables',
+    'groceries': 'Grocery & Staples',
+    'staples': 'Atta, Rice & Dal',
+    'personal-care': 'Personal Care',
+    'household': 'Household Essentials',
+    'chocolates': 'Chocolates & Sweets',
+    'electronics': 'Electronics & Gadgets',
+    'meat': 'Fresh Meat & Seafood',
+    'pharmacy': 'Pharmacy & Health'
+  };
+
+  let currentCategoryTitle = categoryTitles[location.pathname];
+  if (!currentCategoryTitle && location.pathname.startsWith('/category/')) {
+    const rawSlug = decodeURIComponent(location.pathname.replace('/category/', '')).trim();
+    const slug = rawSlug.toLowerCase();
+    currentCategoryTitle = slugTitleMap[slug] || rawSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   return (
     <div className="page-wrapper">
-      <Header />
+      {currentCategoryTitle ? (
+        <CategoryHeader title={currentCategoryTitle} />
+      ) : (
+        <Header />
+      )}
       <main className="page-content">
         <AnimatedRoutes />
       </main>
