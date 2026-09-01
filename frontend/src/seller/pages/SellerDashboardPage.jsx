@@ -283,11 +283,13 @@ export const SellerDashboardPage = () => {
 
     window.addEventListener('storage', handleStorageUpdate);
     window.addEventListener('grabit_orders_updated', handleStorageUpdate);
+    window.addEventListener('grabit_products_updated', handleStorageUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
+      window.removeEventListener('grabit_products_updated', handleStorageUpdate);
     };
   }, [loadDashboardData]);
 
