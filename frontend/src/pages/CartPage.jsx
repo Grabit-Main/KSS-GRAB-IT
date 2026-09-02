@@ -134,27 +134,50 @@ export default function CartPage() {
   };
 
   const handleDetectLocation = () => {
-    setIsLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        () => {
-          setTimeout(() => {
-            const detected = 'Koramangala 4th Block, 100 Feet Rd, Bengaluru 560034';
-            setCustomAddressInput(detected);
-            setIsLocating(false);
-            showToast('GPS location detected!');
-          }, 600);
-        },
-        () => {
-          setIsLocating(false);
-          setCustomAddressInput('Koramangala 5th Block, Bengaluru 560095');
-          showToast('Used approximate location.');
-        }
-      );
-    } else {
-      setIsLocating(false);
-      setCustomAddressInput('Koramangala 5th Block, Bengaluru 560095');
+    if (!('geolocation' in navigator)) {
+      showToast('Geolocation is not supported by your browser.');
+      return;
     }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let detected = `Near ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const road = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
+            const house = addr.house_number ? `${addr.house_number}, ` : '';
+            const area = addr.suburb || addr.neighbourhood || addr.city_district || addr.residential || '';
+            const city = addr.city || addr.town || addr.municipality || addr.state_district || 'Bengaluru';
+            const postcode = addr.postcode ? ` ${addr.postcode}` : '';
+
+            const parts = [house ? `${house}${road}` : road, area, `${city}${postcode}`].filter(Boolean);
+            if (parts.length > 0) {
+              detected = parts.join(', ');
+            } else if (data.display_name) {
+              detected = data.display_name.split(',').slice(0, 4).join(', ').trim();
+            }
+          }
+        } catch (e) {
+          console.warn('Reverse geocoding error:', e);
+        }
+        setCustomAddressInput(detected);
+        setIsLocating(false);
+        showToast('GPS location detected!');
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('Geolocation error:', err);
+        showToast('Could not access GPS. Please enter your address manually.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
   };
 
   const handleSaveCustomLocation = () => {

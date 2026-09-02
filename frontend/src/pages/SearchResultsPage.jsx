@@ -231,11 +231,19 @@ export default function SearchResultsPage() {
         <div style={{ marginBottom: '20px', marginTop: '8px' }}>
           <div style={{ marginBottom: '6px' }}>
             <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.4px' }}>
-              {isTrendingQuery ? 'Trending Products' : `Results for "${query}"`}
+              {isTrendingQuery
+                ? 'Trending Products'
+                : initialResults.length === 0
+                  ? `No results for "${query}"`
+                  : `Results for "${query}"`}
             </h1>
           </div>
           <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-            {isTrendingQuery ? 'Handpicked top-rated products delivered fast to your doorstep' : `Showing catalog matches for "${query}"`}
+            {isTrendingQuery
+              ? 'Handpicked top-rated products delivered fast to your doorstep'
+              : initialResults.length === 0
+                ? `0 products found matching your search term. Check spelling or request missing items below.`
+                : `Showing ${filtered.length} catalog matches for "${query}"`}
           </p>
         </div>
 
@@ -647,6 +655,32 @@ export default function SearchResultsPage() {
                     <Lightbulb size={16} color="#FFFFFF" />
                     <span>Suggest {query ? `"${query}"` : 'a Product'} to Grabit</span>
                   </button>
+                </div>
+
+                {/* Clearly labeled alternatives section */}
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                      Popular Essentials You Might Like Instead
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                      Top-rated items currently trending on GrabIt
+                    </p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: isMobile ? '12px' : '16px'
+                  }}>
+                    {allProducts.slice(0, 8).map(product => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        badgeText="Trending"
+                        badgeColor="#0071E3"
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

@@ -216,11 +216,19 @@ export default function SearchResultsPage() {
         <div style={{ marginBottom: '20px', marginTop: '8px' }}>
           <div style={{ marginBottom: '6px' }}>
             <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.4px' }}>
-              {isTrendingQuery ? 'Trending Products' : `Results for "${query}"`}
+              {isTrendingQuery
+                ? 'Trending Products'
+                : initialResults.length === 0
+                  ? `No results for "${query}"`
+                  : `Results for "${query}"`}
             </h1>
           </div>
           <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-            {isTrendingQuery ? 'Handpicked top-rated products delivered fast to your doorstep' : `Showing catalog matches for "${query}"`}
+            {isTrendingQuery
+              ? 'Handpicked top-rated products delivered fast to your doorstep'
+              : initialResults.length === 0
+                ? `0 products found matching your search term. Check spelling or browse popular categories below.`
+                : `Showing ${filtered.length} catalog matches for "${query}"`}
           </p>
         </div>
 
@@ -567,28 +575,56 @@ export default function SearchResultsPage() {
               </div>
             ) : (
               /* Empty State */
-              <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '48px 24px', textAlign: 'center', marginBottom: '32px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  No matching products found
-                </h3>
-                <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
-                  We couldn't find any products matching your selected filter criteria.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    background: '#0071E3', color: '#FFFFFF', border: 'none',
-                    borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
-                    fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
-                  }}
-                >
-                  Reset All Filters
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '48px 24px', textAlign: 'center',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+                    No matching products found {query ? `for "${query}"` : ''}
+                  </h3>
+                  <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
+                    We couldn't find any products matching your search criteria.
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    style={{
+                      background: '#0071E3', color: '#FFFFFF', border: 'none',
+                      borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+
+                {/* Popular alternatives section clearly labeled */}
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                      Popular Essentials You Might Like Instead
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                      Top-rated items currently trending on GrabIt
+                    </p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: isMobile ? '12px' : '16px'
+                  }}>
+                    {products.slice(0, 8).map(product => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        badgeText="Trending"
+                        badgeColor="#0071E3"
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
