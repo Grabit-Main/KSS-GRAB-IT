@@ -238,6 +238,7 @@ export default function ProductSuggestionModal({ isOpen, onClose, prefillQuery =
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   placeholder="e.g. Oat Milk 1L, Doritos Cool Ranch, Organic Honey..."
                   value={productName}
                   onChange={e => setProductName(e.target.value)}
@@ -281,6 +282,7 @@ export default function ProductSuggestionModal({ isOpen, onClose, prefillQuery =
                   </label>
                   <input
                     type="text"
+                    maxLength={60}
                     placeholder="e.g. Oatly, Amul, 500g"
                     value={brand}
                     onChange={e => setBrand(e.target.value)}
@@ -301,6 +303,7 @@ export default function ProductSuggestionModal({ isOpen, onClose, prefillQuery =
                 </label>
                 <textarea
                   rows={3}
+                  maxLength={300}
                   placeholder="Tell us why you want this product or any specific packaging details..."
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
@@ -385,29 +388,35 @@ export default function ProductSuggestionModal({ isOpen, onClose, prefillQuery =
                       style={{
                         background: '#F8FAFC', borderRadius: '14px',
                         border: '1px solid #E2E8F0', padding: '14px 16px',
-                        display: 'flex', flexDirection: 'column', gap: '6px'
+                        display: 'flex', flexDirection: 'column', gap: '6px',
+                        minWidth: 0, overflow: 'hidden',
+                        wordBreak: 'break-word', overflowWrap: 'anywhere'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                        <h4 style={{
+                          fontSize: '14px', fontWeight: 900, color: '#0F172A', margin: 0,
+                          wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0, flex: 1, lineHeight: 1.4
+                        }}>
                           {sug.product_name}
                         </h4>
                         <span style={{
                           background: sug.status === 'Stocked' ? '#DCFCE7' : '#FEF3C7',
                           color: sug.status === 'Stocked' ? '#15803D' : '#B45309',
                           fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          flexShrink: 0, whiteSpace: 'nowrap'
                         }}>
                           <CheckCircle2 size={12} />
                           {sug.status || 'Under Review'}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                         <span>Category: {sug.category}</span>
                         {sug.brand && <span>Brand: {sug.brand}</span>}
                       </div>
                       {sug.notes && (
-                        <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 0', fontStyle: 'italic' }}>
+                        <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 0', fontStyle: 'italic', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                           "{sug.notes}"
                         </p>
                       )}
