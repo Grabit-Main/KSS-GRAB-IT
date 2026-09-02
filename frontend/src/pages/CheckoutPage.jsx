@@ -52,10 +52,9 @@ export default function CheckoutPage() {
   // Redirect to /cart if cart is empty and order has not been placed
   useEffect(() => {
     if (!orderPlaced && (!items || items.length === 0)) {
-      showToast('Your cart is empty. Please add items before checking out.');
       navigate('/cart', { replace: true });
     }
-  }, [items, orderPlaced, navigate, showToast]);
+  }, [items, orderPlaced, navigate]);
 
   const w = useWindowWidth();
   const isMobile = w <= 768;
@@ -374,7 +373,6 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!items || items.length === 0) {
-      showToast('Your cart is empty. Please add items before placing an order.');
       navigate('/cart', { replace: true });
       return;
     }

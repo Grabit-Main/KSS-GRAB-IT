@@ -301,7 +301,6 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!items || items.length === 0) {
-      showToast('Your cart is empty. Please add items before placing an order.');
       navigate('/cart', { replace: true });
       return;
     }
