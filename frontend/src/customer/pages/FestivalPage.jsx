@@ -25,22 +25,22 @@ export default function FestivalPage() {
     { id: 8002, name: "Royal Blue Peacock Feather Enamel Stone Rakhi", price: 189, mrp: 599, discount: 68, weight: "1 Unit", image: "rakhi-peacock-stone", category: "rakhi" },
     { id: 8003, name: "Sacred Sterling Silver Om & Rudraksha Rakhi Thread", price: 199, mrp: 699, discount: 71, weight: "1 Unit", image: "rakhi-silver-rudraksha", category: "rakhi" },
     { id: 8004, name: "Cute Superhero Star Cartoon Kids Soft Rakhi", price: 129, mrp: 349, discount: 63, weight: "1 Unit", image: "rakhi-kids-cartoon", category: "rakhi" },
-    { id: 8005, name: "Cadbury Celebrations Rich Dry Fruit Gift Box", price: 349, mrp: 450, discount: 22, weight: "177 g", image: "cadbury-silk", category: "chocolates" },
+    { id: 8005, name: "Cadbury Celebrations Rich Dry Fruit Gift Box", price: 349, mrp: 450, discount: 22, weight: "177 g", image: "fest-chocolates.jpg", category: "chocolates" },
     { id: 8006, name: "Haldiram's Pure Desi Ghee Kaju Katli 400g", price: 399, mrp: 500, discount: 20, weight: "400 g", image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645105/grabit_media/fest_mithai.jpg", category: "sweets" },
-    { id: 8007, name: "Traditional Brass Pooja Thali Set with Diya & Roli", price: 299, mrp: 699, discount: 57, weight: "1 Set", image: "surf-excel.jpg", category: "pooja" },
-    { id: 8008, name: "Park Avenue Premium Men's Grooming Gift Kit", price: 449, mrp: 899, discount: 50, weight: "Pack of 5", image: "dettol-handwash.jpg", category: "gifts" },
+    { id: 8007, name: "Traditional Brass Pooja Thali Set with Diya & Roli", price: 299, mrp: 699, discount: 57, weight: "1 Set", image: "pooja-thali-brass", category: "pooja" },
+    { id: 8008, name: "Park Avenue Premium Men's Grooming Gift Kit", price: 449, mrp: 899, discount: 50, weight: "Pack of 5", image: "mens-grooming-kit", category: "gifts" },
   ];
 
   // Products Data for Onam Sadhya
   const onamProducts = [
-    { id: 9001, name: "Kerala Special Nendran Banana Chips in Coconut Oil", price: 135, mrp: 180, discount: 25, weight: "200 g", image: "lays-classic-salted", category: "chips", isBestseller: true },
-    { id: 9002, name: "MTR Palada Payasam Dessert Mix", price: 85, mrp: 110, discount: 22, weight: "300 g", image: "fortune-oil", category: "payasam" },
-    { id: 9003, name: "Traditional Kerala Kasavu Cotton Saree & Mundu", price: 899, mrp: 1999, discount: 55, weight: "1 Unit", image: "promo-gift", category: "wear" },
-    { id: 9004, name: "Handcrafted Brass Nilavilakku Puja Oil Lamp", price: 349, mrp: 750, discount: 53, weight: "1 Unit", image: "surf-excel", category: "puja" },
+    { id: 9001, name: "Kerala Special Nendran Banana Chips in Coconut Oil", price: 135, mrp: 180, discount: 25, weight: "200 g", image: "banana-chips-kerala", category: "chips", isBestseller: true },
+    { id: 9002, name: "MTR Palada Payasam Dessert Mix", price: 85, mrp: 110, discount: 22, weight: "300 g", image: "mtr-payasam-mix", category: "payasam" },
+    { id: 9003, name: "Traditional Kerala Kasavu Cotton Saree & Mundu", price: 899, mrp: 1999, discount: 55, weight: "1 Unit", image: "kerala-kasavu-saree", category: "wear" },
+    { id: 9004, name: "Handcrafted Brass Nilavilakku Puja Oil Lamp", price: 349, mrp: 750, discount: 53, weight: "1 Unit", image: "brass-nilavilakku-lamp", category: "puja" },
     { id: 9005, name: "Fresh Farm Organic Green Banana Leaves", price: 49, mrp: 75, discount: 34, weight: "5 Leaves", image: "fresh-produce-hero-green", category: "fresh" },
-    { id: 9006, name: "Amul Pure Cow Ghee for Sadhya Prep", price: 285, mrp: 320, discount: 10, weight: "500 ml", image: "amul-butter", category: "sadhya" },
-    { id: 9007, name: "Eastern Kerala Sambar & Rasam Spice Powder Combo", price: 115, mrp: 150, discount: 23, weight: "200 g", image: "fortune-oil", category: "sadhya" },
-    { id: 9008, name: "Kerala Rice Pappadam Pack", price: 45, mrp: 60, discount: 25, weight: "100 g", image: "oreo-biscuits", category: "chips" },
+    { id: 9006, name: "Amul Pure Cow Ghee for Sadhya Prep", price: 285, mrp: 320, discount: 10, weight: "500 ml", image: "amul-ghee-tin", category: "sadhya" },
+    { id: 9007, name: "Eastern Kerala Sambar & Rasam Spice Powder Combo", price: 115, mrp: 150, discount: 23, weight: "200 g", image: "eastern-sambar-powder", category: "sadhya" },
+    { id: 9008, name: "Kerala Rice Pappadam Pack", price: 45, mrp: 60, discount: 25, weight: "100 g", image: "kerala-rice-pappadam", category: "chips" },
   ];
 
   const currentProducts = festivalType === 'raksha-bandhan' ? rakhiProducts : onamProducts;

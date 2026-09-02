@@ -8,15 +8,48 @@ import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function WishlistPage() {
   const { wishlistItems, toggleWishlist } = useWishlist();
-  const { addItem } = useCart();
+  const { addItem, getItemQty } = useCart();
   const { showToast } = useToast();
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
 
   const handleAddAllToCart = () => {
-    wishlistItems.forEach(item => addItem(item));
-    showToast(`Added all ${wishlistItems.length} saved items to Cart!`);
+    if (!wishlistItems || wishlistItems.length === 0) return;
+
+    let addedCount = 0;
+    let outOfStockCount = 0;
+    let alreadyInCartCount = 0;
+
+    wishlistItems.forEach(item => {
+      // 1. Stock / availability validation
+      const isOutOfStock = item.inStock === false || item.stock_quantity === 0 || item.isOutOfStock === true;
+      if (isOutOfStock) {
+        outOfStockCount++;
+        return;
+      }
+
+      // 2. Deduplication check against cart
+      const currentQty = getItemQty(item.id);
+      if (currentQty > 0) {
+        alreadyInCartCount++;
+        return;
+      }
+
+      addItem(item);
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      let msg = `Added ${addedCount} saved ${addedCount === 1 ? 'item' : 'items'} to Cart!`;
+      if (alreadyInCartCount > 0) msg += ` (${alreadyInCartCount} already in cart)`;
+      if (outOfStockCount > 0) msg += ` (${outOfStockCount} out of stock)`;
+      showToast(msg);
+    } else if (alreadyInCartCount > 0 && outOfStockCount === 0) {
+      showToast('All available items are already in your cart.');
+    } else if (outOfStockCount > 0) {
+      showToast('Saved items could not be added because they are out of stock.');
+    }
   };
 
   return (
