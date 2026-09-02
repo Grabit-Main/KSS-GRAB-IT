@@ -584,35 +584,50 @@ export default function CheckoutPage() {
                 </h3>
                 
                 {/* Active Delivery Address Box (INTERACTIVE & MOBILE RESPONSIVE) */}
-                <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: isMobile ? '14px' : '16px', background: '#EFF6FF', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />
+                {selectedAddress && selectedAddress.address ? (
+                  <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: isMobile ? '14px' : '16px', background: '#EFF6FF', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', whiteSpace: 'nowrap' }}>🏠 {selectedAddress?.title || 'Home'} (Selected)</span>
+                        <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFFFFF', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap' }}>{selectedAddress?.tag || 'SAVED'}</span>
                       </div>
-                      <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', whiteSpace: 'nowrap' }}>🏠 {selectedAddress.title} (Selected)</span>
-                      <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFFFFF', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap' }}>{selectedAddress.tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsLocationModalOpen(true)}
+                        style={{
+                          color: '#0071E3', fontSize: '12px', fontWeight: 800,
+                          background: '#FFFFFF', border: '1px solid #BFDBFE',
+                          borderRadius: '8px', padding: '5px 12px', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          whiteSpace: 'nowrap', flexShrink: 0,
+                          boxShadow: '0 1px 3px rgba(0,113,227,0.1)'
+                        }}
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
                     </div>
+                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
+                      {selectedAddress.address}<br />
+                      <strong style={{ color: '#0F172A' }}>{selectedAddress.name || currentName}</strong> • {selectedAddress.phone || currentPhone}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ padding: '24px 16px', border: '2px dashed #CBD5E1', borderRadius: '16px', background: '#F8FAFC', textAlign: 'center', marginBottom: '14px' }}>
+                    <MapPin size={32} color="#0071E3" style={{ margin: '0 auto 10px', display: 'block' }} />
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>No Delivery Address Added</div>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: '0 0 14px' }}>Please set your delivery address or pin on map to place your order.</p>
                     <button
                       type="button"
                       onClick={() => setIsLocationModalOpen(true)}
-                      style={{
-                        color: '#0071E3', fontSize: '12px', fontWeight: 800,
-                        background: '#FFFFFF', border: '1px solid #BFDBFE',
-                        borderRadius: '8px', padding: '5px 12px', cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        whiteSpace: 'nowrap', flexShrink: 0,
-                        boxShadow: '0 1px 3px rgba(0,113,227,0.1)'
-                      }}
+                      style={{ padding: '10px 18px', background: '#0071E3', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Pencil size={12} /> Edit
+                      <Plus size={15} /> Add Delivery Address
                     </button>
                   </div>
-                  <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
-                    {selectedAddress.address}<br />
-                    <strong style={{ color: '#0F172A' }}>{selectedAddress.name}</strong> • {selectedAddress.phone}
-                  </p>
-                </div>
+                )}
 
                 <button
                   type="button"
@@ -623,7 +638,7 @@ export default function CheckoutPage() {
                 </button>
 
                 <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '12px 14px', marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12.5px', color: '#065F46', fontWeight: 700 }}>
-                  <Check size={16} color="#10B981" style={{ flexShrink: 0 }} /> Express delivery in {selectedAddress.time} within 5 km radius.
+                  <Check size={16} color="#10B981" style={{ flexShrink: 0 }} /> Express delivery in {selectedAddress?.time || '15-25 min delivery'} within 5 km radius.
                 </div>
               </div>
             </div>
@@ -670,8 +685,8 @@ export default function CheckoutPage() {
               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '16px', color: '#0F172A' }}>3. Review Order Details</h3>
               <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
                 <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>DELIVERING TO</div>
-                <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>{selectedAddress.title} • {selectedAddress.address}</div>
-                <div style={{ fontSize: '11px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>{selectedAddress.time}</div>
+                <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>{selectedAddress?.title || 'Selected Address'} • {selectedAddress?.address || 'No location selected'}</div>
+                <div style={{ fontSize: '11px', color: '#0071E3', fontWeight: 800, marginTop: '2px' }}>{selectedAddress?.time || '15-25 min delivery'}</div>
               </div>
               <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>PAYMENT METHOD</div>

@@ -557,8 +557,8 @@ export default function CheckoutPage() {
               }}>⚡</div>
               <div style={{ textAlign: 'left', flex: 1 }}>
                 <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Estimated Delivery</div>
-                <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px' }}>{selectedAddress.time}</div>
-                <div style={{ color: '#10B981', fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Express delivery • {selectedAddress.title}</div>
+                <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px' }}>{selectedAddress?.time || '15-25 min delivery'}</div>
+                <div style={{ color: '#10B981', fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Express delivery • {selectedAddress?.title || 'Delivery Location'}</div>
               </div>
             </div>
 
@@ -672,8 +672,8 @@ export default function CheckoutPage() {
       <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px', marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <Zap size={16} color="#0071E3" fill="#0071E3" />
         <div style={{ fontSize: '12px' }}>
-          <div style={{ fontWeight: 900, color: '#0F172A' }}>Delivery in {selectedAddress.time}</div>
-          <div style={{ color: '#0071E3', fontSize: '11px', fontWeight: 700 }}>Express delivery to {selectedAddress.title} • {selectedAddress.tag}</div>
+          <div style={{ fontWeight: 900, color: '#0F172A' }}>Delivery in {selectedAddress?.time || '15-25 min delivery'}</div>
+          <div style={{ color: '#0071E3', fontSize: '11px', fontWeight: 700 }}>Express delivery to {selectedAddress?.title || 'Selected Location'} • {selectedAddress?.tag || 'EXPRESS'}</div>
         </div>
       </div>
 
@@ -844,7 +844,7 @@ export default function CheckoutPage() {
 
               <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
                 <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>Delivery Address</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{selectedAddress.address}</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{selectedAddress?.address || 'No address selected'}</div>
                 <div style={{ fontSize: '12px', color: '#0071E3', fontWeight: 700, marginTop: '2px' }}>Fulfilling Store: {storeHubName}</div>
               </div>
 
