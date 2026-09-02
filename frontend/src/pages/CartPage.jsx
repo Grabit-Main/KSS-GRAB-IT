@@ -72,7 +72,12 @@ export default function CartPage() {
 
   const [savedAddresses, setSavedAddresses] = useState(loadUserAddresses);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [editingAddrIndex, setEditingAddrIndex] = useState(null);
+
+  const [newTitle, setNewTitle] = useState('Home');
+  const [newAddress, setNewAddress] = useState('');
+  const [newCity, setNewCity] = useState('Bengaluru');
 
   const [editTitle, setEditTitle] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -97,6 +102,26 @@ export default function CartPage() {
   const saveAddressesToStorage = (newList) => {
     setSavedAddresses(newList);
     saveCustomerAddresses(newList, activeUser?.phone);
+    const def = newList.find(a => a.isDefault) || newList[0];
+    if (def) {
+      const fullAddr = {
+        id: def.id,
+        title: def.title || def.tag || 'Home',
+        address: def.city && !def.address.includes(def.city) ? `${def.address}, ${def.city}` : def.address,
+        city: def.city || '',
+        tag: 'SAVED LOCATION',
+        time: def.time || '15-25 min delivery',
+        isDefault: true
+      };
+      try {
+        localStorage.setItem('grabit_selected_address', JSON.stringify(fullAddr));
+        localStorage.setItem('grabit_delivery_location', fullAddr.address);
+        window.dispatchEvent(new CustomEvent('grabit_selected_address_updated', { detail: fullAddr }));
+        window.dispatchEvent(new CustomEvent('grabit_addresses_updated'));
+      } catch (err) {
+        console.warn('Error broadcasting address:', err);
+      }
+    }
   };
 
   const defaultAddrObj = savedAddresses.find(a => a.isDefault) || savedAddresses[0] || null;
@@ -107,6 +132,29 @@ export default function CartPage() {
     saveAddressesToStorage(updated);
     setIsLocationModalOpen(false);
     showToast('Delivery address updated!');
+  };
+
+  const handleCreateNewAddress = (e) => {
+    e.preventDefault();
+    if (!newAddress.trim()) {
+      showToast('Please enter your street / flat address');
+      return;
+    }
+    const created = {
+      id: Date.now(),
+      title: newTitle.trim() || 'Home',
+      address: newAddress.trim(),
+      city: newCity.trim() || 'Bengaluru',
+      isDefault: true,
+      tag: 'SAVED LOCATION',
+      time: '15-25 min delivery'
+    };
+    const updated = [created, ...savedAddresses.map(a => ({ ...a, isDefault: false }))];
+    saveAddressesToStorage(updated);
+    setIsAddingNewAddress(false);
+    setNewAddress('');
+    setIsLocationModalOpen(false);
+    showToast('Delivery address saved & selected!');
   };
 
   const handleStartEdit = (index, e) => {
@@ -727,7 +775,11 @@ export default function CartPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <MapPin size={22} color="#0071E3" />
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                {editingAddrIndex !== null ? 'Edit Delivery Address' : 'Select Delivery Location'}
+                {editingAddrIndex !== null
+                  ? 'Edit Delivery Address'
+                  : isAddingNewAddress
+                    ? 'Add New Delivery Address'
+                    : 'Select Delivery Location'}
               </h3>
             </div>
 
@@ -778,37 +830,148 @@ export default function CartPage() {
                   </button>
                 </div>
               </form>
+            ) : isAddingNewAddress ? (
+              <form onSubmit={handleCreateNewAddress} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '6px' }}>ADDRESS TYPE</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {['Home', 'Work', 'Other'].map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setNewTitle(type)}
+                        style={{
+                          flex: 1, padding: '8px 12px', borderRadius: '10px',
+                          border: newTitle === type ? '1.5px solid #0071E3' : '1px solid #CBD5E1',
+                          background: newTitle === type ? '#EFF6FF' : '#FFFFFF',
+                          color: newTitle === type ? '#0071E3' : '#334155',
+                          fontWeight: 800, fontSize: '12px', cursor: 'pointer'
+                        }}
+                      >
+                        {type === 'Home' ? '🏠 Home' : type === 'Work' ? '🏢 Work' : '📍 Other'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px' }}>HOUSE / FLAT / STREET ADDRESS *</label>
+                  <textarea
+                    rows={2}
+                    value={newAddress}
+                    onChange={e => setNewAddress(e.target.value)}
+                    required
+                    placeholder="e.g. Flat 302, Green Glen Layout, Bellandur"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '4px' }}>CITY &amp; PINCODE</label>
+                  <input
+                    type="text"
+                    value={newCity}
+                    onChange={e => setNewCity(e.target.value)}
+                    placeholder="Bengaluru 560103"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  {savedAddresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewAddress(false)}
+                      style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#0071E3', color: '#FFFFFF', fontWeight: 900, cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,113,227,0.25)' }}
+                  >
+                    Save &amp; Deliver Here
+                  </button>
+                </div>
+              </form>
             ) : (
               <div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px', maxHeight: '200px', overflowY: 'auto' }}>
-                  {savedAddresses.map((addr, idx) => (
-                    <div
-                      key={addr.id || idx}
-                      onClick={() => handleSelectAddress(addr.id)}
+                {savedAddresses.length === 0 ? (
+                  /* GUIDANCE EMPTY STATE FOR NEW USERS WITH ZERO SAVED ADDRESSES */
+                  <div style={{
+                    padding: '24px 16px', textAlign: 'center', background: '#F8FAFC',
+                    borderRadius: '16px', border: '1.5px dashed #CBD5E1', marginBottom: '16px'
+                  }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>📍</div>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', marginBottom: '4px' }}>
+                      No Saved Delivery Addresses
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: '0 0 16px', lineHeight: 1.4 }}>
+                      You haven't saved any delivery locations yet. Add your address or use GPS detection to get started!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewAddress(true)}
                       style={{
-                        padding: '12px 14px', borderRadius: '14px',
-                        border: addr.isDefault ? '2px solid #0071E3' : '1px solid #E2E8F0',
-                        background: addr.isDefault ? '#EFF6FF' : '#FFFFFF',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        background: '#0071E3', color: '#FFFFFF', border: 'none',
+                        padding: '10px 20px', borderRadius: '12px', fontSize: '13px',
+                        fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        boxShadow: '0 4px 12px rgba(0,113,227,0.25)'
                       }}
                     >
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A' }}>
-                          🏠 {addr.title} {addr.isDefault && <span style={{ fontSize: '10px', color: '#0071E3', background: '#DBEAFE', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>DEFAULT</span>}
+                      <Plus size={16} />
+                      <span>Add New Delivery Address</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {savedAddresses.map((addr, idx) => (
+                        <div
+                          key={addr.id || idx}
+                          onClick={() => handleSelectAddress(addr.id)}
+                          style={{
+                            padding: '12px 14px', borderRadius: '14px',
+                            border: addr.isDefault ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                            background: addr.isDefault ? '#EFF6FF' : '#FFFFFF',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A' }}>
+                              🏠 {addr.title} {addr.isDefault && <span style={{ fontSize: '10px', color: '#0071E3', background: '#DBEAFE', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>DEFAULT</span>}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+                              {addr.address}, {addr.city}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => handleStartEdit(idx, e)}
+                            style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 800, color: '#0F172A' }}
+                          >
+                            <Pencil size={12} /> Edit
+                          </button>
                         </div>
-                        <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-                          {addr.address}, {addr.city}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => handleStartEdit(idx, e)}
-                        style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 800, color: '#0F172A' }}
-                      >
-                        <Pencil size={12} /> Edit
-                      </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewAddress(true)}
+                      style={{
+                        width: '100%', padding: '10px', borderRadius: '12px',
+                        background: '#FFFFFF', border: '1.5px dashed #0071E3', color: '#0071E3',
+                        fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        marginBottom: '14px'
+                      }}
+                    >
+                      <Plus size={15} />
+                      <span>Add Another Address</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Detect GPS / Add Custom Location */}
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>

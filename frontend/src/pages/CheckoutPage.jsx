@@ -87,21 +87,81 @@ export default function CheckoutPage() {
   const [showManualForm, setShowManualForm] = useState(false);
   const [isLocatingGps, setIsLocatingGps] = useState(false);
 
-  // Sync addresses when updated from Header, Profile, or another tab
+  // Sync addresses when updated from Header, Profile, Cart, or another tab
   useEffect(() => {
     const syncAddresses = () => {
       const list = loadCustomerAddresses(activeUser?.phone);
       setSavedAddresses(list);
+
+      // 1. Check if an address was explicitly selected/edited in Cart
+      try {
+        const stored = localStorage.getItem('grabit_selected_address');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.address) {
+            setSelectedAddress({
+              title: parsed.title || parsed.tag || 'Delivery Address',
+              name: parsed.name || currentName,
+              phone: parsed.phone || currentPhone,
+              address: parsed.city && !parsed.address.includes(parsed.city)
+                ? `${parsed.address}, ${parsed.city}`
+                : parsed.address,
+              tag: parsed.tag || 'SELECTED LOCATION',
+              time: parsed.time || '15-25 min delivery'
+            });
+            return;
+          }
+        }
+      } catch {}
+
+      // 2. Fall back to default from customer address list
+      const def = list.find(a => a.isDefault) || list[0];
+      if (def) {
+        const fullAddress = def.city && !def.address.includes(def.city)
+          ? `${def.address}, ${def.city}`
+          : def.address;
+        setSelectedAddress({
+          title: def.title || def.tag || 'Home',
+          name: currentName,
+          phone: currentPhone,
+          address: fullAddress,
+          tag: 'SAVED LOCATION',
+          time: def.time || '15-25 min delivery'
+        });
+      }
     };
     window.addEventListener('grabit_addresses_updated', syncAddresses);
+    window.addEventListener('grabit_selected_address_updated', syncAddresses);
     window.addEventListener('storage', syncAddresses);
     return () => {
       window.removeEventListener('grabit_addresses_updated', syncAddresses);
+      window.removeEventListener('grabit_selected_address_updated', syncAddresses);
       window.removeEventListener('storage', syncAddresses);
     };
-  }, [activeUser?.phone]);
+  }, [activeUser?.phone, currentName, currentPhone]);
 
   const [selectedAddress, setSelectedAddress] = useState(() => {
+    // 1. First priority: explicitly selected address carried from Cart
+    try {
+      const stored = localStorage.getItem('grabit_selected_address');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.address) {
+          return {
+            title: parsed.title || parsed.tag || 'Delivery Address',
+            name: parsed.name || currentName,
+            phone: parsed.phone || currentPhone,
+            address: parsed.city && !parsed.address.includes(parsed.city)
+              ? `${parsed.address}, ${parsed.city}`
+              : parsed.address,
+            tag: parsed.tag || 'SELECTED LOCATION',
+            time: parsed.time || '15-25 min delivery'
+          };
+        }
+      }
+    } catch {}
+
+    // 2. Second priority: default saved address from account
     const list = loadUserAddresses();
     const def = list.find(a => a.isDefault) || list[0];
     if (def) {
@@ -117,6 +177,8 @@ export default function CheckoutPage() {
         time: def.time || '15-25 min delivery'
       };
     }
+
+    // 3. Third priority: GPS / pinned location from storage
     try {
       const saved = localStorage.getItem('grabit_delivery_location');
       if (saved) {
@@ -154,6 +216,11 @@ export default function CheckoutPage() {
       time: addr.time || '15-25 min delivery'
     };
     setSelectedAddress(formatted);
+    try {
+      localStorage.setItem('grabit_selected_address', JSON.stringify(formatted));
+      localStorage.setItem('grabit_delivery_location', fullAddressText);
+      window.dispatchEvent(new CustomEvent('grabit_selected_address_updated', { detail: formatted }));
+    } catch {}
     setIsLocationModalOpen(false);
     showToast(`Delivery location set to "${fullAddressText}"!`);
   };
