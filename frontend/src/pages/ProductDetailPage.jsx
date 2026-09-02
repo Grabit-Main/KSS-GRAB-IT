@@ -313,14 +313,43 @@ export default function ProductDetailPage() {
     ? product.id
     : ((selectedVariantIdx === 0 && getItemQty(`${product.id}-0`) > 0) ? `${product.id}-0` : cartItemId);
 
-  // Bundle Items for Frequently Bought Together
-  const bundleItems = [
-    product,
-    { id: 16, name: 'Pepsi 500ml', price: 45, mrp: 50, image: 'coca-cola', weight: '500ml' },
-    { id: 31, name: 'Cadbury Dairy Milk 36g', price: 25, mrp: 30, image: 'dairy-milk-silk', weight: '36g' },
-  ];
-  const bundlePrice = bundleItems.reduce((s, i) => s + i.price, 0);
-  const bundleMrp = bundleItems.reduce((s, i) => s + (i.mrp || i.price + 5), 0);
+  // Bundle Items for Frequently Bought Together (Dynamic & Category-Relevant)
+  const bundleItems = (() => {
+    if (!product) return [];
+    const COMPANION_CATEGORIES = {
+      'produce': ['staples', 'dairy', 'produce'],
+      'staples': ['staples', 'oils-ghee', 'masalas-spices', 'produce'],
+      'oils-ghee': ['staples', 'masalas-spices', 'produce'],
+      'masalas-spices': ['staples', 'produce', 'oils-ghee'],
+      'dairy': ['bakery', 'biscuits', 'tea-coffee', 'dairy'],
+      'tea-coffee': ['dairy', 'biscuits', 'breakfast'],
+      'breakfast': ['dairy', 'tea-coffee', 'biscuits'],
+      'biscuits': ['tea-coffee', 'dairy', 'snacks'],
+      'snacks': ['beverages', 'chocolates', 'snacks'],
+      'beverages': ['snacks', 'biscuits', 'chocolates'],
+      'chocolates': ['biscuits', 'snacks', 'beverages'],
+      'instant-food': ['beverages', 'snacks', 'instant-food'],
+      'household': ['household', 'personal-care'],
+      'personal-care': ['personal-care', 'household'],
+    };
+
+    const cat = product.category || '';
+    const companionCats = COMPANION_CATEGORIES[cat] || [cat, 'staples', 'snacks'];
+    const candidates = products.filter(p => p.id !== product.id && p.inStock !== false);
+
+    let c1 = candidates.find(p => p.category === companionCats[0]);
+    if (!c1) c1 = candidates.find(p => p.category === cat);
+    if (!c1) c1 = candidates[0];
+
+    let c2 = candidates.find(p => p.category === (companionCats[1] || companionCats[0]) && p.id !== c1?.id);
+    if (!c2) c2 = candidates.find(p => p.id !== c1?.id && (p.category === cat || p.category === companionCats[2]));
+    if (!c2) c2 = candidates.find(p => p.id !== c1?.id);
+
+    return [product, c1, c2].filter(Boolean);
+  })();
+
+  const bundlePrice = bundleItems.reduce((s, i) => s + (i.price || 0), 0);
+  const bundleMrp = bundleItems.reduce((s, i) => s + (i.mrp || (i.price || 0) + 10), 0);
 
   // Related recommendations
   const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, isMobile ? 4 : 6);
@@ -1329,7 +1358,7 @@ export default function ProductDetailPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Bundle Price (3 Items)</div>
+                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Bundle Price ({bundleItems.length} Items)</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A' }}>₹{bundlePrice}</span>
                   <span style={{ fontSize: '13px', color: '#94A3B8', textDecoration: 'line-through' }}>₹{bundleMrp}</span>
@@ -1341,6 +1370,7 @@ export default function ProductDetailPage() {
                 <button
                   onClick={() => {
                     bundleItems.forEach(it => addItem(it));
+                    showToast(`Added ${bundleItems.length} bundle items to Cart!`);
                   }}
                   style={{
                     width: '100%', maxWidth: '100%', background: '#FF6B00', color: 'white', border: 'none',
@@ -1350,7 +1380,7 @@ export default function ProductDetailPage() {
                     boxSizing: 'border-box', textAlign: 'center', display: 'block'
                   }}
                 >
-                  Add 3 Items to Cart (₹{bundlePrice})
+                  Add {bundleItems.length} Items to Cart (₹{bundlePrice})
                 </button>
               </div>
             </div>
