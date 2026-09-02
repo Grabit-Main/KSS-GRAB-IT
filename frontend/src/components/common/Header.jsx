@@ -1102,10 +1102,10 @@ export default function Header() {
 
           {/* ── MOBILE CLEAN ZEPTO-STYLE HEADER ── */}
           {isMobile ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
               {/* Row 1: Brand Logo & Location + Live 10-Min Badge + Reward Box + Profile */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
@@ -1121,7 +1121,7 @@ export default function Header() {
                     onClick={() => setIsModalOpen(true)}
                     style={{
                       fontSize: '12px', fontWeight: 800, color: '#1E293B',
-                      display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', cursor: 'pointer',
                       maxWidth: 'calc(100vw - 160px)', overflow: 'hidden'
                     }}
                   >
