@@ -74,14 +74,23 @@ export default function CheckoutPage() {
         time: '15-25 min delivery'
       };
     }
-    return {
-      title: 'Delivery Location',
-      name: currentName || 'Customer',
-      phone: currentPhone,
-      address: 'Flat 301, Sunshine Heights, 80 Feet Rd, Koramangala, Bengaluru 560034',
-      tag: 'DIRECT DELIVERY',
-      time: '15-25 min delivery'
-    };
+    try {
+      const saved = localStorage.getItem('grabit_delivery_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.address && !parsed.address.toLowerCase().includes('sunshine heights')) {
+          return {
+            title: parsed.tag || 'Delivery Location',
+            name: currentName,
+            phone: currentPhone,
+            address: parsed.address,
+            tag: 'GPS / PINNED LOCATION',
+            time: '15-25 min delivery'
+          };
+        }
+      }
+    } catch {}
+    return null;
   });
 
   const [customAddressInput, setCustomAddressInput] = useState('');

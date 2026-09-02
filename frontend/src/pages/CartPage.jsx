@@ -99,11 +99,8 @@ export default function CartPage() {
     saveCustomerAddresses(newList, activeUser?.phone);
   };
 
-  const defaultAddrObj = savedAddresses.find(a => a.isDefault) || savedAddresses[0] || {
-    id: 1, title: 'Home', address: 'Flat 301, Sunshine Heights, 80 Feet Rd, Koramangala', city: 'Bengaluru 560034'
-  };
-
-  const currentAddressText = `${defaultAddrObj.address}, ${defaultAddrObj.city || ''}`.trim();
+  const defaultAddrObj = savedAddresses.find(a => a.isDefault) || savedAddresses[0] || null;
+  const currentAddressText = defaultAddrObj ? `${defaultAddrObj.address}, ${defaultAddrObj.city || ''}`.trim() : '';
 
   const handleSelectAddress = (addrId) => {
     const updated = savedAddresses.map(a => ({ ...a, isDefault: a.id === addrId }));

@@ -93,18 +93,37 @@ export default function CheckoutPage() {
 
   const [selectedAddress, setSelectedAddress] = useState(() => {
     const list = loadUserAddresses();
-    const def = list.find(a => a.isDefault) || list[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
-    const fullAddress = def.city && !def.address.includes(def.city)
-      ? `${def.address}, ${def.city}`
-      : def.address;
-    return {
-      title: def.title || def.tag || 'Home',
-      name: currentName,
-      phone: currentPhone,
-      address: fullAddress,
-      tag: 'DIRECT LOCATION',
-      time: def.time || '15-25 min delivery'
-    };
+    const def = list.find(a => a.isDefault) || list[0];
+    if (def) {
+      const fullAddress = def.city && !def.address.includes(def.city)
+        ? `${def.address}, ${def.city}`
+        : def.address;
+      return {
+        title: def.title || def.tag || 'Home',
+        name: currentName,
+        phone: currentPhone,
+        address: fullAddress,
+        tag: 'SAVED LOCATION',
+        time: def.time || '15-25 min delivery'
+      };
+    }
+    try {
+      const saved = localStorage.getItem('grabit_delivery_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.address && !parsed.address.toLowerCase().includes('sunshine heights')) {
+          return {
+            title: parsed.tag || 'Delivery Location',
+            name: currentName,
+            phone: currentPhone,
+            address: parsed.address,
+            tag: 'GPS / PINNED LOCATION',
+            time: '15-25 min delivery'
+          };
+        }
+      }
+    } catch {}
+    return null;
   });
 
   const saveAddressesToStorage = (list) => {
@@ -197,6 +216,11 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!selectedAddress || !selectedAddress.address) {
+      showToast('Please add or choose a delivery address first.');
+      setIsLocationModalOpen(true);
+      return;
+    }
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `GB-${randomNum}`;
     const rawId = `ord-${Date.now()}`;
@@ -663,36 +687,51 @@ export default function CheckoutPage() {
                   <MapPin size={20} color="#0071E3" /> 1. Select Delivery Address
                 </h3>
                 
-                {/* Active Delivery Address Box */}
-                <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: isMobile ? '14px' : '16px', background: '#EFF6FF', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />
+                {/* Active Delivery Address Box or Empty State */}
+                {selectedAddress && selectedAddress.address ? (
+                  <div style={{ border: '2px solid #0071E3', borderRadius: '16px', padding: isMobile ? '14px' : '16px', background: '#EFF6FF', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', whiteSpace: 'nowrap' }}>🏠 {selectedAddress.title} (Selected)</span>
                       </div>
-                      <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', whiteSpace: 'nowrap' }}>🏠 {selectedAddress.title} (Selected)</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsLocationModalOpen(true)}
+                        style={{
+                          color: '#0071E3', fontSize: '12px', fontWeight: 800,
+                          background: '#FFFFFF', border: '1px solid #BFDBFE',
+                          borderRadius: '8px', padding: '5px 12px', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
                     </div>
+                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
+                      <span style={{ color: '#0F172A', fontWeight: 800, fontSize: '13.5px' }}>{selectedAddress.address}</span><br />
+                      <strong style={{ color: '#0F172A' }}>{currentName}</strong>{currentPhone ? ` • +91 ${currentPhone}` : ''}<br />
+                      <span style={{ fontSize: '11.5px', color: '#0071E3', fontWeight: 800, marginTop: '4px', display: 'inline-block' }}>
+                        Fulfilling Store: 🏪 {storeHubName} (Koramangala Central Hub)
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ padding: '24px 16px', border: '2px dashed #CBD5E1', borderRadius: '16px', background: '#F8FAFC', textAlign: 'center', marginBottom: '14px' }}>
+                    <MapPin size={32} color="#0071E3" style={{ margin: '0 auto 10px', display: 'block' }} />
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>No Delivery Address Added</div>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: '0 0 14px' }}>Please set your delivery address or pin on map to place your order.</p>
                     <button
                       type="button"
                       onClick={() => setIsLocationModalOpen(true)}
-                      style={{
-                        color: '#0071E3', fontSize: '12px', fontWeight: 800,
-                        background: '#FFFFFF', border: '1px solid #BFDBFE',
-                        borderRadius: '8px', padding: '5px 12px', cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', gap: '4px'
-                      }}
+                      style={{ padding: '10px 18px', background: '#0071E3', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Pencil size={12} /> Edit
+                      <Plus size={15} /> Add Delivery Address
                     </button>
                   </div>
-                  <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
-                    <span style={{ color: '#0F172A', fontWeight: 800, fontSize: '13.5px' }}>{selectedAddress.address}</span><br />
-                    <strong style={{ color: '#0F172A' }}>{currentName}</strong>{currentPhone ? ` • +91 ${currentPhone}` : ''}<br />
-                    <span style={{ fontSize: '11.5px', color: '#0071E3', fontWeight: 800, marginTop: '4px', display: 'inline-block' }}>
-                      Fulfilling Store: 🏪 {storeHubName} (Koramangala Central Hub)
-                    </span>
-                  </p>
-                </div>
+                )}
 
                 <button
                   type="button"

@@ -11,14 +11,14 @@ import {
 
 const LocationContext = createContext();
 
-export const defaultLocationsList = DEFAULT_CUSTOMER_ADDRESSES;
+export const defaultLocationsList = [];
 
 export function LocationProvider({ children }) {
   const [locations, setLocations] = useState(() => loadCustomerAddresses());
   const [selectedId, setSelectedId] = useState(() => {
     const list = loadCustomerAddresses();
     const def = list.find(l => l.isDefault) || list[0];
-    return def ? def.id : 1;
+    return def ? def.id : null;
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('list'); // 'list' | 'map'
@@ -73,7 +73,18 @@ export function LocationProvider({ children }) {
     };
   }, []);
 
-  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
+  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || (() => {
+    try {
+      const saved = localStorage.getItem('grabit_delivery_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.address && !parsed.address.toLowerCase().includes('sunshine heights')) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return { area: 'Select Location', city: '', pincode: '', address: '', tag: 'Location' };
+  })();
 
   const selectLocation = (loc) => {
     setSelectedId(loc.id);

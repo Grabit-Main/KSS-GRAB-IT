@@ -79,6 +79,10 @@ export function logoutUser() {
   localStorage.removeItem('grabit_seller_profile');
   localStorage.removeItem('grabit_jwt');
   localStorage.removeItem('grabit_auth_token');
+  localStorage.removeItem('grabit_addresses_default');
+  localStorage.removeItem('grabit_addresses_guest');
+  localStorage.removeItem('grabit_delivery_location');
+  localStorage.removeItem('grabit_location_confirmed');
   
   // Preserve splashscreen seen flag so it only runs once per app opening
   const splashSeen = sessionStorage.getItem('grabit_splash_displayed');

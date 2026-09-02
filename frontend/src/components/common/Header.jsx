@@ -1058,7 +1058,7 @@ export default function Header() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 800, color: '#1D1D1F', marginTop: '1px' }}>
                 <MapPin size={15} color="#0071E3" strokeWidth={2.2} />
-                <span>{location.area}, {location.city}</span>
+                <span>{location.city ? `${location.area}, ${location.city}` : (location.area || 'Select Location')}</span>
                 <ChevronDown size={13} color="#86868B" />
               </div>
             </div>
@@ -1091,7 +1091,7 @@ export default function Header() {
                     }}
                   >
                     <MapPin size={13} color="#0071E3" strokeWidth={2.2} />
-                    <span>Home - {location.area}, {location.city}</span>
+                    <span>{location.tag && location.tag !== 'Location' && location.tag !== 'Select Location' ? `${location.tag} - ` : ''}{location.city ? `${location.area}, ${location.city}` : (location.area || 'Select Location')}</span>
                     <ChevronDown size={12} color="#64748B" />
                   </div>
                 </div>
