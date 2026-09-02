@@ -396,9 +396,10 @@ export default function OrdersPage() {
       : (o.time || '');
 
     return {
-      id: displayId,
+      id: o.id || o.rawId || displayId,
       displayId,
       rawId: o.rawId || o.id,
+      canonicalId: o.rawId || o.id || displayId,
       date: timeStr ? `${dateStr}, ${timeStr}` : dateStr,
       status: normStatus,
       rawStatus: o.status,
