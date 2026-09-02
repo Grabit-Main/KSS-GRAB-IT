@@ -249,6 +249,7 @@ export default function Header() {
 
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
+  const isSearchingRef = useRef(false);
 
   const navigate = useNavigate();
   const routerLocation = useLocation();
@@ -323,13 +324,21 @@ export default function Header() {
   };
 
   const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      trackCustomerSearch(searchQuery.trim());
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setMenuOpen(false);
-      setIsSearchFocused(false);
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    const query = searchQuery.trim();
+    if (!query || isSearchingRef.current) return;
+    isSearchingRef.current = true;
+    setTimeout(() => {
+      isSearchingRef.current = false;
+    }, 600);
+
+    trackCustomerSearch(query);
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+    setMenuOpen(false);
+    setIsSearchFocused(false);
   };
 
   const openLogin = () => {

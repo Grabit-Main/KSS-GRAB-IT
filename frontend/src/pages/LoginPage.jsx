@@ -22,10 +22,13 @@ export function LoginPage() {
   const handleSkip = () => {
     sessionStorage.setItem('grabit_skipped_login', 'true');
     const intended = sessionStorage.getItem('grabit_intended_path');
-    if (intended) {
-      sessionStorage.removeItem('grabit_intended_path');
+    sessionStorage.removeItem('grabit_intended_path');
+    localStorage.removeItem('grabit_intended_path');
+    if (intended && intended !== '/login') {
+      navigate(intended, { replace: true });
+    } else {
+      navigate('/', { replace: true });
     }
-    navigate('/', { replace: true });
   };
 
   // After login, restore the page the user was trying to reach (set by ProtectedRoute)
