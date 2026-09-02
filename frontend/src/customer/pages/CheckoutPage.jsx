@@ -514,19 +514,8 @@ export default function CheckoutPage() {
   return (
     <div className="container section" style={{ paddingTop: isMobile ? '12px' : '24px', minHeight: '100vh' }}>
 
-      {/* Header Bar with Back Button */}
+      {/* Header Bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <button
-          onClick={() => step > 0 ? setStep(step - 1) : navigate('/cart')}
-          style={{
-            width: '38px', height: '38px', borderRadius: '50%',
-            background: '#FFFFFF', border: '1px solid #E2E8F0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-          }}
-        >
-          <ArrowLeft size={18} color="#0F172A" />
-        </button>
         <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: 0, color: '#0F172A' }}>{STEPS[step]}</h1>
       </div>
 
