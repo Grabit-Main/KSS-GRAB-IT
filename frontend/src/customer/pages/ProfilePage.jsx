@@ -541,15 +541,27 @@ export default function ProfilePage() {
 
       {/* 4. SAVED ADDRESSES MODAL WITH ADD, EDIT & DELETE */}
       {activeModal === 'addresses' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#0F172A" /></button>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 14px', color: '#0F172A' }}>
-              {isAddingAddress ? 'Add New Delivery Address' : editingAddrIdx !== null ? 'Edit Delivery Address' : 'Saved Delivery Locations'}
-            </h3>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)', position: 'relative', maxHeight: '90vh', overflowY: 'auto', border: '1px solid #E2E8F0' }}>
+            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ position: 'sticky', top: '0px', float: 'right', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '16px 16px 0 auto', zIndex: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.15s ease', marginBottom: '-34px' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#E2E8F0'}
+              onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}
+            ><X size={18} strokeWidth={2.4} color="#334155" /></button>
 
+            <div style={{ padding: '24px' }}>
             {(isAddingAddress || editingAddrIdx !== null) ? (
-              <form onSubmit={handleSaveEditAddress}>
+              <>
+                {/* Centered icon header for Add/Edit view */}
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)', color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 6px 16px -4px rgba(0,113,227,0.25)' }}>
+                    <MapPin size={24} strokeWidth={2.4} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                    {isAddingAddress ? 'Add New Delivery Address' : 'Edit Delivery Address'}
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>Fill in your real delivery details below.</p>
+                </div>
+                <form onSubmit={handleSaveEditAddress}>
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px' }}>Address Title</label>
                   <input type="text" placeholder="e.g. Home, Work, Apartment" value={editAddrForm.title} onChange={e => setEditAddrForm({ ...editAddrForm, title: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} required />
@@ -570,9 +582,23 @@ export default function ProfilePage() {
                   <button type="button" onClick={() => { setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ flex: 1, background: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 800, color: '#475569', cursor: 'pointer' }}>Cancel</button>
                   <button type="submit" style={{ flex: 1, background: '#0071E3', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>{isAddingAddress ? 'Save Address' : 'Save Changes'}</button>
                 </div>
-              </form>
+                </form>
+              </>
             ) : (
               <>
+                {/* Centered icon header for list view - matching Image 1 */}
+                <div style={{ textAlign: 'center', marginBottom: '20px', paddingTop: '4px' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)', color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 8px 20px -4px rgba(0,113,227,0.25)' }}>
+                    <MapPin size={26} strokeWidth={2.4} />
+                  </div>
+                  <h3 style={{ fontSize: '19px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                    Saved Delivery Locations
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                    Add your delivery address to see live stock availability and 10-minute delivery in your area.
+                  </p>
+                </div>
+
                 {profileAddresses.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '28px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
                     <MapPin size={32} color="#94A3B8" style={{ margin: '0 auto 8px', display: 'block' }} />
@@ -589,26 +615,10 @@ export default function ProfilePage() {
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {addr.isDefault && <span style={{ fontSize: '10px', background: '#0071E3', color: '#FFF', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>DEFAULT</span>}
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditAddress(i, addr)}
-                              style={{
-                                background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px',
-                                padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#0071E3',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
-                              }}
-                            >
+                            <button type="button" onClick={() => handleStartEditAddress(i, addr)} style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
                               <Edit2 size={11} /> Edit
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteAddress(i)}
-                              style={{
-                                background: '#FFFFFF', border: '1px solid #FCA5A5', borderRadius: '8px',
-                                padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#EF4444',
-                                cursor: 'pointer'
-                              }}
-                            >
+                            <button type="button" onClick={() => handleDeleteAddress(i)} style={{ background: '#FFFFFF', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '3px 8px', fontSize: '11px', fontWeight: 800, color: '#EF4444', cursor: 'pointer' }}>
                               Delete
                             </button>
                           </div>
@@ -619,9 +629,24 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 )}
-                <button onClick={handleStartAddAddress} style={{ width: '100%', background: '#F8FAFC', border: '1px dashed #0071E3', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: 800, color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Plus size={16} /> Add New Delivery Address</button>
+
+                {/* Add New Address button — styled like Image 1 button 3 */}
+                <button
+                  onClick={handleStartAddAddress}
+                  style={{
+                    width: '100%', background: '#F8FAFC', border: '1px dashed #CBD5E1',
+                    borderRadius: '14px', padding: '13px', fontSize: '14px', fontWeight: 800,
+                    color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F0F7FF'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}
+                >
+                  <Plus size={16} /> Add New Delivery Address
+                </button>
               </>
             )}
+            </div>
           </div>
         </div>
       )}
