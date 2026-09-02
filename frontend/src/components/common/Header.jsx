@@ -692,31 +692,42 @@ export default function Header() {
         style={{
           background: '#FFFFFF',
           borderRadius: '24px',
-          padding: '24px',
           maxWidth: '440px',
           width: '100%',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
           border: '1px solid #E2E8F0',
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxHeight: '85vh',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
-        {/* Modal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        {/* Sticky Fixed Modal Header / Close Bar - Always visible when scrolling */}
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          background: '#FFFFFF',
+          padding: '18px 22px 14px',
+          borderBottom: '1px solid #F1F5F9',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+          flexShrink: 0
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Notifications
             </h3>
             {unreadCount > 0 && (
               <span style={{
-                fontSize: '9px',
+                fontSize: '9.5px',
                 fontWeight: 900,
                 color: '#FFFFFF',
                 background: '#0071E3',
-                padding: '2px 7px',
+                padding: '2px 8px',
                 borderRadius: '10px',
                 letterSpacing: '0.4px',
                 textTransform: 'uppercase'
@@ -729,8 +740,8 @@ export default function Header() {
             type="button"
             onClick={() => setIsNotificationOpen(false)}
             style={{
-              width: '32px',
-              height: '32px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               background: '#F1F5F9',
               border: 'none',
@@ -738,17 +749,25 @@ export default function Header() {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#64748B',
-              transition: 'background 0.15s'
+              color: '#334155',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#334155'; }}
             aria-label="Close"
           >
-            <X size={18} />
+            <X size={19} strokeWidth={2.4} />
           </button>
         </div>
 
-        {/* Notification Cards List */}
-        <div>
+        {/* Scrollable Notification Cards List */}
+        <div style={{
+          padding: '16px 20px 20px',
+          overflowY: 'auto',
+          flex: 1,
+          overscrollBehavior: 'contain'
+        }}>
           {notifications.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '36px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
               <Bell size={36} color="#94A3B8" style={{ margin: '0 auto 10px', display: 'block' }} />
@@ -971,6 +990,31 @@ export default function Header() {
           >
             <span>{notifications.length > 0 ? 'View Full Notifications Center' : 'Browse Products'}</span>
             <ChevronRight size={14} strokeWidth={2.4} color="#64748B" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(false)}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'transparent',
+              color: '#64748B',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: '6px',
+              transition: 'color 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#0F172A'}
+            onMouseLeave={e => e.currentTarget.style.color = '#64748B'}
+          >
+            Close
           </button>
         </div>
       </div>

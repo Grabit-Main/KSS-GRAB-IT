@@ -310,19 +310,23 @@ export function LocationProvider({ children }) {
           maxHeight: '92vh', overflowY: 'auto'
         }}
       >
-        {/* Modal Close Button */}
+        {/* Modal Close Button - Sticky so it stays visible when scrolling */}
         <button
           onClick={handleCloseModal}
           aria-label="Close location modal"
           style={{
-            position: 'absolute', top: '18px', right: '18px',
-            width: '32px', height: '32px', borderRadius: '50%',
+            position: 'sticky', top: '0px', float: 'right',
+            width: '34px', height: '34px', borderRadius: '50%',
             background: '#F1F5F9', border: 'none', display: 'flex',
             alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            color: '#64748B', transition: 'background 0.15s', zIndex: 10
+            color: '#334155', transition: 'all 0.15s ease', zIndex: 50,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            marginBottom: '-34px'
           }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#334155'; }}
         >
-          <X size={18} />
+          <X size={18} strokeWidth={2.4} />
         </button>
 
         {/* WELCOMING LOCATION PROMPT HEADER */}
