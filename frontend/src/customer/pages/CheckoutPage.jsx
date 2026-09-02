@@ -172,32 +172,47 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    const newOrderId = 'GB-' + Math.floor(1000 + Math.random() * 9000);
-    const rawId = 'ord-' + Date.now();
+    if (!selectedAddress || !selectedAddress.address) {
+      showToast('Please add or choose a delivery address first.');
+      setIsLocationModalOpen(true);
+      return;
+    }
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const newOrderId = `GB-${randomNum}`;
+    const rawId = `ord-${Date.now()}`;
     const orderItems = items.map((i) => ({
       id: i.id,
-      name: i.name,
-      qty: i.qty || 1,
-      quantity: i.qty || 1,
-      price: i.price,
+      name: i.name || i.product_name || 'Express Grocery Item',
+      product_name: i.name || i.product_name || 'Express Grocery Item',
+      qty: Number(i.qty || i.quantity) || 1,
+      quantity: Number(i.qty || i.quantity) || 1,
+      price: Number(i.price) || 0,
       image: i.image,
     }));
+
+    const custName = selectedAddress.name || currentName || 'Customer';
+    const rawPhoneDigits = (selectedAddress.phone || currentPhone || '').replace(/\D/g, '');
+    const validPhoneDigits = rawPhoneDigits.length >= 10 ? rawPhoneDigits.slice(-10) : (rawPhoneDigits || '9876543210');
+    const fullAddrStr = selectedAddress.address + (selectedAddress.city ? `, ${selectedAddress.city}` : '');
 
     const newOrderObj = {
       id: newOrderId,
       orderNumber: newOrderId,
       rawId: rawId,
-      customer_name: selectedAddress.name || currentName || 'Customer',
-      customer_phone: selectedAddress.phone || currentPhone || '',
-      total_amount: toPay,
-      subtotal: itemTotal,
-      delivery_fee: deliveryFee,
-      discount: discount || 0,
+      store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+      store_name: 'GrabIt Supermarket',
+      customer_name: custName,
+      customer_phone: `+91${validPhoneDigits}`,
+      total_amount: Number(toPay) || 0,
+      total: Number(toPay) || 0,
+      subtotal: Number(itemTotal) || 0,
+      delivery_fee: Number(deliveryFee) || 0,
+      discount: Number(discount) || 0,
       status: 'placed',
       item_count: totalItems,
       items: orderItems,
-      delivery_address: selectedAddress.address,
-      address: selectedAddress.address,
+      delivery_address: fullAddrStr,
+      address: fullAddrStr,
       payment_method: (selectedPayment || 'upi').toUpperCase(),
       estimated_time: selectedAddress.time || '15-25 min delivery',
       created_at: new Date().toISOString(),
@@ -205,17 +220,13 @@ export default function CheckoutPage() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    try {
-      const existing = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      localStorage.setItem('grabit_orders', JSON.stringify([newOrderObj, ...existing]));
-      window.dispatchEvent(new Event('grabit_orders_updated'));
-    } catch {}
+    let finalOrder = { ...newOrderObj };
 
     try {
-      await post('/orders/', {
+      const apiRes = await post('/orders/', {
         store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
-        total_amount: toPay,
-        delivery_address: selectedAddress.address,
+        total_amount: Number(toPay) || 0,
+        delivery_address: fullAddrStr,
         items: orderItems,
         customer_name: newOrderObj.customer_name,
         customer_phone: newOrderObj.customer_phone,
@@ -223,10 +234,38 @@ export default function CheckoutPage() {
         latitude: 12.9716,
         longitude: 77.5946,
         status: 'placed',
-      });
+      }).catch(() => null);
+
+      if (apiRes && apiRes.id) {
+        finalOrder.id = apiRes.id;
+        finalOrder.rawId = apiRes.id;
+        finalOrder.orderNumber = apiRes.id;
+      }
     } catch (e) {
       console.warn('Live order save fallback:', e);
     }
+
+    try {
+      const storageKey = validPhoneDigits ? `grabit_orders_${validPhoneDigits}` : 'grabit_orders_guest';
+      const existingUser = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const filteredUser = existingUser.filter(o => o.rawId !== rawId && o.id !== newOrderId && o.id !== finalOrder.id);
+      localStorage.setItem(storageKey, JSON.stringify([finalOrder, ...filteredUser]));
+
+      const globalExisting = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      const filteredGlobal = globalExisting.filter(o => o.rawId !== rawId && o.id !== newOrderId && o.id !== finalOrder.id);
+      localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filteredGlobal]));
+
+      const cached = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
+      sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify([finalOrder, ...cached]));
+
+      window.dispatchEvent(new Event('grabit_orders_updated'));
+      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      window.dispatchEvent(new Event('grabit_notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.warn('Local order storage error:', e);
+    }
+
     setOrderPlaced(true);
     clearCart();
     setTimeout(() => navigate('/orders'), 2000);

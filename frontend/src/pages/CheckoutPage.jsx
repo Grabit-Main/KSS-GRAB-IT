@@ -267,26 +267,35 @@ export default function CheckoutPage() {
     const rawId = `ord-${Date.now()}`;
     const orderItems = items.map((item) => ({
       id: item.id,
-      name: item.name,
-      qty: item.qty || 1,
-      quantity: item.qty || 1,
-      price: item.price,
+      name: item.name || item.product_name || 'Express Grocery Item',
+      product_name: item.name || item.product_name || 'Express Grocery Item',
+      qty: Number(item.qty || item.quantity) || 1,
+      quantity: Number(item.qty || item.quantity) || 1,
+      price: Number(item.price) || 0,
       image: item.image,
     }));
+
+    const custName = selectedAddress.name || currentName || 'Customer';
+    const rawPhoneDigits = (selectedAddress.phone || currentPhone || '').replace(/\D/g, '');
+    const validPhoneDigits = rawPhoneDigits.length >= 10 ? rawPhoneDigits.slice(-10) : (rawPhoneDigits || '9876543210');
+    const fullAddrStr = selectedAddress.address + (selectedAddress.city ? `, ${selectedAddress.city}` : '');
 
     const newOrder = {
       id: orderNumber,
       orderNumber: orderNumber,
       rawId: rawId,
-      customer_name: selectedAddress.name || currentName || 'Customer',
-      customer_phone: selectedAddress.phone || currentPhone || '',
-      delivery_address: selectedAddress.address,
-      address: selectedAddress.address,
+      store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+      store_name: storeHubName || 'GrabIt Supermarket',
+      customer_name: custName,
+      customer_phone: `+91${validPhoneDigits}`,
+      delivery_address: fullAddrStr,
+      address: fullAddrStr,
       items: orderItems,
-      total_amount: toPay,
-      subtotal: itemTotal,
-      delivery_fee: deliveryFee,
-      discount: discount || 0,
+      total_amount: Number(toPay) || 0,
+      total: Number(toPay) || 0,
+      subtotal: Number(itemTotal) || 0,
+      delivery_fee: Number(deliveryFee) || 0,
+      discount: Number(discount) || 0,
       status: 'placed',
       payment_method: (selectedPayment || 'upi').toUpperCase(),
       estimated_time: selectedAddress.time || '15-25 min delivery',
@@ -300,9 +309,9 @@ export default function CheckoutPage() {
     try {
       const apiRes = await post('/orders/', {
         store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
-        delivery_address: selectedAddress.address,
+        delivery_address: fullAddrStr,
         items: orderItems,
-        total_amount: toPay,
+        total_amount: Number(toPay) || 0,
         customer_name: newOrder.customer_name,
         customer_phone: newOrder.customer_phone,
         payment_method: newOrder.payment_method,
@@ -319,9 +328,7 @@ export default function CheckoutPage() {
     } catch {}
 
     try {
-      const digits = (finalOrder.customer_phone || currentPhone || '').replace(/\D/g, '');
-      const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
-      const storageKey = custPhone ? `grabit_orders_${custPhone}` : 'grabit_orders_guest';
+      const storageKey = validPhoneDigits ? `grabit_orders_${validPhoneDigits}` : 'grabit_orders_guest';
 
       const existingUserOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
       const filteredUser = existingUserOrders.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
@@ -331,7 +338,12 @@ export default function CheckoutPage() {
       const filteredGlobal = globalExisting.filter(o => o.rawId !== rawId && o.id !== orderNumber && o.id !== finalOrder.id);
       localStorage.setItem('grabit_orders', JSON.stringify([finalOrder, ...filteredGlobal]));
 
+      const cached = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
+      sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify([finalOrder, ...cached]));
+
       window.dispatchEvent(new Event('grabit_orders_updated'));
+      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      window.dispatchEvent(new Event('grabit_notifications_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.warn('Storage sync:', e);
