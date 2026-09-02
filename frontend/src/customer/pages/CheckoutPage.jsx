@@ -19,6 +19,7 @@ const PAYMENT_METHODS = [
 
 import { useEffect } from 'react';
 import { forceScrollToTop } from '../../utils/scrollToTop';
+import { addUserNotification } from '../../utils/userNotifications';
 
 export default function CheckoutPage() {
   const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
@@ -389,6 +390,20 @@ export default function CheckoutPage() {
 
       const cached = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
       sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify([finalOrder, ...cached]));
+
+      // Add genuine real-time user notification
+      const trackId = finalOrder.id || newOrderId;
+      addUserNotification({
+        title: 'Order Placed',
+        message: `Order #${trackId} received. Store is preparing your items.`,
+        link: `/orders/track/${trackId}`,
+        orderId: trackId,
+        category: 'active',
+        statusBadge: '⚡ ~15-20 min',
+        statusColor: '#0071E3',
+        statusBg: '#EFF6FF',
+        iconType: 'package'
+      });
 
       window.dispatchEvent(new Event('grabit_orders_updated'));
       window.dispatchEvent(new CustomEvent('grabit_orders_updated'));

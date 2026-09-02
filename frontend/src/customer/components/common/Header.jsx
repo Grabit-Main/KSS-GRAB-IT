@@ -11,7 +11,7 @@ import ProductSuggestionModal from '../../components/common/ProductSuggestionMod
 import useWindowWidth from '../../hooks/useWindowWidth';
 import { searchProducts, getProductSlug } from '../../data/products';
 import { getCanonicalSlug } from '../../data/categories';
-import { getRealUserNotifications, markAllNotificationsAsRead, dismissNotification, markNotificationAsRead } from '../../../utils/userNotifications';
+import { getRealUserNotifications, markAllNotificationsAsRead, dismissNotification, markNotificationAsRead, clearAllNotifications } from '../../../utils/userNotifications';
 
 const MEGA_CATEGORIES = [
   {
@@ -685,29 +685,55 @@ export default function Header() {
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setIsNotificationOpen(false)}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              background: '#F1F5F9',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#334155',
-              transition: 'all 0.15s ease',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#334155'; }}
-            aria-label="Close"
-          >
-            <X size={19} strokeWidth={2.4} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  clearAllNotifications();
+                  setNotifications([]);
+                }}
+                style={{
+                  background: '#F1F5F9',
+                  border: 'none',
+                  color: '#64748B',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+              >
+                Clear all
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsNotificationOpen(false)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: '#F1F5F9',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#334155',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#334155'; }}
+              aria-label="Close"
+            >
+              <X size={19} strokeWidth={2.4} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Notification Cards List */}

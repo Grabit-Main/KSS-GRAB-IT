@@ -14,7 +14,7 @@ import {
   Clock
 } from 'lucide-react';
 import useWindowWidth from '../hooks/useWindowWidth';
-import { getRealUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from '../../utils/userNotifications';
+import { getRealUserNotifications, markAllNotificationsAsRead, markNotificationAsRead, clearAllNotifications } from '../../utils/userNotifications';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
@@ -107,34 +107,66 @@ export default function NotificationsPage() {
           </p>
         </div>
 
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={markAllRead}
-            style={{
-              background: '#F0F7FF',
-              border: '1px solid #BFDBFE',
-              color: '#0071E3',
-              fontSize: '12px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '7px 12px',
-              borderRadius: '10px',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              transition: 'all 0.15s ease',
-              boxShadow: '0 1px 3px rgba(0, 113, 227, 0.08)'
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = '#DBEAFE'}
-            onMouseLeave={e => e.currentTarget.style.background = '#F0F7FF'}
-          >
-            <CheckCheck size={14} strokeWidth={2.4} />
-            <span>Mark all read</span>
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                clearAllNotifications();
+                setNotifications([]);
+              }}
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                color: '#64748B',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '7px 12px',
+                borderRadius: '10px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#EF4444'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B'; }}
+            >
+              Clear all
+            </button>
+          )}
+
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              style={{
+                background: '#F0F7FF',
+                border: '1px solid #BFDBFE',
+                color: '#0071E3',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '7px 12px',
+                borderRadius: '10px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'all 0.15s ease',
+                boxShadow: '0 1px 3px rgba(0, 113, 227, 0.08)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#DBEAFE'}
+              onMouseLeave={e => e.currentTarget.style.background = '#F0F7FF'}
+            >
+              <CheckCheck size={14} strokeWidth={2.4} />
+              <span>Mark all read</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter Tabs */}
