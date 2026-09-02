@@ -76,8 +76,8 @@ export default function CheckoutPage() {
     }
     return {
       title: 'Delivery Location',
-      name: currentName || 'Valued Customer',
-      phone: currentPhone || '9876543210',
+      name: currentName || 'Customer',
+      phone: currentPhone,
       address: 'Flat 301, Sunshine Heights, 80 Feet Rd, Koramangala, Bengaluru 560034',
       tag: 'DIRECT DELIVERY',
       time: '15-25 min delivery'

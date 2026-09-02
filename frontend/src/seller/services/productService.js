@@ -98,7 +98,7 @@ export const productService = {
             delivery_time: '10 mins',
             rating: p.rating || 4.8,
             reviews: p.reviews || 240,
-            stock_quantity: ov.stock_quantity !== undefined ? ov.stock_quantity : (p.id === 2 ? 0 : (p.id === 5 ? 2 : (p.inStock ? (30 + (p.id % 25)) : 0))),
+            stock_quantity: ov.stock_quantity !== undefined ? ov.stock_quantity : (p.stock_quantity !== undefined ? p.stock_quantity : (p.inStock ? 50 : 0)),
             unit: ov.unit || p.weight || '1 unit',
             description: ov.description || `${p.name} by ${p.brand || 'Grabit'} - 100% genuine and farm-fresh.`,
             image: resolveMediaUrl(ov.image || p.image, DEFAULT_PRODUCT_FALLBACK),
@@ -126,7 +126,7 @@ export const productService = {
               delivery_time: '10 mins',
               rating: p.rating || 4.8,
               reviews: p.reviews || 24,
-              stock_quantity: parseInt(p.stock, 10) || 50,
+              stock_quantity: !isNaN(parseInt(p.stock, 10)) ? parseInt(p.stock, 10) : 50,
               unit: p.unit || '1 unit',
               description: p.description || `${p.name} - Available at GrabIt.`,
               image: resolveMediaUrl(p.image_url, DEFAULT_PRODUCT_FALLBACK),
@@ -205,7 +205,7 @@ export const productService = {
       name: data.name?.trim(),
       category_id: isUUID(data.category) ? data.category : null,
       price: parseFloat(data.price) || 0,
-      stock: parseInt(data.stock_quantity, 10) || 50,
+      stock: !isNaN(parseInt(data.stock_quantity, 10)) ? parseInt(data.stock_quantity, 10) : 50,
       image_url: imageUrl || DEFAULT_PRODUCT_FALLBACK,
     };
 

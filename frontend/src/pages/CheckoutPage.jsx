@@ -63,8 +63,8 @@ export default function CheckoutPage() {
   };
   const activeUser = getStoredUser();
   const isCustomerRole = activeUser?.role === 'customer' || !activeUser?.role;
-  const currentName = isCustomerRole ? (activeUser?.full_name || activeUser?.name || 'Rahul Sharma') : 'Rahul Sharma';
-  const currentPhone = (activeUser?.phone || '+919999900004').replace('+91', '').trim();
+  const currentName = activeUser?.full_name || activeUser?.name || 'Customer';
+  const currentPhone = (activeUser?.phone || '').replace('+91', '').trim();
   const storeHubName = 'GrabIt Supermarket';
 
   const getAddressesKey = (phone) => getCustomerAddressKey(phone || activeUser?.phone);
@@ -687,7 +687,7 @@ export default function CheckoutPage() {
                   </div>
                   <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
                     <span style={{ color: '#0F172A', fontWeight: 800, fontSize: '13.5px' }}>{selectedAddress.address}</span><br />
-                    <strong style={{ color: '#0F172A' }}>{currentName}</strong> • {currentPhone}<br />
+                    <strong style={{ color: '#0F172A' }}>{currentName}</strong>{currentPhone ? ` • +91 ${currentPhone}` : ''}<br />
                     <span style={{ fontSize: '11.5px', color: '#0071E3', fontWeight: 800, marginTop: '4px', display: 'inline-block' }}>
                       Fulfilling Store: 🏪 {storeHubName} (Koramangala Central Hub)
                     </span>

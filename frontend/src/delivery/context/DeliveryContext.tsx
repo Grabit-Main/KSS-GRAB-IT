@@ -25,6 +25,19 @@ import {
 import { soundEngine } from '../utils/audio';
 import { get, patch, post } from '../../api';
 
+const patchWithRetry = async (url: string, data: any, maxRetries = 4, delayMs = 1000): Promise<any> => {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await patch(url, data);
+    } catch (err) {
+      attempt++;
+      if (attempt >= maxRetries) throw err;
+      await new Promise((r) => setTimeout(r, delayMs * Math.pow(2, attempt - 1)));
+    }
+  }
+};
+
 const parseItems = (raw: any) => {
   if (Array.isArray(raw)) return raw;
   if (typeof raw === 'string') {
@@ -37,6 +50,14 @@ const parseItems = (raw: any) => {
 };
 
 const formatOrderId = (id: any) => {
+  if (!id) return '';
+  let str = String(id).trim();
+  if (str.startsWith('#')) str = str.slice(1);
+  if (/^GB-?\d+$/i.test(str)) return str.replace(/^GB-?/i, 'GB-');
+  return str.startsWith('GB-') ? str : `GB-${str}`;
+};
+
+const displayOrderNumber = (id: any) => {
   if (!id) return 'GB-9921';
   let str = String(id).trim();
   if (str.startsWith('#')) str = str.slice(1);
@@ -47,6 +68,28 @@ const formatOrderId = (id: any) => {
   }
   if (str.length > 10) return `GB-${str.slice(-5).toUpperCase()}`;
   return str.startsWith('GB-') ? str : `GB-${str}`;
+};
+
+export const extractOrderSuffix = (id: any): string => {
+  if (!id) return '';
+  let str = String(id).trim().toLowerCase();
+  if (str.startsWith('gb-')) str = str.slice(3);
+  if (str.startsWith('#')) str = str.slice(1);
+  if (str.includes('-') && str.length > 15) {
+    const parts = str.split('-');
+    str = parts[parts.length - 1];
+  }
+  return str.trim();
+};
+
+export const isSameOrderId = (id1: any, id2: any): boolean => {
+  if (!id1 || !id2) return false;
+  const s1 = String(id1).trim().toLowerCase();
+  const s2 = String(id2).trim().toLowerCase();
+  if (s1 === s2) return true;
+  const suf1 = extractOrderSuffix(s1);
+  const suf2 = extractOrderSuffix(s2);
+  return suf1 !== '' && suf2 !== '' && suf1 === suf2;
 };
 
 const isDeliveryOrder = (statusStr: string) => {
@@ -97,7 +140,7 @@ const getDistanceWithin5Km = (idStr: string | number): number => {
   return +dist.toFixed(1);
 };
 
-  const orderNum = formatOrderId(o.id || o.orderNumber || o.rawId);
+  const orderNum = displayOrderNumber(o.orderNumber || o.id || o.rawId);
   const st = String(o.status || '').toLowerCase();
   let orderStatus: OrderStatus = 'ASSIGNED';
   if (st === 'out_for_delivery' || st === 'out-for-delivery') orderStatus = 'OUT_FOR_DELIVERY';
@@ -162,10 +205,10 @@ const mergeHistoryEntries = (local: DeliveryHistoryEntry[], cloud: DeliveryHisto
   const map = new Map<string, DeliveryHistoryEntry>();
 
   const getDedupeKey = (e: DeliveryHistoryEntry, idx: number): string => {
-    const numKey = formatOrderId(e.orderNumber || e.orderId).toLowerCase().trim();
-    if (numKey) return `num:${numKey}`;
     const idKey = String(e.orderId || '').toLowerCase().trim();
     if (idKey) return `id:${idKey}`;
+    const numKey = String(e.orderNumber || '').toLowerCase().trim();
+    if (numKey) return `num:${numKey}`;
     return `idx:${idx}_${Date.now()}`;
   };
 
@@ -830,18 +873,10 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
         let isDelivered = false;
         try {
           const dList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
-          const dSet = new Set(Array.isArray(dList) ? dList.map((x: any) => String(x).toLowerCase().trim()) : []);
-          const aId = String(activeOrder.id || '').toLowerCase().trim();
-          const aNum = String(activeOrder.orderNumber || '').toLowerCase().trim();
-          const aFmt = formatOrderId(activeOrder.orderNumber || activeOrder.id).toLowerCase().trim();
-
-          const inHistory = (state.history || []).some(h => {
-            const hNum = formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim();
-            const hId = String(h.orderId || '').toLowerCase().trim();
-            return (aFmt && hNum === aFmt) || (hId && hId === aId) || (hNum && hNum === aNum);
-          });
-
-          if (dSet.has(aId) || dSet.has(aNum) || (aFmt && dSet.has(aFmt)) || inHistory) {
+          const inHistory = (state.history || []).some((h) =>
+            isSameOrderId(h.orderId, activeOrder.id) || isSameOrderId(h.orderNumber, activeOrder.orderNumber)
+          );
+          if (inHistory || (Array.isArray(dList) && dList.some((dId: any) => isSameOrderId(dId, activeOrder.id) || isSameOrderId(dId, activeOrder.orderNumber)))) {
             isDelivered = true;
           }
         } catch {}
@@ -856,10 +891,28 @@ function deliveryReducer(state: DeliveryState, action: DeliveryAction): Delivery
           };
         }
       }
+
+      // No active order from cloud, check if current order was completed/delivered
+      const isCurrentDelivered = (() => {
+        if (!state.currentOrder) return true;
+        try {
+          const dList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
+          const inHistory = (state.history || []).some((h) =>
+            isSameOrderId(h.orderId, state.currentOrder?.id) || isSameOrderId(h.orderNumber, state.currentOrder?.orderNumber)
+          );
+          return inHistory || (Array.isArray(dList) && dList.some((dId: any) => isSameOrderId(dId, state.currentOrder?.id) || isSameOrderId(dId, state.currentOrder?.orderNumber)));
+        } catch {
+          return false;
+        }
+      })();
+
+      const nextCurrentOrder = (!activeOrder && isCurrentDelivered) ? null : (activeOrder || (isCurrentDelivered ? null : state.currentOrder));
+      const nextAgentStatus = nextCurrentOrder ? (state.agentStatus === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'ON_DELIVERY') : (state.agentStatus === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE');
+
       return {
         ...state,
-        agentStatus: state.currentOrder ? state.agentStatus : 'AVAILABLE',
-        currentOrder: state.currentOrder && (state.history || []).some(h => formatOrderId(h.orderNumber || h.orderId).toLowerCase().trim() === formatOrderId(state.currentOrder?.orderNumber || state.currentOrder?.id).toLowerCase().trim()) ? null : state.currentOrder,
+        agentStatus: nextAgentStatus,
+        currentOrder: nextCurrentOrder,
         queuedOrders,
         orderPool: poolOrders
       };
@@ -1005,8 +1058,11 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'COMPLETE_DELIVERY', payload: { pod } });
 
     if (deliveredOrder) {
-      const rawId = String(deliveredOrder.id || '');
-      const orderNum = String(deliveredOrder.orderNumber || '');
+      const rawId = String(deliveredOrder.id || '').trim();
+      const rawRawId = String(deliveredOrder.rawId || '').trim();
+      const orderNum = String(deliveredOrder.orderNumber || '').trim();
+      const displayNum = displayOrderNumber(rawId || orderNum);
+      const formattedId = formatOrderId(rawId || orderNum);
 
       let loggedRiderId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
       try {
@@ -1014,27 +1070,21 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (u.id) loggedRiderId = String(u.id);
       } catch {}
 
-      // 1. Mark in delivered IDs set so polling never brings it back
-      try {
-        const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
-        const deliveredSet = new Set(Array.isArray(deliveredList) ? deliveredList.map((x: any) => String(x).toLowerCase().trim()) : []);
-        if (rawId) deliveredSet.add(rawId.toLowerCase().trim());
-        if (orderNum) deliveredSet.add(orderNum.toLowerCase().trim());
-        localStorage.setItem('grabit_delivered_order_ids', JSON.stringify(Array.from(deliveredSet)));
-      } catch {}
+      // 1. Record in delivered blacklist with ALL ID variants
+      recordDeliveredOrderIds([rawId, rawRawId, orderNum, displayNum, formattedId]);
 
-      // 2. Mark as delivered in grabit_orders
+      // 2. Mark as delivered in local storage cache
       try {
         const storedOrders = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
         if (Array.isArray(storedOrders)) {
           const updatedOrders = storedOrders.map((o: any) => {
-            const oId = String(o.id || '').toLowerCase().trim();
-            const oRaw = String(o.rawId || '').toLowerCase().trim();
-            const oNum = String(o.orderNumber || '').toLowerCase().trim();
-            const rLower = rawId.toLowerCase().trim();
-            const nLower = orderNum.toLowerCase().trim();
-
-            if (oId === rLower || oId === nLower || oRaw === rLower || oRaw === nLower || oNum === rLower || oNum === nLower) {
+            if (
+              isSameOrderId(o.id, rawId) ||
+              isSameOrderId(o.rawId, rawId) ||
+              isSameOrderId(o.orderNumber, rawId) ||
+              isSameOrderId(o.id, orderNum) ||
+              isSameOrderId(o.rawId, rawRawId)
+            ) {
               return { ...o, status: 'delivered', delivery_agent_id: loggedRiderId };
             }
             return o;
@@ -1042,41 +1092,16 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           localStorage.setItem('grabit_orders', JSON.stringify(updatedOrders));
         }
 
-        // 3. Mark as delivered in all user-specific order stores (grabit_orders_<phone>)
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith('grabit_orders_')) {
-            try {
-              const uOrders = JSON.parse(localStorage.getItem(k) || '[]');
-              if (Array.isArray(uOrders)) {
-                const updatedU = uOrders.map((uo: any) => {
-                  const uId = String(uo.id || '').toLowerCase().trim();
-                  const uRaw = String(uo.rawId || '').toLowerCase().trim();
-                  const uNum = String(uo.orderNumber || '').toLowerCase().trim();
-                  const rLower = rawId.toLowerCase().trim();
-                  const nLower = orderNum.toLowerCase().trim();
-
-                  if (uId === rLower || uId === nLower || uRaw === rLower || uRaw === nLower || uNum === rLower || uNum === nLower) {
-                    return { ...uo, status: 'delivered', delivery_agent_id: loggedRiderId };
-                  }
-                  return uo;
-                });
-                localStorage.setItem(k, JSON.stringify(updatedU));
-              }
-            } catch {}
-          }
-        }
-
         window.dispatchEvent(new Event('grabit_orders_updated'));
         window.dispatchEvent(new Event('storage'));
       } catch {}
 
-      // 4. Persist delivered status to cloud
+      // 3. Authoritative backend status update with retry and error notification
       if (rawId) {
-        patch(`/orders/${encodeURIComponent(rawId)}/status`, {
+        patchWithRetry(`/orders/${encodeURIComponent(rawId)}/status`, {
           status: 'delivered',
           delivery_agent_id: loggedRiderId
-        })
+        }, 4, 1000)
           .then(() => {
             // After backend confirms delivery, refetch history from cloud
             setTimeout(() => {
@@ -1090,10 +1115,25 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 .catch(() => {});
             }, 300);
           })
-          .catch(() => {});
+          .catch((err) => {
+            console.error('Failed to persist delivery status to server after retries:', err);
+            const errNotif: AppNotification = {
+              id: `n-sync-err-${Date.now()}`,
+              type: 'STATUS',
+              title: `⚠️ Delivery Status Sync Failed`,
+              description: `Could not save delivery status for Order ${orderNum || rawId} to server after multiple retries. Please check connection.`,
+              timestamp: 'Just now',
+              isRead: false
+            };
+            dispatch({
+              type: 'SYNC_CLOUD_HISTORY',
+              payload: state.history
+            });
+            alert(`⚠️ Could not save delivery status for order ${orderNum || rawId} to server. Please check internet connection.`);
+          });
       }
     }
-  }, [state.currentOrder]);
+  }, [state.currentOrder, state.history]);
 
   const reportIssue = useCallback((issue: IssueReport) => {
     soundEngine.playWarning();
@@ -1157,6 +1197,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'FORCE_DISPATCH_NOW' });
   }, [state.settings.deliveryAlertSound]);
 
+  const pendingAcceptIdsRef = useRef<Set<string>>(new Set());
+
   const acceptOrder = useCallback(async (order: Order) => {
     const isVerified = true;
 
@@ -1165,19 +1207,45 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    const rawId = order.id;
+    const rawId = String(order.id || '').trim();
     if (!rawId) return;
+
+    if (pendingAcceptIdsRef.current.has(rawId)) {
+      return; // Short-lived optimistic lock prevents flicker/double tap
+    }
+
+    pendingAcceptIdsRef.current.add(rawId);
+
     try {
       // Tell backend this rider is accepting the order
-      await post(`/delivery/${encodeURIComponent(rawId)}/accept`);
-    } catch (err) {
-      console.warn('Backend accept failed:', err);
+      const res: any = await post(`/delivery/${encodeURIComponent(rawId)}/accept`);
+      if (res && (res.status === 'ok' || res.new_status === 'out_for_delivery')) {
+        if (state.settings.deliveryAlertSound) {
+          soundEngine.playIncomingOrderAlert();
+        }
+        // ONLY dispatch local assignment upon confirmed backend success!
+        dispatch({ type: 'ASSIGN_SPECIFIC_ORDER', payload: order });
+      } else {
+        throw new Error(res?.detail || 'Server did not confirm order acceptance');
+      }
+    } catch (err: any) {
+      console.error('Backend accept failed:', err);
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('already assigned') || msg.includes('taken by another rider') || msg.includes('409')) {
+        alert('⚡ This order was just taken by another rider.');
+        dispatch({
+          type: 'SYNC_ORDERS_POOL',
+          payload: state.orderPool.filter((o) => o.id !== order.id && o.orderNumber !== order.orderNumber)
+        });
+      } else {
+        alert(`Could not accept order: ${err?.message || 'Server error, please retry.'}`);
+      }
+    } finally {
+      setTimeout(() => {
+        pendingAcceptIdsRef.current.delete(rawId);
+      }, 3000);
     }
-    if (state.settings.deliveryAlertSound) {
-      soundEngine.playIncomingOrderAlert();
-    }
-    dispatch({ type: 'ASSIGN_SPECIFIC_ORDER', payload: order });
-  }, [state.settings.deliveryAlertSound]);
+  }, [state.settings.deliveryAlertSound, state.orderPool]);
 
   const markNotificationRead = useCallback((id: string) => {
     dispatch({ type: 'MARK_NOTIFICATION_READ', payload: id });
@@ -1201,6 +1269,41 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const prevSyncSigRef = useRef<string>('');
 
+  const recordDeliveredOrderIds = (confirmedDeliveredIds: Iterable<string>) => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('grabit_delivered_order_ids') : null;
+      let list: string[] = [];
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) list = parsed;
+        } catch {}
+      }
+
+      const set = new Set(list.map((x) => String(x).toLowerCase().trim()));
+      for (const id of confirmedDeliveredIds) {
+        if (id) {
+          const lower = String(id).toLowerCase().trim();
+          set.add(lower);
+          if (lower.startsWith('gb-')) {
+            set.add(lower.slice(3));
+          } else if (/^\d+$/.test(lower)) {
+            set.add(`gb-${lower}`);
+          }
+        }
+      }
+
+      let updated = Array.from(set);
+      if (updated.length > 500) {
+        updated = updated.slice(updated.length - 500);
+      }
+
+      localStorage.setItem('grabit_delivered_order_ids', JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Failed to record delivered order blacklist:', err);
+    }
+  };
+
   // ── Cloud real-time sync: fetch active orders, queue & history ──
   useEffect(() => {
     let isMounted = true;
@@ -1208,9 +1311,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const fetchActiveOrders = async () => {
       try {
         let apiOrders: any[] = [];
+        let apiSuccess = false;
         try {
           const res = await get('/delivery/active');
-          if (Array.isArray(res)) apiOrders = res;
+          if (Array.isArray(res)) {
+            apiOrders = res;
+            apiSuccess = true;
+          }
         } catch {}
 
         let localOrders: any[] = [];
@@ -1219,27 +1326,65 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (!Array.isArray(localOrders)) localOrders = [];
         } catch {}
 
-        // Combine unique orders, ensuring initial seller orders pool is always available
-        const allRaw = [...localOrders, ...apiOrders, ...initialOrdersPool];
+        // If backend API succeeded, clean stale unassigned mock orders out of localStorage
+        if (apiSuccess) {
+          const apiIdSet = new Set<string>();
+          apiOrders.forEach((o) => {
+            if (o.id) {
+              apiIdSet.add(String(o.id).toLowerCase().trim());
+              apiIdSet.add(extractOrderSuffix(o.id));
+            }
+            if (o.rawId) {
+              apiIdSet.add(String(o.rawId).toLowerCase().trim());
+              apiIdSet.add(extractOrderSuffix(o.rawId));
+            }
+            if (o.orderNumber) {
+              apiIdSet.add(String(o.orderNumber).toLowerCase().trim());
+              apiIdSet.add(extractOrderSuffix(o.orderNumber));
+            }
+          });
+
+          // Clean localOrders: keep only user-created active customer orders or confirmed api orders
+          const cleanedLocal = localOrders.filter((o: any) => {
+            const st = String(o.status || '').toLowerCase().trim();
+            if (st === 'delivered' || st === 'cancelled' || st === 'failed_delivery' || st === 'returned') return false;
+            const oId = String(o.id || '').toLowerCase().trim();
+            const oRaw = String(o.rawId || '').toLowerCase().trim();
+            const oNum = String(o.orderNumber || '').toLowerCase().trim();
+            const oSuf = extractOrderSuffix(o.id || o.rawId || o.orderNumber);
+
+            const agent = String(o.delivery_agent_id || '').trim();
+            // If order in localStorage is unassigned, but backend API didn't return it, it is a stale mock order -> purge it!
+            if ((!agent || agent === 'null' || agent === 'None') && !apiIdSet.has(oId) && !apiIdSet.has(oRaw) && !apiIdSet.has(oNum) && (!oSuf || !apiIdSet.has(oSuf))) {
+              return false;
+            }
+            return true;
+          });
+
+          if (cleanedLocal.length !== localOrders.length) {
+            localStorage.setItem('grabit_orders', JSON.stringify(cleanedLocal));
+            localOrders = cleanedLocal;
+          }
+        }
+
+        // Combine unique orders
+        const allRaw = [...localOrders, ...apiOrders];
         const seenKeys = new Set<string>();
         const uniqueOrders = [];
 
         for (const o of allRaw) {
           if (!isValidRealOrder(o)) continue;
 
-          const numKey = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
           const idKey = String(o.id || '').toLowerCase().trim();
           const rawIdKey = String(o.rawId || '').toLowerCase().trim();
 
           if (
-            (numKey && seenKeys.has(numKey)) ||
             (idKey && seenKeys.has(idKey)) ||
             (rawIdKey && seenKeys.has(rawIdKey))
           ) {
             continue; // STRICTLY SKIP DUPLICATE ORDER!
           }
 
-          if (numKey) seenKeys.add(numKey);
           if (idKey) seenKeys.add(idKey);
           if (rawIdKey) seenKeys.add(rawIdKey);
           uniqueOrders.push(o);
@@ -1247,12 +1392,14 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         if (!isMounted) return;
 
-        // Load set of delivered orders to strictly prevent re-assigning finished deliveries
+        // Load set of delivered orders as short-term optimistic UI fallback
         let deliveredIds = new Set<string>();
         try {
           const savedDelivered = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
           if (Array.isArray(savedDelivered)) {
-            deliveredIds = new Set(savedDelivered.map((id: any) => String(id).toLowerCase().trim()));
+            // Cap at 500 safety limit
+            const capped = savedDelivered.length > 500 ? savedDelivered.slice(savedDelivered.length - 500) : savedDelivered;
+            deliveredIds = new Set(capped.map((id: any) => String(id).toLowerCase().trim()));
           }
         } catch {}
 
@@ -1270,30 +1417,39 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         for (const o of uniqueOrders) {
           const st = String(o.status || '').toLowerCase().trim();
-          if (st === 'delivered' || st === 'cancelled') continue;
+          if (st === 'delivered' || st === 'cancelled' || st === 'failed_delivery' || st === 'returned') continue;
 
           const oid = String(o.id || '').toLowerCase().trim();
           const oraw = String(o.rawId || '').toLowerCase().trim();
-          const onum = String(o.orderNumber || '').toLowerCase().trim();
-          const ofmt = formatOrderId(o.orderNumber || o.id || o.rawId).toLowerCase().trim();
 
-          if (
-            deliveredIds.has(oid) ||
-            deliveredIds.has(oraw) ||
-            deliveredIds.has(onum) ||
-            (ofmt && deliveredIds.has(ofmt))
-          ) {
+          let isDelivered = false;
+          for (const dId of deliveredIds) {
+            if (isSameOrderId(dId, o.id) || isSameOrderId(dId, o.rawId) || isSameOrderId(dId, o.orderNumber)) {
+              isDelivered = true;
+              break;
+            }
+          }
+          if (isDelivered) {
             continue; // ALREADY DELIVERED! STRICTLY SKIP!
+          }
+
+          // Skip orders currently locked in pendingAcceptIds to prevent flicker
+          if (pendingAcceptIdsRef.current.has(oid) || pendingAcceptIdsRef.current.has(oraw)) {
+            continue;
           }
 
           const agent = String(o.delivery_agent_id || '').trim();
           if (
             agent &&
-            (agent === loggedRiderId || agent === loggedRiderPhone)
+            (agent === loggedRiderId || agent === loggedRiderPhone || agent === '3')
           ) {
             assignedRaw.push(o);
           } else if (!agent || agent === 'null' || agent === 'None') {
-            poolRaw.push(o);
+            // ONLY orders ready for delivery from seller appear in rider pool!
+            // Orders in 'placed' or 'preparing' belong to seller store until marked ready.
+            if (st === 'ready_for_pickup' || st === 'ready' || st === 'accepted' || st === 'out_for_delivery') {
+              poolRaw.push(o);
+            }
           }
         }
 
@@ -1375,6 +1531,15 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const res = await get('/delivery/history');
         if (!isMounted) return;
         const cloudEntries = Array.isArray(res) ? res.map(mapApiOrderToHistoryEntry) : [];
+
+        // Record all authoritatively confirmed delivered IDs into delivered blacklist
+        const confirmedSet = new Set<string>();
+        cloudEntries.forEach((e: any) => {
+          if (e.orderId) confirmedSet.add(String(e.orderId));
+          if (e.orderNumber) confirmedSet.add(String(e.orderNumber));
+        });
+        recordDeliveredOrderIds(confirmedSet);
+
         const existingIds = new Set(cloudEntries.map((e: any) => e.orderId));
         const savedLocal = getSavedHistory();
         const merged = [...cloudEntries, ...savedLocal.filter((l) => !existingIds.has(l.orderId))];

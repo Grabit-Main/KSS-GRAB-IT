@@ -16,13 +16,13 @@ export async function api(path, options = {}) {
   const isGet = !options.method || options.method === 'GET';
 
   // For public endpoints (orders, products, categories), allow GET requests even without auth token
-  const isPublicGet = isGet && (path.includes('/orders') || path.includes('/products') || path.includes('/categories'));
+  const isPublicGet = isGet && (path.startsWith('/orders') || path.startsWith('/products') || path.startsWith('/categories'));
   if (isGet && !token && !isPublicGet) return null;
 
-  // ✅ FIX: Abort hung requests after 8 seconds so a slow backend response can't
+  // ✅ FIX: Abort hung requests after 4 seconds so a slow backend response can't
   // block subsequent poll cycles from starting.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
 
   try {
     const response = await fetch(`${API}${path}`, {

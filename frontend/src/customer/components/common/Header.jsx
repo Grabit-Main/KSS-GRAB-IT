@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, Lightbulb } from 'lucide-react';
+import { MapPin, ChevronDown, ChevronRight, Search, User, ShoppingBag, ShoppingCart, Menu, X, LayoutGrid, Zap, Package, Heart, LogIn, Home, TrendingUp, Sparkles, ArrowRight, ArrowLeft, Lightbulb, Bell, Flame, Wallet, CheckCheck, Truck, Plus } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useDeliveryLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -11,6 +11,7 @@ import ProductSuggestionModal from '../../components/common/ProductSuggestionMod
 import useWindowWidth from '../../hooks/useWindowWidth';
 import { searchProducts } from '../../data/products';
 import { getCanonicalSlug } from '../../data/categories';
+import { getRealUserNotifications, markAllNotificationsAsRead, dismissNotification, markNotificationAsRead } from '../../../utils/userNotifications';
 
 const MEGA_CATEGORIES = [
   {
@@ -22,7 +23,8 @@ const MEGA_CATEGORIES = [
       { name: 'Milk & Butter', link: '/category/dairy-bakery', icon: '🥛' },
       { name: 'Paneer & Cheese', link: '/category/dairy-bakery', icon: '🧀' },
       { name: 'Bread & Bakery', link: '/category/dairy-bakery', icon: '🍞' },
-      { name: 'Eggs & Farm Items', link: '/category/produce', icon: '🥚' },
+      { name: 'Fresh Meat & Seafood', link: '/category/meat-seafood', icon: '🥩' },
+      { name: 'Farm Fresh Eggs', link: '/category/meat-seafood', icon: '🥚' },
     ]
   },
   {
@@ -45,20 +47,31 @@ const MEGA_CATEGORIES = [
       { name: 'Basmati Rice & Grains', link: '/category/staples', icon: '🍚' },
       { name: 'Dals & Pulses', link: '/category/staples', icon: '🍲' },
       { name: 'Edible Oils & Ghee', link: '/category/oil', icon: '🛢️' },
-      { name: 'Tea, Coffee & Drinks', link: '/category/beverages', icon: '☕' },
-      { name: 'Instant Noodles & Pasta', link: '/category/staples', icon: '🍜' },
+      { name: 'Tea, Coffee & Drinks', link: '/category/tea-coffee', icon: '☕' },
+      { name: 'Instant Noodles & Pasta', link: '/category/instant-food', icon: '🍜' },
     ]
   },
   {
-    title: 'Household & Lifestyle',
-    icon: '⚡',
+    title: 'Care & Lifestyle',
+    icon: '✨',
     items: [
       { name: 'Personal Care & Hygiene', link: '/category/personal-care', icon: '🧴' },
-      { name: 'Household & Cleaning', link: '/category/household', icon: '🧼' },
-      { name: 'Electronics & Audio Gear', link: '/category/electronics', icon: '⚡' },
+      { name: 'Baby Care & Diapers', link: '/category/baby-care', icon: '👶' },
+      { name: 'Pet Care & Supplies', link: '/category/pet-care', icon: '🐾' },
+      { name: 'Beauty & Cosmetics', link: '/category/beauty-cosmetics', icon: '💄' },
+      { name: 'Health & Wellness', link: '/category/health-wellness', icon: '💊' },
       { name: 'Fashion & Accessories', link: '/category/fashion', icon: '🕶️' },
-      { name: 'Baby Care & Diapers', link: '/category/personal-care', icon: '👶' },
-      { name: 'Pet Supplies & Treats', link: '/category/household', icon: '🐾' },
+    ]
+  },
+  {
+    title: 'Home, Fitness & Hobbies',
+    icon: '🏠',
+    items: [
+      { name: 'Home & Kitchen Essentials', link: '/category/home-kitchen', icon: '🍳' },
+      { name: 'Stationery & Office Supplies', link: '/category/stationery-office', icon: '📚' },
+      { name: 'Sports & Fitness Gear', link: '/category/sports-fitness', icon: '🏸' },
+      { name: 'Toys, Games & Puzzles', link: '/category/toys-games', icon: '🧩' },
+      { name: 'Pooja & Spiritual Needs', link: '/category/pooja-needs', icon: '🪔' },
     ]
   }
 ];
@@ -160,6 +173,30 @@ export default function Header() {
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState('all');
+  const notificationRef = useRef(null);
+  const [notifications, setNotifications] = useState(getRealUserNotifications);
+
+  useEffect(() => {
+    const refreshNotifications = () => {
+      setNotifications(getRealUserNotifications());
+    };
+    refreshNotifications();
+    window.addEventListener('storage', refreshNotifications);
+    window.addEventListener('grabit_orders_updated', refreshNotifications);
+    window.addEventListener('grabit_notifications_updated', refreshNotifications);
+    return () => {
+      window.removeEventListener('storage', refreshNotifications);
+      window.removeEventListener('grabit_orders_updated', refreshNotifications);
+      window.removeEventListener('grabit_notifications_updated', refreshNotifications);
+    };
+  }, []);
+
+  const unreadCount = notifications.filter(n => n.unread).length;
+  const filteredNotifications = notificationFilter === 'all'
+    ? notifications
+    : notifications.filter(n => n.category === notificationFilter);
 
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -189,9 +226,57 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleNotificationOutside = (e) => {
+      if (isNotificationOpen && notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setIsNotificationOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleNotificationOutside);
+    document.addEventListener('touchstart', handleNotificationOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleNotificationOutside);
+      document.removeEventListener('touchstart', handleNotificationOutside);
+    };
+  }, [isNotificationOpen]);
+
+  const trackCustomerSearch = (query) => {
+    if (!query || !query.trim()) return;
+    const clean = query.trim().toLowerCase();
+    try {
+      const existing = JSON.parse(localStorage.getItem('grabit_often_searched') || '[]');
+      const item = existing.find(x => x.query.toLowerCase() === clean);
+      const newCount = (item ? item.count : 0) + 1;
+      const filtered = existing.filter(x => x.query.toLowerCase() !== clean);
+      const updated = [{ query: query.trim(), count: newCount, timestamp: Date.now() }, ...filtered].slice(0, 8);
+      localStorage.setItem('grabit_often_searched', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getOftenSearched = () => {
+    try {
+      return JSON.parse(localStorage.getItem('grabit_often_searched') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const clearOftenSearched = (e) => {
+    e.stopPropagation();
+    try {
+      localStorage.removeItem('grabit_often_searched');
+      setIsSearchFocused(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      trackCustomerSearch(searchQuery.trim());
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setMenuOpen(false);
       setIsSearchFocused(false);
@@ -218,6 +303,7 @@ export default function Header() {
 
   const renderSearchSuggestions = () => {
     if (!isSearchFocused) return null;
+    const oftenSearched = getOftenSearched();
 
     return (
       <div
@@ -238,6 +324,52 @@ export default function Header() {
       >
         {searchQuery.trim().length === 0 ? (
           <div>
+            {oftenSearched.length > 0 && (
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    🔍 Often & Recently Searched
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearOftenSearched}
+                    style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '10.5px', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 8px' }}>
+                  {oftenSearched.map(item => (
+                    <button
+                      key={item.query}
+                      type="button"
+                      onMouseDown={() => {
+                        trackCustomerSearch(item.query);
+                        setSearchQuery(item.query);
+                        navigate(`/search?q=${encodeURIComponent(item.query)}`);
+                        setIsSearchFocused(false);
+                      }}
+                      style={{
+                        background: '#EFF6FF', border: '1.5px solid #BFDBFE',
+                        borderRadius: '20px', padding: '5px 12px', fontSize: '12px',
+                        fontWeight: 700, color: '#1E40AF', cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span>🕒</span>
+                      <span>{item.query}</span>
+                      {item.count > 1 && (
+                        <span style={{ fontSize: '10px', background: '#DBEAFE', padding: '1px 6px', borderRadius: '10px', color: '#1E3A8A' }}>
+                          {item.count}x
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Sparkles size={12} color="#0071E3" /> Trending Searches
             </div>
@@ -247,6 +379,7 @@ export default function Header() {
                   key={t.query}
                   type="button"
                   onMouseDown={() => {
+                    trackCustomerSearch(t.query);
                     setSearchQuery(t.query);
                     navigate(`/search?q=${encodeURIComponent(t.query)}`);
                     setIsSearchFocused(false);
@@ -380,6 +513,313 @@ export default function Header() {
     );
   };
 
+  {/* 🔔 NOTIFICATIONS MODAL (MATCHING SAVED DELIVERY LOCATIONS MODAL EXACTLY) */}
+  const renderNotificationModal = () => (
+    <div
+      onClick={() => setIsNotificationOpen(false)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        background: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px'
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '24px',
+          padding: '24px',
+          maxWidth: '440px',
+          width: '100%',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          position: 'relative',
+          border: '1px solid #E2E8F0',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Modal Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Notifications
+            </h3>
+            {unreadCount > 0 && (
+              <span style={{
+                fontSize: '9px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                background: '#0071E3',
+                padding: '2px 7px',
+                borderRadius: '10px',
+                letterSpacing: '0.4px',
+                textTransform: 'uppercase'
+              }}>
+                {unreadCount} NEW
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(false)}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#F1F5F9',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748B',
+              transition: 'background 0.15s'
+            }}
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Notification Cards List */}
+        <div>
+          {notifications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
+              <Bell size={36} color="#94A3B8" style={{ margin: '0 auto 10px', display: 'block' }} />
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>No notifications yet</div>
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                When you place an order, live delivery tracking and order status updates will appear here.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+              {notifications.map((item) => {
+                const isSelected = item.unread;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      markNotificationAsRead(item.id);
+                      setNotifications(getRealUserNotifications());
+                      if (item.link) {
+                        setIsNotificationOpen(false);
+                        navigate(item.link);
+                      }
+                    }}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '16px',
+                      border: isSelected ? '1.5px solid #BFDBFE' : '1px solid #E2E8F0',
+                      background: isSelected ? '#F8FAFC' : '#FFFFFF',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      transition: 'all 0.18s ease',
+                      boxShadow: isSelected ? '0 3px 12px rgba(0,113,227,0.06)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = '#0071E3';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,113,227,0.1)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = isSelected ? '#BFDBFE' : '#E2E8F0';
+                      e.currentTarget.style.boxShadow = isSelected ? '0 3px 12px rgba(0,113,227,0.06)' : '0 1px 3px rgba(0,0,0,0.02)';
+                    }}
+                  >
+                    {/* Left Icon Badge */}
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      background: item.iconType === 'truck' ? '#EFF6FF' : item.iconType === 'refund' ? '#ECFDF5' : '#F1F5F9',
+                      border: `1px solid ${item.iconType === 'truck' ? '#DBEAFE' : item.iconType === 'refund' ? '#A7F3D0' : '#E2E8F0'}`
+                    }}>
+                      {item.iconType === 'truck' && <Truck size={18} color="#0071E3" strokeWidth={2.2} />}
+                      {item.iconType === 'refund' && <Wallet size={18} color="#059669" strokeWidth={2.2} />}
+                      {item.iconType === 'package' && <Package size={18} color="#475569" strokeWidth={2.2} />}
+                    </div>
+
+                    {/* Right Content Column */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {/* Top Line: Title + Badge + Time + Dismiss */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                          {item.title}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                          {isSelected && (
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: 800,
+                              color: '#0071E3',
+                              background: '#EFF6FF',
+                              border: '1px solid #BFDBFE',
+                              padding: '1px 6px',
+                              borderRadius: '8px',
+                              letterSpacing: '0.3px',
+                              textTransform: 'uppercase',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              NEW
+                            </span>
+                          )}
+                          <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+                            {item.time}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              dismissNotification(item.id);
+                              setNotifications(getRealUserNotifications());
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#94A3B8',
+                              cursor: 'pointer',
+                              padding: '2px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '4px',
+                              transition: 'color 0.15s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+                            title="Dismiss"
+                            aria-label="Dismiss notification"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Body Message: Clean, readable, professional font */}
+                      <div style={{ fontSize: '12px', fontWeight: 500, color: '#475569', lineHeight: 1.45 }}>
+                        {item.message}
+                      </div>
+
+                      {/* Bottom Row: Status Badge + Action Link */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: item.statusColor || '#0071E3',
+                          background: item.statusBg || '#EFF6FF',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {item.statusBadge || '⚡ Express Delivery'}
+                        </span>
+
+                        {item.actionText && (
+                          <span style={{
+                            fontSize: '11.5px',
+                            fontWeight: 800,
+                            color: '#0071E3',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}>
+                            {item.actionText} <ChevronRight size={13} strokeWidth={2.5} />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Primary Action Button: Mark All as Read (when there are unread notifications) */}
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                markAllNotificationsAsRead();
+                setNotifications(getRealUserNotifications());
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '14px',
+                border: 'none',
+                background: '#0071E3',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+                marginBottom: '10px',
+                boxShadow: '0 4px 14px rgba(0, 113, 227, 0.22)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#005bb5'}
+              onMouseLeave={e => e.currentTarget.style.background = '#0071E3'}
+            >
+              <CheckCheck size={16} color="#FFFFFF" strokeWidth={2.4} />
+              <span>Mark All as Read</span>
+            </button>
+          )}
+
+          {/* Secondary Action Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsNotificationOpen(false);
+              navigate(notifications.length > 0 ? '/notifications' : '/');
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '14px',
+              border: '1px solid #E2E8F0',
+              background: '#F8FAFC',
+              color: '#0F172A',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+          >
+            <span>{notifications.length > 0 ? 'View Full Notifications Center' : 'Browse Products'}</span>
+            <ChevronRight size={14} strokeWidth={2.4} color="#64748B" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {!isProfilePage && (
@@ -471,8 +911,34 @@ export default function Header() {
                   </div>
                 </div>
 
-                {/* Right Side: Cart Button with Badge */}
+                {/* Right Side: Notification & Cart Buttons */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationOpen(true)}
+                    style={{
+                      width: '40px', height: '40px', borderRadius: '50%',
+                      background: '#FFFFFF', border: '1.5px solid #CBD5E1',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.06)', color: '#0F172A',
+                      position: 'relative', cursor: 'pointer', padding: 0
+                    }}
+                    aria-label="Notifications"
+                  >
+                    <Bell size={18} color="#0071E3" />
+                    {unreadCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: '-4px', right: '-4px',
+                        background: '#FF3B30', color: '#FFFFFF', fontSize: '10px', fontWeight: 900,
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '1.5px solid #FFFFFF', boxShadow: '0 2px 6px rgba(255,59,48,0.4)'
+                      }}>
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
                   <Link
                     to="/cart"
                     style={{
@@ -499,25 +965,50 @@ export default function Header() {
                 </div>
               </div>
 
-              {/* Row 3: Clean Search Input */}
-              <form ref={mobileSearchRef} onSubmit={handleSearch} style={{ width: '100%', position: 'relative', marginBottom: '6px' }}>
-                <Search size={16} color="#64748B" style={{ position: 'absolute', left: '14px', top: '12px', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  placeholder={currentTheme.placeholder}
-                  value={searchQuery}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onChange={e => { setSearchQuery(e.target.value); setIsSearchFocused(true); }}
-                  style={{
-                    width: '100%', height: '40px',
-                    paddingLeft: '38px', paddingRight: '14px',
-                    borderRadius: '10px', border: '1px solid #CBD5E1',
-                    fontSize: '13px', background: '#FFFFFF', outline: 'none',
-                    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)'
-                  }}
-                />
-                {renderSearchSuggestions()}
-              </form>
+              {/* Row 3: Clean Search Input with Back Arrow */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', marginBottom: '6px' }}>
+                {!isHomePage && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    style={{
+                      background: '#F1F5F9',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '38px',
+                      height: '38px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: '#0F172A',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease'
+                    }}
+                    aria-label="Go Back"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
+                <form ref={mobileSearchRef} onSubmit={handleSearch} style={{ flex: 1, position: 'relative' }}>
+                  <Search size={16} color="#64748B" style={{ position: 'absolute', left: '14px', top: '12px', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder={currentTheme.placeholder}
+                    value={searchQuery}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onChange={e => { setSearchQuery(e.target.value); setIsSearchFocused(true); }}
+                    style={{
+                      width: '100%', height: '40px',
+                      paddingLeft: '38px', paddingRight: '14px',
+                      borderRadius: '10px', border: '1px solid #CBD5E1',
+                      fontSize: '13px', background: '#FFFFFF', outline: 'none',
+                      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)'
+                    }}
+                  />
+                  {renderSearchSuggestions()}
+                </form>
+              </div>
 
             </div>
           ) : (
@@ -622,6 +1113,38 @@ export default function Header() {
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>Profile</span>
               </Link>
 
+              {/* 🔔 Notification Alerts Button */}
+              <button
+                type="button"
+                onClick={() => setIsNotificationOpen(true)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '2px', background: 'transparent', border: 'none', cursor: 'pointer',
+                  padding: '4px 10px', borderRadius: '8px', transition: 'all 0.15s ease',
+                  position: 'relative', color: '#1D1D1F'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F5F5F7'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                title="Notifications"
+              >
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bell size={22} color={unreadCount > 0 ? '#0071E3' : '#1D1D1F'} strokeWidth={1.8} />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '-6px', right: '-10px',
+                      background: '#FF3B30', color: '#FFFFFF',
+                      fontSize: '10px', fontWeight: 900,
+                      width: '16px', height: '16px', borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1.5px solid #FFFFFF', boxShadow: '0 2px 6px rgba(255,59,48,0.3)'
+                    }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>Alerts</span>
+              </button>
+
               {/* 🛒 Cart Button - Stacked Icon + Text with Badge */}
               <Link
                 to="/cart"
@@ -687,6 +1210,16 @@ export default function Header() {
               { name: 'Oils & Ghee', link: '/category/oil', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645142/grabit_media/fortune_oil_real.jpg', color: '#CA8A04' },
               { name: 'Electronics', link: '/category/electronics', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645110/grabit_media/electronics_hero_transparent.png', color: '#8B5CF6' },
               { name: 'Fashion', link: '/category/fashion', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645079/grabit_media/sneakers.jpg', color: '#F43F5E' },
+              { name: 'Baby Care', link: '/category/baby-care', img: '/category-baby-care.jpg', color: '#0284C7' },
+              { name: 'Pet Care', link: '/category/pet-care', img: '/category-pet-care.jpg', color: '#EA580C' },
+              { name: 'Beauty', link: '/category/beauty-cosmetics', img: '/category-beauty-cosmetics.jpg', color: '#E11D48' },
+              { name: 'Pharma', link: '/category/health-wellness', img: '/category-health-wellness.jpg', color: '#16A34A' },
+              { name: 'Meat & Seafood', link: '/category/meat-seafood', img: '/category-meat-seafood.jpg', color: '#DC2626' },
+              { name: 'Kitchen', link: '/category/home-kitchen', img: '/category-home-kitchen.jpg', color: '#EA580C' },
+              { name: 'Stationery', link: '/category/stationery-office', img: '/category-stationery-office.jpg', color: '#2563EB' },
+              { name: 'Fitness', link: '/category/sports-fitness', img: '/category-sports-fitness.jpg', color: '#16A34A' },
+              { name: 'Toys', link: '/category/toys-games', img: '/category-toys-games.jpg', color: '#9333EA' },
+              { name: 'Pooja', link: '/category/pooja-needs', img: '/category-pooja-needs.jpg', color: '#D97706' },
             ].map((item, idx) => {
               const currentCatSlug = locationPath.startsWith('/category/') ? getCanonicalSlug(locationPath.replace('/category/', '')) : null;
               const itemCatSlug = item.link.startsWith('/category/') ? getCanonicalSlug(item.link.replace('/category/', '')) : null;
@@ -740,76 +1273,7 @@ export default function Header() {
         </div>
       )}
 
-      {/* 📱 ZEPTO-STYLE MOBILE FIXED BOTTOM NAVIGATION BAR */}
-      {isMobile && (
-        <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000,
-          background: 'rgba(255, 255, 255, 0.94)',
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          borderTop: '1px solid rgba(226, 232, 240, 0.8)',
-          padding: '6px 8px 8px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-          boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.06)'
-        }}>
-          {[
-            { label: 'Home', path: '/', icon: Home, match: p => p === '/' },
-            { label: 'Categories', path: '/categories', icon: LayoutGrid, match: p => p.startsWith('/categor') },
-            { label: 'Trending', path: '/search?q=trending', icon: TrendingUp, match: p => p.includes('trending') },
-            { label: 'Profile', path: '/profile', icon: User, match: p => p === '/profile' }
-          ].map(navItem => {
-            const IconComponent = navItem.icon;
-            const currentFullUrl = routerLocation.pathname + routerLocation.search;
-            const isActive = navItem.match(currentFullUrl);
-            const activeColor = '#0071E3'; // Primary Blue
-            return (
-              <Link
-                key={navItem.label}
-                to={navItem.path}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  justifyContent: 'center', gap: '3px', flex: 1, textDecoration: 'none',
-                  position: 'relative', padding: '4px 0'
-                }}
-              >
-                <div style={{
-                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '4px 16px', borderRadius: '16px',
-                  background: isActive ? '#EFF6FF' : 'transparent',
-                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}>
-                  <IconComponent
-                    size={20}
-                    color={isActive ? activeColor : '#64748B'}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                  {navItem.badge > 0 && (
-                    <span style={{
-                      position: 'absolute', top: '-2px', right: '4px',
-                      background: '#34C759', color: '#FFFFFF',
-                      fontSize: '10px', fontWeight: 900,
-                      width: '16px', height: '16px', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(52,199,89,0.4)',
-                      border: '1.5px solid #FFFFFF'
-                    }}>
-                      {navItem.badge}
-                    </span>
-                  )}
-                </div>
-                <span style={{
-                  fontSize: '10px',
-                  fontWeight: isActive ? 800 : 600,
-                  color: isActive ? activeColor : '#64748B',
-                  letterSpacing: '-0.2px',
-                  transition: 'color 0.2s ease, font-weight 0.2s ease'
-                }}>
-                  {navItem.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      {/* 📱 ZEPTO-STYLE MOBILE FIXED BOTTOM NAVIGATION BAR MOVED TO GLOBAL COMPONENT */}
 
       <AuthModal
         isOpen={isAuthModalOpen}
@@ -916,6 +1380,9 @@ export default function Header() {
         onClose={() => setIsSuggestionModalOpen(false)}
         prefillQuery={searchQuery}
       />
+
+      {/* 🔔 Notifications Modal (Exact Saved Delivery Locations Model) */}
+      {isNotificationOpen && renderNotificationModal()}
     </>
   );
 }

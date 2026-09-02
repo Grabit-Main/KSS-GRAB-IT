@@ -1,4 +1,5 @@
 import { get } from '../../api';
+import { inferProductCategory, getCanonicalSlug } from './categories';
 
 // Comprehensive Product Catalog (270+ Products, 22-25 Products Per Category)
 
@@ -327,7 +328,97 @@ export const products = [
   { id: 275, name: "Zaveri Pearls Gold Tone Traditional Kundan Necklace Set", weight: "1 Set", price: 499, mrp: 2990, discount: 83, rating: 4.8, reviews: 1890, image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645075/grabit_media/fest_sister.jpg", category: "fashion", brand: "Zaveri Pearls", inStock: true },
   { id: 276, name: "YouBella Gold Plated Designer Earrings Set for Women", weight: "1 Set", price: 299, mrp: 1999, discount: 85, rating: 4.7, reviews: 1420, image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645075/grabit_media/fest_sister.jpg", category: "fashion", brand: "YouBella", inStock: true },
   { id: 277, name: "Tommy Hilfiger Men's Leather Belt with Reversible Buckle", weight: "1 Unit", price: 1499, mrp: 2499, discount: 40, rating: 4.9, reviews: 540, image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645076/grabit_media/dettol_real.jpg", category: "fashion", brand: "Tommy Hilfiger", inStock: true },
-  { id: 278, name: "Levi's Men's Solid Cotton Canvas Cap", weight: "1 Unit", price: 599, mrp: 999, discount: 40, rating: 4.8, reviews: 410, image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645079/grabit_media/sneakers.jpg", category: "fashion", brand: "Levi's", inStock: true }
+  { id: 278, name: "Levi's Men's Solid Cotton Canvas Cap", weight: "1 Unit", price: 599, mrp: 999, discount: 40, rating: 4.8, reviews: 410, image: "https://res.cloudinary.com/hmx3azp6/image/upload/v1787645079/grabit_media/sneakers.jpg", category: "fashion", brand: "Levi's", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 15. BABY CARE & INFANT NEEDS (catKey: 'baby-care')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 279, name: "Pampers All Round Protection Baby Diaper Pants (Medium, 54 Pcs)", weight: "54 Pcs", price: 649, mrp: 899, discount: 28, rating: 4.8, reviews: 3200, image: "/category-baby-care.jpg", category: "baby-care", brand: "Pampers", inStock: true },
+  { id: 280, name: "Johnson's Baby Gentle No Tears Shampoo (500ml)", weight: "500ml", price: 320, mrp: 395, discount: 19, rating: 4.9, reviews: 1840, image: "/category-baby-care.jpg", category: "baby-care", brand: "Johnson's", inStock: true },
+  { id: 281, name: "Himalaya Gentle Baby Wipes with Aloe Vera & Indian Lotus (72 Wipes)", weight: "72 Wipes", price: 145, mrp: 190, discount: 24, rating: 4.8, reviews: 4500, image: "/category-baby-care.jpg", category: "baby-care", brand: "Himalaya", inStock: true },
+  { id: 282, name: "Nestle Cerelac Baby Cereal with Milk Wheat Apple (300g)", weight: "300g", price: 290, mrp: 330, discount: 12, rating: 4.7, reviews: 1200, image: "/category-baby-care.jpg", category: "baby-care", brand: "Nestle", inStock: true },
+  { id: 283, name: "Johnson's Baby Nourishing Moisture Lotion (500ml)", weight: "500ml", price: 335, mrp: 425, discount: 21, rating: 4.9, reviews: 2100, image: "/category-baby-care.jpg", category: "baby-care", brand: "Johnson's", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 16. PET CARE & SUPPLIES (catKey: 'pet-care')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 284, name: "Pedigree Adult Dry Dog Food Real Chicken & Meat (3kg)", weight: "3kg", price: 675, mrp: 810, discount: 17, rating: 4.8, reviews: 2900, image: "/category-pet-care.jpg", category: "pet-care", brand: "Pedigree", inStock: true },
+  { id: 285, name: "Whiskas Adult Wet Cat Food Ocean Fish in Jelly (12 x 85g)", weight: "1.02kg", price: 480, mrp: 600, discount: 20, rating: 4.9, reviews: 1450, image: "/category-pet-care.jpg", category: "pet-care", brand: "Whiskas", inStock: true },
+  { id: 286, name: "Pedigree Dentastix Daily Oral Care Chews Dog Treats (7 Sticks)", weight: "180g", price: 180, mrp: 220, discount: 18, rating: 4.8, reviews: 3600, image: "/category-pet-care.jpg", category: "pet-care", brand: "Pedigree", inStock: true },
+  { id: 287, name: "Captain Zack Barking Up The Tea Tree Relieving Dog Shampoo (200ml)", weight: "200ml", price: 265, mrp: 350, discount: 24, rating: 4.7, reviews: 820, image: "/category-pet-care.jpg", category: "pet-care", brand: "Captain Zack", inStock: true },
+  { id: 288, name: "Drools Absolute Calcium Bone Supplement Treats for Dogs (50 Pcs)", weight: "50 Pcs", price: 299, mrp: 399, discount: 25, rating: 4.8, reviews: 1980, image: "/category-pet-care.jpg", category: "pet-care", brand: "Drools", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 17. BEAUTY, SKINCARE & COSMETICS (catKey: 'beauty-cosmetics')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 289, name: "Minimalist 10% Niacinamide Face Serum with Zinc (30ml)", weight: "30ml", price: 569, mrp: 599, discount: 5, rating: 4.9, reviews: 6200, image: "/category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Minimalist", inStock: true },
+  { id: 290, name: "Maybelline New York Colossal Bold Black Kajal (0.35g)", weight: "0.35g", price: 155, mrp: 199, discount: 22, rating: 4.8, reviews: 9400, image: "/category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Maybelline", inStock: true },
+  { id: 291, name: "Lakme Sun Expert SPF 50 Ultra Matte Sunscreen Lotion (100ml)", weight: "100ml", price: 375, mrp: 499, discount: 25, rating: 4.7, reviews: 3100, image: "/category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Lakme", inStock: true },
+  { id: 292, name: "Garnier Skin Naturals Micellar Cleansing Water (125ml)", weight: "125ml", price: 185, mrp: 249, discount: 26, rating: 4.8, reviews: 4800, image: "/category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Garnier", inStock: true },
+  { id: 293, name: "Nivea Soft Light Moisturizing Cream with Vitamin E (200ml)", weight: "200ml", price: 240, mrp: 320, discount: 25, rating: 4.9, reviews: 5400, image: "/category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Nivea", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 18. HEALTH, WELLNESS & PHARMACY (catKey: 'health-wellness')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 294, name: "Dabur Chyawanprash 2X Immunity Booster (1kg)", weight: "1kg", price: 375, mrp: 450, discount: 17, rating: 4.9, reviews: 7800, image: "/category-health-wellness.jpg", category: "health-wellness", brand: "Dabur", inStock: true },
+  { id: 295, name: "Revital H Daily Health Supplement Multivitamins (30 Capsules)", weight: "30 Capsules", price: 280, mrp: 340, discount: 18, rating: 4.8, reviews: 4200, image: "/category-health-wellness.jpg", category: "health-wellness", brand: "Revital", inStock: true },
+  { id: 296, name: "Volini Instant Pain Relief Spray (100g)", weight: "100g", price: 195, mrp: 245, discount: 20, rating: 4.9, reviews: 3600, image: "/category-health-wellness.jpg", category: "health-wellness", brand: "Volini", inStock: true },
+  { id: 297, name: "Fast&Up Charge Natural Vitamin C & Zinc Effervescent (20 Tablets)", weight: "20 Tabs", price: 299, mrp: 390, discount: 23, rating: 4.8, reviews: 2900, image: "/category-health-wellness.jpg", category: "health-wellness", brand: "Fast&Up", inStock: true },
+  { id: 298, name: "Dr. Morepen Digital Rigid Tip Medical Thermometer (1 Unit)", weight: "1 Unit", price: 149, mrp: 225, discount: 34, rating: 4.7, reviews: 1800, image: "/category-health-wellness.jpg", category: "health-wellness", brand: "Dr. Morepen", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 19. FRESH MEAT, SEAFOOD & EGGS (catKey: 'meat-seafood')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 299, name: "Fresh Farm Tender Chicken Breast Boneless (500g)", weight: "500g", price: 199, mrp: 260, discount: 23, rating: 4.9, reviews: 3400, image: "/category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true },
+  { id: 300, name: "Farm Fresh Country Brown Eggs Pack (12 Pcs)", weight: "12 Pcs", price: 119, mrp: 150, discount: 21, rating: 4.8, reviews: 5200, image: "/category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true },
+  { id: 301, name: "Fresh Atlantic Pink Salmon Steaks Cut (500g)", weight: "500g", price: 699, mrp: 899, discount: 22, rating: 4.9, reviews: 1100, image: "/category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true },
+  { id: 302, name: "Fresh Premium Chicken Curry Cut Skinless (1kg)", weight: "1kg", price: 249, mrp: 320, discount: 22, rating: 4.8, reviews: 4100, image: "/category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true },
+  { id: 303, name: "Fresh River Prawns Cleaned & Deveined (250g)", weight: "250g", price: 289, mrp: 380, discount: 24, rating: 4.7, reviews: 980, image: "/category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 20. HOME & KITCHEN (catKey: 'home-kitchen')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 304, name: "Prestige Deluxe Alpha Stainless Steel Pressure Cooker (3L)", weight: "3L", price: 1499, mrp: 2150, discount: 30, rating: 4.8, reviews: 2900, image: "/category-home-kitchen.jpg", category: "home-kitchen", brand: "Prestige", inStock: true },
+  { id: 305, name: "Milton Thermosteel Flip Lid Vacuum Flask Bottle (1000ml)", weight: "1000ml", price: 799, mrp: 1099, discount: 27, rating: 4.9, reviews: 4600, image: "/category-home-kitchen.jpg", category: "home-kitchen", brand: "Milton", inStock: true },
+  { id: 306, name: "Hawkins Futura Hard Anodised Non-Stick Frying Pan (22cm)", weight: "22cm", price: 890, mrp: 1175, discount: 24, rating: 4.8, reviews: 3100, image: "/category-home-kitchen.jpg", category: "home-kitchen", brand: "Hawkins", inStock: true },
+  { id: 307, name: "Borosil Glass Lunch Box Meal Container Set with Bag (3 Pcs)", weight: "3 Pcs", price: 945, mrp: 1290, discount: 27, rating: 4.9, reviews: 2400, image: "/category-home-kitchen.jpg", category: "home-kitchen", brand: "Borosil", inStock: true },
+  { id: 308, name: "Pigeon Stainless Steel Kitchen Knife Set with Wooden Block (5 Pcs)", weight: "5 Pcs", price: 449, mrp: 795, discount: 44, rating: 4.7, reviews: 1850, image: "/category-home-kitchen.jpg", category: "home-kitchen", brand: "Pigeon", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 21. STATIONERY & OFFICE SUPPLIES (catKey: 'stationery-office')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 309, name: "Classmate Pulse 6-Subject Spiral Notebook (300 Pages)", weight: "300 Pages", price: 180, mrp: 220, discount: 18, rating: 4.8, reviews: 3800, image: "/category-stationery-office.jpg", category: "stationery-office", brand: "Classmate", inStock: true },
+  { id: 310, name: "Parker Jotter Stainless Steel CT Ballpoint Pen (Blue Ink)", weight: "1 Pen", price: 299, mrp: 375, discount: 20, rating: 4.9, reviews: 5100, image: "/category-stationery-office.jpg", category: "stationery-office", brand: "Parker", inStock: true },
+  { id: 311, name: "Faber-Castell Connector Sketch Pen & Marker Set (25 Colors)", weight: "25 Colors", price: 195, mrp: 250, discount: 22, rating: 4.8, reviews: 2900, image: "/category-stationery-office.jpg", category: "stationery-office", brand: "Faber-Castell", inStock: true },
+  { id: 312, name: "Scotch Magic Tape with Dispenser + Precision Scissors Combo", weight: "1 Combo", price: 165, mrp: 225, discount: 27, rating: 4.8, reviews: 1950, image: "/category-stationery-office.jpg", category: "stationery-office", brand: "Scotch", inStock: true },
+  { id: 313, name: "Casio FX-991CW Scientific ClassWiz Calculator (540 Functions)", weight: "1 Unit", price: 1295, mrp: 1495, discount: 13, rating: 4.9, reviews: 6300, image: "/category-stationery-office.jpg", category: "stationery-office", brand: "Casio", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 22. SPORTS & FITNESS (catKey: 'sports-fitness')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 314, name: "Yonex Nanoray Carbon Light Badminton Racket with Cover", weight: "1 Racket", price: 1699, mrp: 2490, discount: 32, rating: 4.9, reviews: 4100, image: "/category-sports-fitness.jpg", category: "sports-fitness", brand: "Yonex", inStock: true },
+  { id: 315, name: "MuscleBlaze 100% Raw Whey Protein Concentrate (1kg)", weight: "1kg", price: 1799, mrp: 2399, discount: 25, rating: 4.8, reviews: 8200, image: "/category-sports-fitness.jpg", category: "sports-fitness", brand: "MuscleBlaze", inStock: true },
+  { id: 316, name: "Boldfit Gym Shaker Bottle with Protein Mixer Whisk Ball (700ml)", weight: "700ml", price: 249, mrp: 499, discount: 50, rating: 4.8, reviews: 3400, image: "/category-sports-fitness.jpg", category: "sports-fitness", brand: "Boldfit", inStock: true },
+  { id: 317, name: "Nivia Storm Rubber Moulded Tournament Football (Size 5)", weight: "Size 5", price: 475, mrp: 650, discount: 27, rating: 4.7, reviews: 2900, image: "/category-sports-fitness.jpg", category: "sports-fitness", brand: "Nivia", inStock: true },
+  { id: 318, name: "Strava Anti-Slip High Density Eco Yoga Mat with Strap (6mm)", weight: "6mm", price: 699, mrp: 1299, discount: 46, rating: 4.8, reviews: 2200, image: "/category-sports-fitness.jpg", category: "sports-fitness", brand: "Strava", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 23. TOYS & GAMES (catKey: 'toys-games')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 319, name: "LEGO Classic Creative Brick Box Building Toy Set (484 Pcs)", weight: "484 Pcs", price: 1799, mrp: 2299, discount: 22, rating: 4.9, reviews: 3700, image: "/category-toys-games.jpg", category: "toys-games", brand: "LEGO", inStock: true },
+  { id: 320, name: "Monopoly Classic Family Board Game Edition", weight: "1 Box", price: 799, mrp: 999, discount: 20, rating: 4.8, reviews: 5400, image: "/category-toys-games.jpg", category: "toys-games", brand: "Hasbro", inStock: true },
+  { id: 321, name: "Hot Wheels 5-Car Diecast Vehicle Gift Pack Assortment", weight: "5 Cars", price: 599, mrp: 749, discount: 20, rating: 4.9, reviews: 6800, image: "/category-toys-games.jpg", category: "toys-games", brand: "Hot Wheels", inStock: true },
+  { id: 322, name: "Rubik's Original 3x3 Speed Cube Puzzle", weight: "1 Cube", price: 399, mrp: 599, discount: 33, rating: 4.8, reviews: 4200, image: "/category-toys-games.jpg", category: "toys-games", brand: "Rubik's", inStock: true },
+  { id: 323, name: "Barbie Fashionistas Doll with Trendy Outfit & Accessories", weight: "1 Doll", price: 549, mrp: 699, discount: 21, rating: 4.8, reviews: 3100, image: "/category-toys-games.jpg", category: "toys-games", brand: "Barbie", inStock: true },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 24. POOJA & SPIRITUAL NEEDS (catKey: 'pooja-needs')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 324, name: "Cycle Pure Agarbatti Lia Fragrance Incense Sticks (120 Sticks)", weight: "120 Sticks", price: 140, mrp: 175, discount: 20, rating: 4.9, reviews: 8100, image: "/category-pooja-needs.jpg", category: "pooja-needs", brand: "Cycle Pure", inStock: true },
+  { id: 325, name: "Mangaldeep Pure Brass Puja Diya Oil Lamp (Medium)", weight: "1 Unit", price: 249, mrp: 350, discount: 29, rating: 4.8, reviews: 2900, image: "/category-pooja-needs.jpg", category: "pooja-needs", brand: "Mangaldeep", inStock: true },
+  { id: 326, name: "Bhimseni Pure Camphor Kapoor Crystals for Pooja (100g)", weight: "100g", price: 199, mrp: 260, discount: 23, rating: 4.9, reviews: 5700, image: "/category-pooja-needs.jpg", category: "pooja-needs", brand: "Bhimseni", inStock: true },
+  { id: 327, name: "Pooja Pure Ghee Diya Wicks Readymade Batti (50 Pcs)", weight: "50 Pcs", price: 120, mrp: 160, discount: 25, rating: 4.8, reviews: 3600, image: "/category-pooja-needs.jpg", category: "pooja-needs", brand: "Shubhkart", inStock: true },
+  { id: 328, name: "Patanjali Pure Haldi Kumkum & Roli Chawal Festive Set", weight: "1 Set", price: 99, mrp: 130, discount: 24, rating: 4.8, reviews: 2400, image: "/category-pooja-needs.jpg", category: "pooja-needs", brand: "Patanjali", inStock: true }
 ];
 
 export const getProductById = (id) => {
@@ -392,8 +483,7 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
       seenIds.add(idStr);
 
-      const catVal = String(cp.category || cp.category_slug || cp.category_id || cp.category_name || '').toLowerCase();
-      const catNameVal = String(cp.category_name || cp.category || '').toLowerCase();
+      const resolvedCategory = inferProductCategory(cp);
 
       merged.push({
         id: cp.id,
@@ -402,10 +492,10 @@ export async function syncProductsFromBackend() {
         mrp: Number(cp.mrp || cp.discount_price || cp.price) || 0,
         discount: cp.mrp ? Math.round(((cp.mrp - cp.price) / cp.mrp) * 100) : 10,
         image: cp.image || cp.image_url || '/grabit-logo.png',
-        category: cp.category || cp.category_slug || cp.category_id || 'produce',
-        category_slug: cp.category_slug || cp.category || (cp.category_name ? cp.category_name.toLowerCase().replace(/\s+/g, '-') : ''),
-        category_name: cp.category_name || cp.category || '',
-        category_id: cp.category_id || cp.category || '',
+        category: resolvedCategory,
+        category_slug: resolvedCategory,
+        category_name: cp.category_name || resolvedCategory,
+        category_id: cp.category_id || '',
         brand: cp.brand || 'Grabit Seller',
         weight: cp.unit || '1 unit',
         delivery_time: cp.delivery_time || '8 mins',
@@ -422,8 +512,7 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
 
       const ov = overrides[idStr] || {};
-      const catVal = String(ov.category || apiProd.category_slug || apiProd.category_id || apiProd.category || '').toLowerCase();
-      const catNameVal = String(ov.category_name || apiProd.category_name || apiProd.category || apiProd.categories?.name || '').toLowerCase();
+      const resolvedCategory = inferProductCategory({ ...apiProd, ...ov });
 
       const prodObj = {
         id: apiProd.id,
@@ -432,10 +521,10 @@ export async function syncProductsFromBackend() {
         mrp: Number(ov.mrp ?? apiProd.mrp ?? apiProd.price) || 0,
         discount: 10,
         image: ov.image || apiProd.image_url || apiProd.image || 'default-product.png',
-        category: catVal || 'produce',
-        category_slug: apiProd.category_slug || (catNameVal ? catNameVal.replace(/\s+/g, '-') : ''),
-        category_name: catNameVal,
-        category_id: apiProd.category_id || apiProd.category || '',
+        category: resolvedCategory,
+        category_slug: resolvedCategory,
+        category_name: ov.category_name || apiProd.category_name || resolvedCategory,
+        category_id: apiProd.category_id || '',
         brand: ov.brand || apiProd.brand || 'Grabit Fresh',
         weight: '1 unit',
         rating: 5.0,
@@ -459,11 +548,13 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
       if (!seenIds.has(idStr)) {
         const ov = overrides[idStr] || {};
+        const resolvedCategory = inferProductCategory({ ...bp, ...ov });
         merged.push({
           ...bp,
           ...ov,
-          category_slug: bp.category_slug || bp.category,
-          category_name: bp.category_name || bp.category,
+          category: resolvedCategory,
+          category_slug: resolvedCategory,
+          category_name: bp.category_name || resolvedCategory,
         });
         seenIds.add(idStr);
       }

@@ -183,28 +183,12 @@ export default function CartPage() {
   };
 
   return (
-    <div className="container section" style={{ paddingTop: '20px', paddingBottom: isMobile ? '100px' : '40px' }}>
+    <div className="container section" style={{ paddingTop: isMobile ? '36px' : '44px', paddingBottom: isMobile ? '100px' : '40px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} color="#111827" />
-        </button>
-        <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#111827', margin: 0 }}>
-          Cart
+      <div style={{ marginBottom: '14px', marginTop: isMobile ? '8px' : '12px' }}>
+        <h1 style={{ fontSize: isMobile ? '22px' : '24px', fontWeight: 900, color: '#111827', margin: 0 }}>
+          Cart ({totalItems} Items)
         </h1>
       </div>
 

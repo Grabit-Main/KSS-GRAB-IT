@@ -51,8 +51,49 @@ export default function HomePage() {
     };
   }, []);
 
-  const popularProducts = useMemo(() => {
-    return allProducts.filter(p => ['snacks','dairy','beverages','staples','household', '1', '2', '3', '4', '7'].includes(String(p.category || p.category_slug))).slice(0, isMobile ? 6 : 12);
+  // 🔍 Dynamic Search History Personalization Algorithm
+  const { popularProductsList, isPersonalizedBySearch, userTopTerms } = useMemo(() => {
+    let searchedTerms = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem('grabit_often_searched') || '[]');
+      searchedTerms = stored.map(x => (x.query || '').toLowerCase().trim()).filter(Boolean);
+    } catch (e) {
+      searchedTerms = [];
+    }
+
+    if (searchedTerms.length === 0) {
+      const defaultPopular = allProducts.filter(p => ['snacks','dairy','beverages','staples','household', '1', '2', '3', '4', '7'].includes(String(p.category || p.category_slug))).slice(0, isMobile ? 6 : 12);
+      return { popularProductsList: defaultPopular, isPersonalizedBySearch: false, userTopTerms: [] };
+    }
+
+    // Match products based on customer's often searched keywords
+    const matched = [];
+    const matchedIds = new Set();
+
+    searchedTerms.forEach(term => {
+      allProducts.forEach(p => {
+        if (!matchedIds.has(p.id)) {
+          const name = (p.name || '').toLowerCase();
+          const cat = (p.category || p.category_slug || '').toLowerCase();
+          const subcat = (p.subcat || '').toLowerCase();
+          const brand = (p.brand || '').toLowerCase();
+
+          if (name.includes(term) || cat.includes(term) || subcat.includes(term) || brand.includes(term)) {
+            matched.push(p);
+            matchedIds.add(p.id);
+          }
+        }
+      });
+    });
+
+    const remaining = allProducts.filter(p => !matchedIds.has(p.id) && ['snacks','dairy','beverages','staples','household', '1', '2', '3', '4', '7'].includes(String(p.category || p.category_slug)));
+    const combined = [...matched, ...remaining].slice(0, isMobile ? 6 : 12);
+
+    return {
+      popularProductsList: combined,
+      isPersonalizedBySearch: matched.length > 0,
+      userTopTerms: searchedTerms.slice(0, 3)
+    };
   }, [allProducts, isMobile]);
 
   const snackProducts = useMemo(() => {
@@ -74,6 +115,31 @@ export default function HomePage() {
   const prodCols = isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)';
   const catCols  = isMobile ? 'repeat(4, 1fr)' : isTablet ? 'repeat(5, 1fr)' : 'repeat(8, 1fr)';
   const maxCatCount = isMobile ? 8 : isTablet ? 10 : 16;
+
+  // ⏱️ Live Flash Deals Countdown Timer
+  const [dealTimeLeft, setDealTimeLeft] = useState({ hours: '02', minutes: '45', seconds: '18' });
+
+  useEffect(() => {
+    const calcRemaining = () => {
+      const now = new Date();
+      const endOfBlock = new Date(now);
+      const currentHour = now.getHours();
+      const nextIntervalHour = (Math.floor(currentHour / 3) + 1) * 3;
+      endOfBlock.setHours(nextIntervalHour, 0, 0, 0);
+      const diff = Math.max(0, Math.floor((endOfBlock - now) / 1000));
+      const hours = String(Math.floor(diff / 3600)).padStart(2, '0');
+      const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+      const seconds = String(diff % 60).padStart(2, '0');
+      return { hours, minutes, seconds };
+    };
+
+    setDealTimeLeft(calcRemaining());
+    const timer = setInterval(() => {
+      setDealTimeLeft(calcRemaining());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Image-Color Matched Hero Banners with Soft Light Pastel Backgrounds
   const slides = [
@@ -786,19 +852,40 @@ export default function HomePage() {
 
 
 
-      {/* ── 4. POPULAR NEAR YOU ──────────────────── */}
+      {/* ── 4. POPULAR NEAR YOU (SEARCH PERSONALIZED) ──────────────────── */}
       <div className="container" style={{ paddingTop: '4px', marginBottom: isMobile ? '20px' : '32px', position: 'relative', zIndex: 2 }}>
         <div className="professional-card" style={{
           borderRadius: isMobile ? '18px' : '22px',
           padding: isMobile ? '18px 12px' : '24px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? '14px' : '18px' }}>
-            <h2 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#1D1D1F', margin: 0, letterSpacing: '-0.02em' }}>Popular Near You</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? '14px' : '18px', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#1D1D1F', margin: 0, letterSpacing: '-0.02em' }}>
+                  Popular Near You
+                </h2>
+                {isPersonalizedBySearch && (
+                  <span style={{ background: '#EFF6FF', color: '#0071E3', fontSize: '10.5px', fontWeight: 800, padding: '3px 9px', borderRadius: '12px', border: '1px solid #BFDBFE', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={11} color="#0071E3" /> Personalized
+                  </span>
+                )}
+              </div>
+              {isPersonalizedBySearch && userTopTerms.length > 0 && (
+                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '3px', fontWeight: 500 }}>
+                  Top picks based on your recent searches: <span style={{ color: '#0071E3', fontWeight: 700 }}>"{userTopTerms.join('", "')}"</span>
+                </div>
+              )}
+            </div>
             <Link to="/search?q=trending" style={{ fontSize: '13px', color: '#0071E3', fontWeight: 800, textDecoration: 'none' }}>View all</Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: prodCols, gap: isMobile ? '10px' : '14px' }}>
-            {popularProducts.map((product, i) => (
-              <ProductCard key={i} product={product} badge={i < 3 ? '10% OFF' : '15% OFF'} badgeColor={i < 3 ? '#34C759' : '#FF3B30'} />
+            {popularProductsList.map((product, i) => (
+              <ProductCard
+                key={product.id || i}
+                product={product}
+                badge={isPersonalizedBySearch && i < 3 ? 'Top Match' : (i < 3 ? '10% OFF' : '15% OFF')}
+                badgeColor={isPersonalizedBySearch && i < 3 ? '#0071E3' : (i < 3 ? '#34C759' : '#FF3B30')}
+              />
             ))}
           </div>
         </div>
@@ -1105,11 +1192,17 @@ export default function HomePage() {
               <h2 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#0F172A' }}>Grabit Deals</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748B' }}>
                 <span>Ends in</span>
-                {['02', '45', '18'].map((t, i) => (
-                  <span key={i} style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, color: '#0F172A' }}>
-                    {t}{i < 2 ? ':' : ''}
-                  </span>
-                ))}
+                <span style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, color: '#0F172A', minWidth: '22px', textAlign: 'center' }}>
+                  {dealTimeLeft.hours}
+                </span>
+                <span style={{ fontWeight: 800, color: '#64748B' }}>:</span>
+                <span style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, color: '#0F172A', minWidth: '22px', textAlign: 'center' }}>
+                  {dealTimeLeft.minutes}
+                </span>
+                <span style={{ fontWeight: 800, color: '#64748B' }}>:</span>
+                <span style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, color: '#0071E3', minWidth: '22px', textAlign: 'center' }}>
+                  {dealTimeLeft.seconds}
+                </span>
               </div>
             </div>
             <Link to="/category/electronics" style={{ fontSize: '13px', color: '#0066FF', fontWeight: 700, textDecoration: 'none' }}>View all</Link>
@@ -1127,20 +1220,23 @@ export default function HomePage() {
         paddingTop: '6px',
         marginBottom: isMobile ? '24px' : '36px',
         position: 'relative',
-        zIndex: 2
+        zIndex: 2,
+        display: 'flex',
+        justifyContent: 'center'
       }}>
-        <Link to="/exclusive-deals" style={{ textDecoration: 'none' }}>
+        <Link to="/exclusive-deals" style={{ textDecoration: 'none', width: '100%', maxWidth: isMobile ? '100%' : '1020px' }}>
           <div style={{
             borderRadius: isMobile ? '18px' : '24px',
             overflow: 'hidden',
-            boxShadow: '0 14px 38px rgba(100, 0, 200, 0.22)',
+            boxShadow: '0 14px 38px rgba(100, 0, 200, 0.18)',
             border: '1.5px solid rgba(160, 100, 255, 0.35)',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             cursor: 'pointer',
-            width: '100%'
+            width: '100%',
+            background: 'linear-gradient(135deg, #F5F0FF 0%, #EAE0FF 100%)'
           }}
           onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 22px 48px rgba(100,0,200,0.34)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 14px 38px rgba(100, 0, 200, 0.22)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 14px 38px rgba(100, 0, 200, 0.18)'; }}
           onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.98)'; }}
           onTouchEnd={e => { e.currentTarget.style.transform = 'none'; }}
           onTouchCancel={e => { e.currentTarget.style.transform = 'none'; }}
@@ -1341,44 +1437,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bottom Trust Badges Row */}
-          <div style={{
-            marginTop: isMobile ? '20px' : '28px',
-            paddingTop: isMobile ? '16px' : '20px',
-            borderTop: '1px solid rgba(0,113,227,0.12)',
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: isMobile ? '12px' : '16px'
-          }}>
-            {[
-              { icon: <Zap size={18} color="#0071E3" fill="#0071E3" />, t1: "Fast 30-Min", t2: "Delivery" },
-              { icon: <MapPin size={18} color="#0F9D58" fill="#0F9D58" />, t1: "Within 5 km", t2: "Hyperlocal" },
-              { icon: <Shield size={18} color="#FF6B00" fill="#FF6B00" />, t1: "100% Quality", t2: "Guaranteed" },
-              { icon: <Tag size={18} color="#7C3AED" fill="#7C3AED" />, t1: "Instant 1-Tap", t2: "Refunds" }
-            ].map((badge, idx) => (
-              <div key={idx} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                background: '#FFFFFF',
-                padding: '10px 14px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
-                  background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {badge.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>{badge.t1}</div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>{badge.t2}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

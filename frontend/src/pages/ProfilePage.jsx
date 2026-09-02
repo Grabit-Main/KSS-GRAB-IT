@@ -38,28 +38,40 @@ export default function ProfilePage() {
 
   const initialUser = getStoredUser();
   // ── USER STATE & WALLET ──
-  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || 'Customer');
+  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || '');
   const [userPhone, setUserPhone] = useState(initialUser?.phone || '');
   const [userEmail, setUserEmail] = useState(initialUser?.email || '');
   const [walletBalance, setWalletBalance] = useState(0);
   const [addAmount, setAddAmount] = useState('100');
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
 
+  const isLoggedIn = !!(userPhone || userEmail || initialUser?.phone);
+
   // Sync profile when auth state updates
-  useState(() => {
+  useEffect(() => {
     const syncUser = () => {
       const u = getStoredUser();
       if (u) {
-        setUserName(u.full_name || u.name || 'Customer');
+        setUserName(u.full_name || u.name || '');
         setUserPhone(u.phone || '');
         setUserEmail(u.email || '');
+      } else {
+        setUserName('');
+        setUserPhone('');
+        setUserEmail('');
       }
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('grabit_auth_updated', syncUser);
       window.addEventListener('storage', syncUser);
     }
-  });
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('grabit_auth_updated', syncUser);
+        window.removeEventListener('storage', syncUser);
+      }
+    };
+  }, []);
 
   // ── MODAL VISIBILITY STATES ──
   const [activeModal, setActiveModal] = useState(null); // 'add-balance' | 'refunds' | 'gift-cards' | 'addresses' | 'edit-profile' | 'rewards' | 'payments' | 'app-icon' | 'suggest' | 'notifications' | 'info'
@@ -163,8 +175,7 @@ export default function ProfilePage() {
       window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch {}
-    showToast('Logged out of Grabit successfully!');
-    setTimeout(() => navigate('/login'), 600);
+    navigate('/login', { replace: true });
   };
 
   const handleAddBalance = (e) => {
@@ -220,25 +231,42 @@ export default function ProfilePage() {
 
         {/* ── 2. USER PROFILE SUMMARY ── */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '14px',
-          marginBottom: '20px', padding: '4px 2px'
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '20px', padding: '14px 16px',
+          background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
         }}>
-          <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0071E3 0%, #0058B3 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(0, 113, 227, 0.25)', flexShrink: 0
-          }}>
-            <User size={32} color="#FFFFFF" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: isLoggedIn ? 'linear-gradient(135deg, #0071E3 0%, #0058B3 100%)' : '#F1F5F9',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: isLoggedIn ? '0 6px 16px rgba(0, 113, 227, 0.25)' : 'none', flexShrink: 0
+            }}>
+              <User size={28} color={isLoggedIn ? "#FFFFFF" : "#64748B"} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.3px' }}>
+                {isLoggedIn ? userName : 'Welcome to GrabIt'}
+              </h2>
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0, fontWeight: 600 }}>
+                {isLoggedIn ? (userPhone || userEmail) : 'Log in to view orders & saved addresses'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.3px' }}>
-              {userName}
-            </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: 0, fontWeight: 600 }}>
-              {userPhone}
-            </p>
-          </div>
+          {!isLoggedIn && (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: '#0071E3', color: '#FFFFFF', border: 'none',
+                borderRadius: '10px', padding: '8px 16px', fontSize: '13px',
+                fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.25)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Log In
+            </button>
+          )}
         </div>
 
         {/* ── 3. TOP 3 QUICK ACTION CARDS ── */}
@@ -440,18 +468,33 @@ export default function ProfilePage() {
 
         {/* ── 8. LOG OUT BUTTON & VERSION FOOTER ── */}
         <div style={{ textAlign: 'center', padding: '4px 0 2px', margin: '0 0 0' }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: '#FFFFFF', border: '1px solid #E2E8F0',
-              borderRadius: '12px', padding: '7px 20px',
-              fontSize: '12.5px', fontWeight: 800, color: '#EF4444',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '8px'
-            }}
-          >
-            <LogOut size={14} /> Log Out
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              style={{
+                background: '#FFFFFF', border: '1px solid #E2E8F0',
+                borderRadius: '12px', padding: '7px 20px',
+                fontSize: '12.5px', fontWeight: 800, color: '#EF4444',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '8px'
+              }}
+            >
+              <LogOut size={14} /> Log Out
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: '#0071E3', border: 'none',
+                borderRadius: '12px', padding: '8px 22px',
+                fontSize: '13px', fontWeight: 800, color: '#FFFFFF',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 12px rgba(0,113,227,0.2)', marginBottom: '8px'
+              }}
+            >
+              <LogIn size={14} /> Log In / Sign Up
+            </button>
+          )}
           <div style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: 600, letterSpacing: '0.2px', margin: 0, padding: 0 }}>
             App version 0.0.1
           </div>

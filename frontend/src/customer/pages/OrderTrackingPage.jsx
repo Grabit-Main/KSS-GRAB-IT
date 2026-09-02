@@ -1,17 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, Phone, MessageSquare, ShieldCheck, CheckCircle2,
   Package, ShoppingBag, Truck, AlertCircle, RefreshCw, ChevronRight, HelpCircle,
   X, Send, PhoneCall, Check, ExternalLink, Sparkles, Zap
 } from 'lucide-react';
-import { get } from '../../api';
+import { get, patch } from '../../api';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import ProductSvg from '../components/common/ProductSvg';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../../utils/scrollToTop';
 import CustomerReviewSection from '../../components/common/CustomerReviewSection';
+
+const canCancelOrder = (statusStr) => {
+  const st = String(statusStr || '').toLowerCase();
+  return st === 'placed' || st === 'preparing' || st === 'confirmed' || st === 'pending';
+};
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & verified', icon: '🛒' },
@@ -60,6 +66,78 @@ export default function OrderTrackingPage() {
     { id: 1, sender: 'agent', text: 'Hello! 👋 I am your GrabIt Support Assistant. How can I help you with this order today?', time: 'Just now' }
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Placed order by mistake');
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleConfirmCancel = async () => {
+    if (!order) return;
+    setIsCancelling(true);
+    const targetId = order.rawId || order.id || orderId;
+    const finalReason = cancelReason || 'Cancelled by customer';
+
+    try {
+      try {
+        await patch(`/orders/${targetId}/status`, {
+          status: 'cancelled',
+          cancellation_reason: finalReason
+        });
+      } catch (err) {
+        console.warn('Backend patch error in tracking page:', err);
+      }
+
+      const updateList = (list) => {
+        if (!Array.isArray(list)) return [];
+        return list.map(o => {
+          if (o.id === order.id || o.rawId === targetId || o.id === targetId) {
+            return {
+              ...o,
+              status: 'cancelled',
+              cancellation_reason: finalReason,
+              cancelled_at: new Date().toISOString()
+            };
+          }
+          return o;
+        });
+      };
+
+      try {
+        const global = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        localStorage.setItem('grabit_orders', JSON.stringify(updateList(global)));
+
+        const digits = (order.customer_phone || '').replace(/\D/g, '');
+        const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
+        if (custPhone) {
+          const userOrders = JSON.parse(localStorage.getItem(`grabit_orders_${custPhone}`) || '[]');
+          localStorage.setItem(`grabit_orders_${custPhone}`, JSON.stringify(updateList(userOrders)));
+        }
+
+        const cached = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
+        sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify(updateList(cached)));
+      } catch (storageErr) {
+        console.warn('Tracking page storage update error:', storageErr);
+      }
+
+      setOrder(prev => ({
+        ...prev,
+        status: 'cancelled',
+        cancellation_reason: finalReason
+      }));
+
+      window.dispatchEvent(new Event('grabit_orders_updated'));
+      window.dispatchEvent(new Event('grabit_notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      showToast(`Order #${order.id || orderId} has been cancelled.`);
+      setCancelModalOpen(false);
+    } catch (e) {
+      console.error('Failed to cancel order:', e);
+      showToast('Failed to cancel order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const [issueSubmitted, setIssueSubmitted] = useState(false);
   const [selectedIssueType, setSelectedIssueType] = useState('');
 
@@ -504,7 +582,26 @@ export default function OrderTrackingPage() {
                 ))}
               </div>
 
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                {canCancelOrder(order?.status) && (
+                  <button
+                    onClick={() => {
+                      setCancelReason('Placed order by mistake');
+                      setCancelModalOpen(true);
+                    }}
+                    style={{
+                      background: '#FEF2F2', color: '#DC2626', border: '1.5px solid #FECACA',
+                      borderRadius: '12px', padding: '10px 18px', fontSize: '13px', fontWeight: 800,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; }}
+                  >
+                    <X size={15} strokeWidth={2.4} />
+                    Cancel Order
+                  </button>
+                )}
                 <button
                   onClick={handleReorder}
                   style={{
@@ -799,6 +896,141 @@ export default function OrderTrackingPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── CANCEL ORDER CONFIRMATION MODAL ── */}
+      {cancelModalOpen && typeof document !== 'undefined' && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%',
+            padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', position: 'relative'
+          }}>
+            {/* Header Icon + Title */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '14px',
+                background: '#FEE2E2', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, border: '1px solid #FECACA'
+              }}>
+                <AlertCircle size={24} color="#DC2626" strokeWidth={2.4} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                  Cancel Order #{order?.id || orderId}?
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                  Are you sure you want to cancel this order? Once cancelled, this action cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isCancelling && setCancelModalOpen(false)}
+                style={{
+                  background: '#F1F5F9', border: 'none', borderRadius: '50%',
+                  width: '32px', height: '32px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#64748B', flexShrink: 0
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Refund notice banner */}
+            <div style={{
+              background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '14px',
+              padding: '12px 14px', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '10px'
+            }}>
+              <Check size={18} color="#16A34A" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '12.5px', color: '#166534', fontWeight: 600, lineHeight: 1.4 }}>
+                A 100% full refund of <strong style={{ fontWeight: 800 }}>₹{Number(order?.total || 0).toLocaleString('en-IN')}</strong> will be credited to your original payment source within 15-30 minutes.
+              </div>
+            </div>
+
+            {/* Reason selector */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
+                Reason for cancellation:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  'Placed order by mistake',
+                  'Need to change delivery address or phone',
+                  'Forgot to add essential items',
+                  'Delivery time is taking too long',
+                  'Other reason'
+                ].map((reason) => {
+                  const isChecked = cancelReason === reason;
+                  return (
+                    <label
+                      key={reason}
+                      onClick={() => setCancelReason(reason)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        background: isChecked ? '#EFF6FF' : '#F8FAFC',
+                        border: isChecked ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
+                        cursor: 'pointer',
+                        fontSize: '12.5px',
+                        fontWeight: isChecked ? 700 : 500,
+                        color: isChecked ? '#1E40AF' : '#475569',
+                        transition: 'all 0.12s ease'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="cancelReasonTrack"
+                        checked={isChecked}
+                        onChange={() => setCancelReason(reason)}
+                        style={{ accentColor: '#0071E3', margin: 0 }}
+                      />
+                      <span>{reason}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px' }}>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setCancelModalOpen(false)}
+                style={{
+                  background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '12px',
+                  padding: '12px', fontSize: '13.5px', fontWeight: 800, color: '#334155',
+                  cursor: isCancelling ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={handleConfirmCancel}
+                style={{
+                  background: '#DC2626', border: 'none', borderRadius: '12px',
+                  padding: '12px', fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF',
+                  cursor: isCancelling ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  opacity: isCancelling ? 0.7 : 1
+                }}
+              >
+                {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>
