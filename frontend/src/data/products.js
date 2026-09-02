@@ -222,9 +222,33 @@ export const baseProducts = [
 
 export let products = [...baseProducts];
 
-export function getProductById(id) {
-  return products.find((p) => String(p.id) === String(id));
+export function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/'/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
+
+export function getProductSlug(product) {
+  if (!product) return '';
+  if (product.slug) return product.slug;
+  return slugify(product.name || '');
+}
+
+export function getProductById(idOrSlug) {
+  if (idOrSlug === undefined || idOrSlug === null) return null;
+  const target = String(idOrSlug).toLowerCase().trim();
+  return products.find(p => {
+    if (String(p.id).toLowerCase() === target) return true;
+    if (p.slug && p.slug.toLowerCase() === target) return true;
+    if (slugify(p.name) === target) return true;
+    return false;
+  });
+}
+
+export const getProductByIdOrSlug = getProductById;
 
 export const SEARCH_SYNONYMS = {
   coke: ['coca-cola', 'coca cola', 'soft drink', 'beverages', 'cold drinks', 'drink', 'soda'],

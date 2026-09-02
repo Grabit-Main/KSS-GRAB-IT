@@ -9,7 +9,7 @@ import FestiveSubHeader from './FestiveSubHeader';
 import ProductSvg from './ProductSvg';
 import ProductSuggestionModal from './ProductSuggestionModal';
 import useWindowWidth from '../../hooks/useWindowWidth';
-import { searchProducts } from '../../data/products';
+import { searchProducts, getProductSlug } from '../../data/products';
 import { getCanonicalSlug } from '../../data/categories';
 import { getRealUserNotifications, markAllNotificationsAsRead, dismissNotification, markNotificationAsRead } from '../../utils/userNotifications';
 
@@ -601,7 +601,7 @@ export default function Header() {
                   <div
                     key={prod.id}
                     onMouseDown={() => {
-                      navigate(`/product/${prod.id}`);
+                      navigate(`/product/${getProductSlug(prod)}`);
                       setIsSearchFocused(false);
                     }}
                     style={{

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Star, Heart, ChevronLeft, ChevronRight, Zap, MapPin, Plus, Minus, ShoppingCart, Tag, Shield, ShoppingBag, Truck, CheckCircle2, Clock, Share2, ThumbsUp, HelpCircle, Award, Check } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
-import { products, getProductById } from '../data/products';
+import { products, getProductById, getProductSlug } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useDeliveryLocation } from '../context/LocationContext';
@@ -59,7 +59,17 @@ const getProductVariants = (p) => {
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const product = getProductById(id) || products[0];
+
+  useEffect(() => {
+    if (product) {
+      const canonicalSlug = getProductSlug(product);
+      if (canonicalSlug && id !== canonicalSlug) {
+        navigate(`/product/${canonicalSlug}`, { replace: true });
+      }
+    }
+  }, [id, product, navigate]);
   const { addItem, updateQty, getItemQty } = useCart();
   const { showToast } = useToast();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -1357,7 +1367,7 @@ export default function ProductDetailPage() {
               {sidebarRecommendations.map((recProd, rIdx) => (
                 <Link
                   key={rIdx}
-                  to={`/product/${recProd.id}`}
+                  to={`/product/${getProductSlug(recProd)}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none',
                     padding: '8px', borderRadius: '10px', transition: 'background 0.15s'

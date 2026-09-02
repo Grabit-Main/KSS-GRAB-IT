@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import { useWishlist } from '../../context/WishlistContext';
 import ProductSvg from './ProductSvg';
+import { getProductSlug } from '../../data/products';
 
 export default function ProductCard({ product, badge, badgeColor = '#E53935', initialQty = 0 }) {
   const { addItem, updateQty, getItemQty } = useCart();
@@ -109,7 +110,7 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
       </button>
 
       {/* Product Image Box */}
-      <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+      <Link to={`/product/${getProductSlug(product)}`} style={{ textDecoration: 'none' }}>
         <div style={{
           background: '#F8FAFC',
           borderRadius: '10px',
@@ -126,7 +127,7 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
 
       {/* Product Details */}
       <div>
-        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+        <Link to={`/product/${getProductSlug(product)}`} style={{ textDecoration: 'none' }}>
           <div style={{
             fontSize: '11px',
             fontWeight: 700,
