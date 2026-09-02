@@ -991,34 +991,10 @@ export default function Header() {
             <span>{notifications.length > 0 ? 'View Full Notifications Center' : 'Browse Products'}</span>
             <ChevronRight size={14} strokeWidth={2.4} color="#64748B" />
           </button>
-
-          <button
-            type="button"
-            onClick={() => setIsNotificationOpen(false)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'transparent',
-              color: '#64748B',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: '6px',
-              transition: 'color 0.15s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = '#0F172A'}
-            onMouseLeave={e => e.currentTarget.style.color = '#64748B'}
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
+
   );
 
   return (
