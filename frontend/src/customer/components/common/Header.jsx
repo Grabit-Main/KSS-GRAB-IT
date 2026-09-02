@@ -154,6 +154,54 @@ const CATEGORY_HEADER_THEMES = {
     border: '#FECDD3',
     accent: '#F43F5E',
     placeholder: 'Search sneakers, t-shirts, fashion gear...'
+  },
+  '/category/pharmacy': {
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
+    accent: '#7C3AED',
+    placeholder: 'Search medicines, first aid, healthcare...'
+  },
+  '/pharmacy': {
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
+    accent: '#7C3AED',
+    placeholder: 'Search medicines, pain relief, vitamins...'
+  },
+  '/category/health-wellness': {
+    bg: '#F0FDF4',
+    border: '#BBF7D0',
+    accent: '#10B981',
+    placeholder: 'Search vitamins, wellness, immunity...'
+  },
+  '/category/baby-care': {
+    bg: '#FEF3C7',
+    border: '#FDE68A',
+    accent: '#D97706',
+    placeholder: 'Search diapers, wipes, baby food...'
+  },
+  '/category/pet-care': {
+    bg: '#FFF1F2',
+    border: '#FECDD3',
+    accent: '#E11D48',
+    placeholder: 'Search dog food, cat food, pet supplies...'
+  },
+  '/category/meat-seafood': {
+    bg: '#FEF2F2',
+    border: '#FECACA',
+    accent: '#DC2626',
+    placeholder: 'Search fresh chicken, meat, fish, eggs...'
+  },
+  '/fresh-produce': {
+    bg: '#EAF8F0',
+    border: '#A7F3D0',
+    accent: '#34C759',
+    placeholder: 'Search fresh fruits, vegetables, greens...'
+  },
+  '/chicken-meat': {
+    bg: '#FEF2F2',
+    border: '#FECACA',
+    accent: '#DC2626',
+    placeholder: 'Search fresh chicken, mutton, seafood...'
   }
 };
 
@@ -325,18 +373,75 @@ export default function Header() {
     [...new Set(matchingProducts.map(p => p.brand).filter(Boolean))].slice(0, 3)
   ) : [];
 
-  const trendingSearches = [
-    { label: "Lay's Chips", query: "lays", icon: '🍿' },
-    { label: 'Amul Butter', query: 'butter', icon: '🥛' },
-    { label: 'Cadbury Silk', query: 'silk', icon: '🍫' },
-    { label: 'Coca-Cola', query: 'coke', icon: '🥤' },
-    { label: 'Maggi Noodles', query: 'maggi', icon: '🍜' },
-    { label: 'Aashirvaad Atta', query: 'atta', icon: '🌾' }
-  ];
-
   const renderSearchSuggestions = () => {
     if (!isSearchFocused) return null;
     const oftenSearched = getOftenSearched();
+
+    if (searchQuery.trim().length === 0) {
+      if (oftenSearched.length === 0) return null;
+      return (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: '6px',
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.14)',
+            zIndex: 99999,
+            overflow: 'hidden',
+            padding: '12px 0'
+          }}
+        >
+          <div>
+            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                🔍 Often &amp; Recently Searched
+              </span>
+              <button
+                type="button"
+                onClick={clearOftenSearched}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '10.5px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Clear
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 4px' }}>
+              {oftenSearched.map(item => (
+                <button
+                  key={item.query}
+                  type="button"
+                  onMouseDown={() => {
+                    trackCustomerSearch(item.query);
+                    setSearchQuery(item.query);
+                    navigate(`/search?q=${encodeURIComponent(item.query)}`);
+                    setIsSearchFocused(false);
+                  }}
+                  style={{
+                    background: '#EFF6FF', border: '1.5px solid #BFDBFE',
+                    borderRadius: '20px', padding: '5px 12px', fontSize: '12px',
+                    fontWeight: 700, color: '#1E40AF', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>🕒</span>
+                  <span>{item.query}</span>
+                  {item.count > 1 && (
+                    <span style={{ fontSize: '10px', background: '#DBEAFE', padding: '1px 6px', borderRadius: '10px', color: '#1E3A8A' }}>
+                      {item.count}x
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -355,94 +460,7 @@ export default function Header() {
           padding: '12px 0'
         }}
       >
-        {searchQuery.trim().length === 0 ? (
-          <div>
-            {oftenSearched.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#0071E3', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    🔍 Often & Recently Searched
-                  </span>
-                  <button
-                    type="button"
-                    onClick={clearOftenSearched}
-                    style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '10.5px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 8px' }}>
-                  {oftenSearched.map(item => (
-                    <button
-                      key={item.query}
-                      type="button"
-                      onMouseDown={() => {
-                        trackCustomerSearch(item.query);
-                        setSearchQuery(item.query);
-                        navigate(`/search?q=${encodeURIComponent(item.query)}`);
-                        setIsSearchFocused(false);
-                      }}
-                      style={{
-                        background: '#EFF6FF', border: '1.5px solid #BFDBFE',
-                        borderRadius: '20px', padding: '5px 12px', fontSize: '12px',
-                        fontWeight: 700, color: '#1E40AF', cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <span>🕒</span>
-                      <span>{item.query}</span>
-                      {item.count > 1 && (
-                        <span style={{ fontSize: '10px', background: '#DBEAFE', padding: '1px 6px', borderRadius: '10px', color: '#1E3A8A' }}>
-                          {item.count}x
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ padding: '4px 16px 8px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Sparkles size={12} color="#0071E3" /> Trending Searches
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 14px 8px' }}>
-              {trendingSearches.map(t => (
-                <button
-                  key={t.query}
-                  type="button"
-                  onMouseDown={() => {
-                    trackCustomerSearch(t.query);
-                    setSearchQuery(t.query);
-                    navigate(`/search?q=${encodeURIComponent(t.query)}`);
-                    setIsSearchFocused(false);
-                  }}
-                  style={{
-                    background: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: '20px', padding: '6px 13px', fontSize: '12.5px',
-                    fontWeight: 600, color: '#334155', cursor: 'pointer',
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = '#F1F5F9';
-                    e.currentTarget.style.borderColor = '#CBD5E1';
-                    e.currentTarget.style.color = '#0F172A';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = '#F8FAFC';
-                    e.currentTarget.style.borderColor = '#E2E8F0';
-                    e.currentTarget.style.color = '#334155';
-                  }}
-                >
-                  <span>{t.icon}</span>
-                  <span>{t.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div>
+        <div>
             {categorySuggestions.length > 0 && (
               <div style={{ padding: '4px 14px 10px', display: 'flex', flexWrap: 'wrap', gap: '6px', borderBottom: '1px solid #F1F5F9', marginBottom: '8px' }}>
                 {categorySuggestions.map(c => (
@@ -588,8 +606,7 @@ export default function Header() {
               <span>Can't find an item? Suggest a product to Grabit</span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
     );
   };
 
@@ -924,15 +941,43 @@ export default function Header() {
           gap: isMobile ? '6px' : '20px'
         }}>
 
-          {/* 1. Brand Logo (Desktop) */}
+          {/* 1. Brand Logo & Back Navigation (Desktop) */}
           {!isMobile && (
-            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              <img
-                src="https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png"
-                alt="Grabit"
-                style={{ height: '58px', width: 'auto', maxWidth: '230px', objectFit: 'contain' }}
-              />
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+              {!isHomePage && (
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  style={{
+                    background: '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '50%',
+                    width: '38px',
+                    height: '38px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#0F172A',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                  }}
+                  aria-label="Go Back"
+                  title="Go Back"
+                  onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; }}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+              )}
+              <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <img
+                  src="https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png"
+                  alt="Grabit"
+                  style={{ height: '58px', width: 'auto', maxWidth: '230px', objectFit: 'contain' }}
+                />
+              </Link>
+            </div>
           )}
 
           {/* 2. Sleek Delivery Location */}
