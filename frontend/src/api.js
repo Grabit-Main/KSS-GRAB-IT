@@ -43,7 +43,10 @@ export async function api(path, options = {}) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') return null; // Timed out — treat as no data, caller uses localStorage
+    if (err.name === 'AbortError') {
+      if (isGet) return null; // Timed out GET — treat as no data, caller uses localStorage
+      throw new Error('Server request timed out. Please check your network and try again.');
+    }
     throw err;
   }
 }

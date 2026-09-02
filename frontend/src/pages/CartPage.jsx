@@ -591,7 +591,8 @@ export default function CartPage() {
               </div>
 
               {(AVAILABLE_COUPONS || []).map((c) => {
-                const isEligible = itemTotal >= c.minOrder;
+                const isFreeDeliveryAlready = c.discountType === 'free_delivery' && itemTotal >= 100;
+                const isEligible = itemTotal >= c.minOrder && !isFreeDeliveryAlready;
                 const isCurrent = appliedCoupon?.code === c.code;
 
                 return (
@@ -621,7 +622,14 @@ export default function CartPage() {
                         </div>
                       </div>
 
-                      {isEligible ? (
+                      {isFreeDeliveryAlready ? (
+                        <span style={{
+                          fontSize: '11px', fontWeight: 800, color: '#059669',
+                          background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '8px'
+                        }}>
+                          FREE DELIVERY
+                        </span>
+                      ) : isEligible ? (
                         <button
                           type="button"
                           onClick={() => handleApplyCouponCode(c.code)}
@@ -644,7 +652,15 @@ export default function CartPage() {
                       )}
                     </div>
 
-                    {!isEligible && (
+                    {isFreeDeliveryAlready ? (
+                      <div style={{
+                        fontSize: '11px', color: '#059669', background: '#ECFDF5',
+                        border: '1px solid #A7F3D0', padding: '6px 10px', borderRadius: '8px',
+                        fontWeight: 700
+                      }}>
+                        🎉 Orders above ₹100 already get FREE delivery! No coupon needed.
+                      </div>
+                    ) : !isEligible ? (
                       <div style={{
                         fontSize: '11px', color: '#D97706', background: '#FFFBEB',
                         border: '1px solid #FDE68A', padding: '6px 10px', borderRadius: '8px',
@@ -652,7 +668,7 @@ export default function CartPage() {
                       }}>
                         Add ₹{c.minOrder - itemTotal} more to unlock this coupon
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}

@@ -226,12 +226,15 @@ export function LoginPage() {
         otp,
         ...(!registered ? { full_name: name || 'Customer', email: email || null } : {}),
       });
-      const resolvedUser = x.user || { role: detectedRole, name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
-      localStorage.setItem('grabit_session', x.access_token || 'session-token');
+      if (!x || !x.access_token || !x.user) {
+        throw new Error('Verification failed. Invalid verification code or server error.');
+      }
+      const resolvedUser = x.user;
+      localStorage.setItem('grabit_session', x.access_token);
       localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
       sessionStorage.setItem('grabit_skipped_login', 'true');
 
-      const userRole = resolvedUser.role || detectedRole;
+      const userRole = resolvedUser.role || 'customer';
       if (userRole === 'seller' || userRole === 'admin') {
         localStorage.setItem('grabit_seller_access', x.access_token);
         localStorage.setItem('grabit_seller_profile', JSON.stringify(resolvedUser));

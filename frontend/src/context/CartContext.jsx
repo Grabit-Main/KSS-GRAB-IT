@@ -229,6 +229,16 @@ export function CartProvider({ children }) {
   const discount = Math.max(0, mrpTotal - itemTotal);
   const deliveryFee = itemTotal >= 100 || itemTotal === 0 ? 0 : 30;
 
+  // Auto-remove free_delivery coupon if cart qualifies for free delivery on its own
+  useEffect(() => {
+    if (appliedCoupon?.discountType === 'free_delivery' && (itemTotal >= 100 || deliveryFee === 0)) {
+      setAppliedCoupon(null);
+      try {
+        localStorage.removeItem('grabit_applied_coupon');
+      } catch {}
+    }
+  }, [appliedCoupon, itemTotal, deliveryFee]);
+
   const applyCoupon = useCallback((codeToApply) => {
     if (!codeToApply || !codeToApply.trim()) {
       return { success: false, message: 'Please enter a valid coupon code' };
@@ -257,12 +267,19 @@ export function CartProvider({ children }) {
       return { success: false, message: `Add ₹${diff} more items to apply code ${cleanCode}` };
     }
 
+    if (coupon.discountType === 'free_delivery' && (deliveryFee === 0 || itemTotal >= 100)) {
+      return {
+        success: false,
+        message: 'Your order already qualifies for FREE delivery! No coupon needed.'
+      };
+    }
+
     setAppliedCoupon(coupon);
     try {
       localStorage.setItem('grabit_applied_coupon', JSON.stringify(coupon));
     } catch {}
     return { success: true, message: `Coupon "${coupon.code}" applied successfully!` };
-  }, [itemTotal]);
+  }, [itemTotal, deliveryFee]);
 
   const removeCoupon = useCallback(() => {
     setAppliedCoupon(null);
