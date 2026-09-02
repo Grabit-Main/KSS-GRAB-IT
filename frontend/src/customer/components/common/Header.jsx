@@ -1401,17 +1401,18 @@ export default function Header() {
         <div style={{
           background: currentTheme.bg,
           borderBottom: `1px solid ${currentTheme.border}`,
-          padding: '8px 12px 6px'
+          padding: '6px 0 4px'
         }}>
           <div style={{
             display: 'flex', gap: '14px', overflowX: 'auto',
             scrollbarWidth: 'none', msOverflowStyle: 'none',
             whiteSpace: 'nowrap', flexWrap: 'nowrap',
             paddingTop: '6px', paddingBottom: '8px',
+            paddingLeft: '16px', paddingRight: '16px',
             alignItems: 'center'
           }}>
             {[
-              { name: 'All', link: '/', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645142/grabit_media/lays_classic_salted.png', color: '#0071E3' },
+              { name: 'All', link: '/', img: 'fresh-groceries-basket-only.png', color: '#0071E3' },
               { name: 'Fresh', link: '/category/produce', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645128/grabit_media/apples_real.jpg', color: '#34C759' },
               { name: 'Dairy', link: '/category/dairy-bakery', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645078/grabit_media/butter_real.jpg', color: '#0284C7' },
               { name: 'Snacks', link: '/category/snacks-munchies', img: 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645100/grabit_media/lays_magic_masala.png', color: '#D97706' },

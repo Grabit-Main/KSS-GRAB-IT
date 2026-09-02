@@ -102,7 +102,8 @@ function Img({ src, alt, size: s }) {
         maxHeight: s + 'px',
         maxWidth: s + 'px',
         objectFit: 'contain',
-        filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.08))',
+        mixBlendMode: 'multiply',
+        filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.06))',
         transition: 'transform 0.2s ease'
       }}
     />

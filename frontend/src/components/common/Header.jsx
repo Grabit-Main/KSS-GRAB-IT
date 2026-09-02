@@ -1463,17 +1463,18 @@ export default function Header() {
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
-          padding: '8px 12px 6px'
+          padding: '6px 0 4px'
         }}>
           <div style={{
             display: 'flex', gap: '14px', overflowX: 'auto',
             scrollbarWidth: 'none', msOverflowStyle: 'none',
             whiteSpace: 'nowrap', flexWrap: 'nowrap',
             paddingTop: '6px', paddingBottom: '8px',
+            paddingLeft: '16px', paddingRight: '16px',
             alignItems: 'center'
           }}>
             {[
-              { name: 'All', link: '/', img: 'lays-classic-salted.png', color: '#0071E3' },
+              { name: 'All', link: '/', img: 'fresh-groceries-basket-only.png', color: '#0071E3' },
               { name: 'Fresh', link: '/category/produce', img: 'apples-real.jpg', color: '#34C759' },
               { name: 'Dairy', link: '/category/dairy-bakery', img: 'butter-real.jpg', color: '#0284C7' },
               { name: 'Snacks', link: '/category/snacks-munchies', img: 'lays-magic-masala.png', color: '#D97706' },
