@@ -86,6 +86,7 @@ export default function CheckoutPage() {
   const [customAddressInput, setCustomAddressInput] = useState('');
   const [showManualForm, setShowManualForm] = useState(false);
   const [isLocatingGps, setIsLocatingGps] = useState(false);
+  const [showCouponBackWarningModal, setShowCouponBackWarningModal] = useState(false);
 
   // Sync addresses when updated from Header, Profile, Cart, or another tab
   useEffect(() => {
@@ -329,6 +330,46 @@ export default function CheckoutPage() {
       },
       { timeout: 10000 }
     );
+  };
+
+  // Permanently sync selected address so it is never lost on navigation
+  useEffect(() => {
+    if (selectedAddress && selectedAddress.address) {
+      try {
+        localStorage.setItem('grabit_selected_address', JSON.stringify(selectedAddress));
+        localStorage.setItem('grabit_delivery_location', selectedAddress.address);
+      } catch {}
+    }
+  }, [selectedAddress]);
+
+  const handleStepBack = () => {
+    if (step > 0) {
+      setStep(prev => prev - 1);
+    } else {
+      // Step 0: Going back to /cart
+      if (appliedCoupon) {
+        setShowCouponBackWarningModal(true);
+      } else {
+        if (selectedAddress && selectedAddress.address) {
+          try {
+            localStorage.setItem('grabit_selected_address', JSON.stringify(selectedAddress));
+            localStorage.setItem('grabit_delivery_location', selectedAddress.address);
+          } catch {}
+        }
+        navigate('/cart');
+      }
+    }
+  };
+
+  const handleConfirmBackToCart = () => {
+    setShowCouponBackWarningModal(false);
+    if (selectedAddress && selectedAddress.address) {
+      try {
+        localStorage.setItem('grabit_selected_address', JSON.stringify(selectedAddress));
+        localStorage.setItem('grabit_delivery_location', selectedAddress.address);
+      } catch {}
+    }
+    navigate('/cart');
   };
 
   const handlePlaceOrder = async () => {
@@ -805,8 +846,23 @@ export default function CheckoutPage() {
     <div className="container section" style={{ paddingTop: isMobile ? '12px' : '24px', minHeight: '100vh' }}>
 
       {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: 0, color: '#0F172A' }}>{STEPS[step]}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={handleStepBack}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '12px',
+              padding: '8px 14px', fontSize: '13px', fontWeight: 800, color: '#334155',
+              cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}
+          >
+            <ArrowLeft size={16} />
+            <span>{step === 0 ? 'Back to Cart' : `Back to ${STEPS[step - 1]}`}</span>
+          </button>
+          <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: 0, color: '#0F172A' }}>{STEPS[step]}</h1>
+        </div>
       </div>
 
       {/* Stepper Header */}
@@ -828,7 +884,54 @@ export default function CheckoutPage() {
         <div>
           {/* ── STEP 1: DELIVERY ── */}
           {step === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Delivery Address Re-confirmation Badge */}
+              {selectedAddress && selectedAddress.address ? (
+                <div style={{
+                  background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '14px',
+                  padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <CheckCircle2 size={18} color="#16A34A" />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#166534' }}>
+                        Delivery Address Confirmed: {selectedAddress.title || 'Home'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#15803D', fontWeight: 600 }}>
+                        {selectedAddress.address}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationModalOpen(true)}
+                    style={{
+                      background: '#FFFFFF', border: '1px solid #86EFAC', borderRadius: '8px',
+                      padding: '5px 12px', fontSize: '11.5px', fontWeight: 800, color: '#16A34A', cursor: 'pointer'
+                    }}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : null}
+
+              {appliedCoupon && (
+                <div style={{
+                  background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '14px',
+                  padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Tag size={16} color="#0071E3" />
+                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#1E40AF' }}>
+                      Coupon <strong>{appliedCoupon.code || appliedCoupon}</strong> Active — Saving ₹{couponDiscount}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '10.5px', background: '#DBEAFE', color: '#1E40AF', padding: '3px 8px', borderRadius: '6px', fontWeight: 900 }}>
+                    APPLIED
+                  </span>
+                </div>
+              )}
+
               <div className="card card-body" style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 900, marginBottom: '16px', color: '#0F172A' }}>
                   <MapPin size={20} color="#0071E3" /> 1. Select Delivery Address
@@ -1279,6 +1382,57 @@ export default function CheckoutPage() {
                 )}
               </>
             )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── COUPON BACK NAVIGATION WARNING MODAL ── */}
+      {showCouponBackWarningModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%',
+            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center'
+          }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <Tag size={24} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 8px' }}>
+              Returning to Cart?
+            </h3>
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px' }}>
+              You currently have coupon <strong style={{ color: '#0071E3' }}>{appliedCoupon?.code || appliedCoupon}</strong> applied (saving ₹{couponDiscount}).
+            </p>
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', textAlign: 'left', marginBottom: '20px', fontSize: '12px', color: '#64748B', lineHeight: 1.5 }}>
+              💡 <strong>Note:</strong> Your coupon and selected delivery address (<em style={{ color: '#0F172A' }}>{selectedAddress?.title || 'Saved Address'}</em>) are preserved. However, if you change items or cart total in your cart, coupon eligibility will be re-evaluated.
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowCouponBackWarningModal(false)}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: '12px',
+                  background: '#0071E3', color: '#FFFFFF', border: 'none',
+                  fontSize: '13px', fontWeight: 900, cursor: 'pointer'
+                }}
+              >
+                Stay on Checkout
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBackToCart}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: '12px',
+                  background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1',
+                  fontSize: '13px', fontWeight: 800, cursor: 'pointer'
+                }}
+              >
+                Return to Cart
+              </button>
             </div>
           </div>
         </div>

@@ -53,7 +53,18 @@ export default function OrderTrackingPage() {
       const cached = sessionStorage.getItem('grabit_fast_orders_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
-        const found = parsed.find(o => String(o.id) === String(orderId) || String(o.rawId) === String(orderId));
+        const targetParam = String(orderId || '').trim();
+        const normTarget = targetParam.toLowerCase().replace(/^ord-?/i, '');
+        const found = parsed.find(o => {
+          const oId = String(o.id || '').trim();
+          const oRawId = String(o.rawId || '').trim();
+          const oNum = String(o.order_number || o.orderNumber || '').trim();
+          if (oId === targetParam || oRawId === targetParam || oNum === targetParam) return true;
+          const normOId = oId.toLowerCase().replace(/^ord-?/i, '');
+          const normORaw = oRawId.toLowerCase().replace(/^ord-?/i, '');
+          const normONum = oNum.toLowerCase().replace(/^ord-?/i, '');
+          return normOId === normTarget || normORaw === normTarget || normONum === normTarget;
+        });
         if (found) return found;
       }
     } catch {}
@@ -165,7 +176,18 @@ export default function OrderTrackingPage() {
       const fetchPath = activeUserPhone ? `/orders/user/${activeUserPhone}` : '/orders/';
       const apiOrders = await get(fetchPath).catch(() => []);
       if (Array.isArray(apiOrders)) {
-        const found = apiOrders.find(o => String(o.id) === String(orderId) || String(o.id).slice(0, 8) === String(orderId).slice(0, 8));
+        const targetParam = String(orderId || '').trim();
+        const normTarget = targetParam.toLowerCase().replace(/^ord-?/i, '');
+        const found = apiOrders.find(o => {
+          const oId = String(o.id || '').trim();
+          const oRawId = String(o.rawId || '').trim();
+          const oNum = String(o.order_number || o.orderNumber || '').trim();
+          if (oId === targetParam || oRawId === targetParam || oNum === targetParam) return true;
+          const normOId = oId.toLowerCase().replace(/^ord-?/i, '');
+          const normORaw = oRawId.toLowerCase().replace(/^ord-?/i, '');
+          const normONum = oNum.toLowerCase().replace(/^ord-?/i, '');
+          return normOId === normTarget || normORaw === normTarget || normONum === normTarget;
+        });
         if (found) {
           const st = String(found.status || '').toLowerCase();
           let step = getStepIndex(st);
