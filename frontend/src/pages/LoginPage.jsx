@@ -78,10 +78,11 @@ export function LoginPage() {
         setDebugOtp('');
       }
       setResendCooldown(30);
+      setError('');
       return true;
-    } catch {
+    } catch (err) {
       setDebugOtp('');
-      setError('Unable to send verification code. Please check your connection and try again.');
+      setError(err?.message || 'Unable to send verification code. Please check your connection and try again.');
       return false;
     }
   };
@@ -191,7 +192,8 @@ export function LoginPage() {
           setEmail(res.user.email);
         }
         setOtp('');
-        await requestOtpFor(fullPhone);
+        const sent = await requestOtpFor(fullPhone);
+        if (!sent) return;
         setStep('otp');
       } else {
         setName('');
@@ -218,10 +220,11 @@ export function LoginPage() {
     setError('');
     try {
       setOtp('');
-      await requestOtpFor(fullPhone);
+      const sent = await requestOtpFor(fullPhone);
+      if (!sent) return;
       setStep('otp');
     } catch {
-      setStep('otp');
+      // Keep on register step if sending OTP fails
     } finally {
       setBusy(false);
     }
@@ -686,7 +689,7 @@ export function LoginPage() {
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
+                  placeholder="· · · · · ·"
                   maxLength={6}
                   style={{
                     width: '100%',

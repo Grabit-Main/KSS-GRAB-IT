@@ -1,4 +1,8 @@
-const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api');
+const API = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8000/api'
+    : (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api')
+);
 
 // Resolve the best available auth token from all known storage keys
 function getAuthToken() {
@@ -19,10 +23,10 @@ export async function api(path, options = {}) {
   const isPublicGet = isGet && (path.startsWith('/orders') || path.startsWith('/products') || path.startsWith('/categories'));
   if (isGet && !token && !isPublicGet) return null;
 
-  // ✅ FIX: Abort hung requests after 4 seconds so a slow backend response can't
-  // block subsequent poll cycles from starting.
+  // Abort hung GET requests after 4s; allow 15s for mutations/auth calls
+  const timeoutMs = isGet ? 4000 : 15000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API}${path}`, {
