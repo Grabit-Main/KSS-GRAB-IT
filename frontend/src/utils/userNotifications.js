@@ -51,20 +51,25 @@ export function getRealUserNotifications() {
       }
     } catch (e) {}
 
-    // Also check global grabit_orders, but strictly filter for this user's phone or name
+    // Also check global grabit_orders, but strictly filter for this user's phone
     try {
       const globalRaw = localStorage.getItem('grabit_orders');
       if (globalRaw) {
         const parsed = JSON.parse(globalRaw);
         if (Array.isArray(parsed)) {
+          const GENERIC_NAMES = ['customer', 'user', 'guest', 'admin', 'test', 'unknown', ''];
           parsed.forEach(o => {
             const oPhoneDigits = (o.customer_phone || o.phone || '').replace(/\D/g, '');
             const oCustPhone = oPhoneDigits.length >= 10 ? oPhoneDigits.slice(-10) : oPhoneDigits;
             const oName = (o.customer_name || '').trim().toLowerCase();
-            const matchesPhone = oCustPhone && currentUserPhone && oCustPhone === currentUserPhone;
-            const matchesName = currentUserName && oName && oName === currentUserName;
 
-            if (matchesPhone || matchesName) {
+            const matchesPhone = oCustPhone && currentUserPhone && oCustPhone === currentUserPhone;
+            const matchesSpecificName = currentUserName &&
+              !GENERIC_NAMES.includes(currentUserName) &&
+              !GENERIC_NAMES.includes(oName) &&
+              oName === currentUserName;
+
+            if (matchesPhone || matchesSpecificName) {
               if (!orders.some(existing => (existing.id && existing.id === o.id) || (existing.rawId && existing.rawId === o.rawId))) {
                 orders.push(o);
               }
