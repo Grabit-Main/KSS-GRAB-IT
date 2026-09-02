@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { get, patch } from '../api';
 import { 
   DEFAULT_CUSTOMER_ADDRESSES,
   loadCustomerAddresses,
@@ -44,8 +45,40 @@ export default function ProfilePage() {
   const [walletBalance, setWalletBalance] = useState(0);
   const [addAmount, setAddAmount] = useState('100');
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const isLoggedIn = !!(userPhone || userEmail || initialUser?.phone);
+
+  // Hydrate user profile from backend API (/users/me)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRemoteProfile = async () => {
+      const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+      if (!token) return;
+      try {
+        const remote = await get('/users/me');
+        if (remote && isMounted) {
+          const current = getStoredUser() || {};
+          const merged = {
+            ...current,
+            ...remote,
+            name: remote.full_name || remote.name || current.name || '',
+            full_name: remote.full_name || remote.name || current.full_name || '',
+            email: remote.email || current.email || '',
+            phone: remote.phone || current.phone || '',
+          };
+          localStorage.setItem('grabit_user', JSON.stringify(merged));
+          setUserName(merged.full_name || merged.name || '');
+          setUserEmail(merged.email || '');
+          if (merged.phone) setUserPhone(merged.phone);
+        }
+      } catch (err) {
+        // Fall back gracefully to local storage
+      }
+    };
+    fetchRemoteProfile();
+    return () => { isMounted = false; };
+  }, []);
 
   // Sync profile when auth state updates
   useEffect(() => {
@@ -72,6 +105,51 @@ export default function ProfilePage() {
       }
     };
   }, []);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!userName.trim()) {
+      showToast('Please enter your full name.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const payload = {
+        full_name: userName.trim(),
+        email: userEmail.trim(),
+      };
+
+      // 1. Dispatch PATCH /users/me to backend API
+      const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+      if (token) {
+        try {
+          await patch('/users/me', payload);
+        } catch (apiErr) {
+          console.warn('API PATCH /users/me failed, preserving locally:', apiErr);
+        }
+      }
+
+      // 2. Persist to localStorage & broadcast event
+      const current = getStoredUser() || {};
+      const updatedUser = {
+        ...current,
+        name: userName.trim(),
+        full_name: userName.trim(),
+        email: userEmail.trim(),
+        phone: userPhone.trim(),
+      };
+      localStorage.setItem('grabit_user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new CustomEvent('grabit_auth_updated', { detail: updatedUser }));
+
+      showToast('Profile updated successfully!');
+      setActiveModal(null);
+    } catch (err) {
+      showToast('Failed to save profile. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // ── MODAL VISIBILITY STATES ──
   const [activeModal, setActiveModal] = useState(null); // 'add-balance' | 'refunds' | 'gift-cards' | 'addresses' | 'edit-profile' | 'rewards' | 'payments' | 'app-icon' | 'suggest' | 'notifications' | 'info'
@@ -693,20 +771,51 @@ export default function ProfilePage() {
           <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '400px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
             <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 16px', color: '#0F172A' }}>Edit Account Profile</h3>
-            <form onSubmit={e => { e.preventDefault(); setActiveModal(null); showToast('Profile updated successfully!'); }}>
+            <form onSubmit={handleSaveProfile}>
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Full Name</label>
-                <input type="text" value={userName} onChange={e => setUserName(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="text"
+                  required
+                  value={userName}
+                  onChange={e => setUserName(e.target.value)}
+                  placeholder="Your Full Name"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Mobile Number</label>
-                <input type="text" value={userPhone} onChange={e => setUserPhone(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="text"
+                  value={userPhone}
+                  onChange={e => setUserPhone(e.target.value)}
+                  placeholder="+91 9876543210"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Email Address</label>
-                <input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="email"
+                  value={userEmail}
+                  onChange={e => setUserEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
-              <button type="submit" style={{ width: '100%', background: '#0071E3', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '14px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Save Profile Changes</button>
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                style={{
+                  width: '100%', background: isSavingProfile ? '#94A3B8' : '#0071E3',
+                  border: 'none', borderRadius: '12px', padding: '12px',
+                  fontSize: '14px', fontWeight: 900, color: '#FFFFFF',
+                  cursor: isSavingProfile ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,113,227,0.25)'
+                }}
+              >
+                {isSavingProfile ? 'Saving Changes...' : 'Save Profile Changes'}
+              </button>
             </form>
           </div>
         </div>

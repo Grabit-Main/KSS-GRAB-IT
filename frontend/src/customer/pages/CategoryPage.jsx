@@ -6,10 +6,11 @@ import { Sparkles, Zap, Star, TrendingUp, ArrowLeft, Sliders, X, ChevronDown, Ch
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import ProductSuggestionModal from '../../components/common/ProductSuggestionModal';
-import { products } from '../data/products';
+import { products, syncProductsFromBackend } from '../data/products';
 import { subCategories, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../../utils/scrollToTop';
+import { get } from '../../api';
 const CATEGORY_MAP = {
   'snacks-munchies': {
     title: 'Snacks & Munchies',
@@ -714,17 +715,70 @@ export default function CategoryPage() {
   const [allProductsState, setAllProductsState] = useState(() => [...products]);
 
   useEffect(() => {
-    const updateProds = () => setAllProductsState([...products]);
+    let isMounted = true;
+    const updateProds = () => {
+      if (isMounted) setAllProductsState([...products]);
+    };
     updateProds();
+
+    // Actively fetch products from backend API so newly added seller products appear
+    const fetchApiProducts = async () => {
+      try {
+        if (typeof syncProductsFromBackend === 'function') {
+          await syncProductsFromBackend();
+        }
+        const res = await get('/products/').catch(() => []);
+        const apiProds = Array.isArray(res) ? res : (res?.results || []);
+        if (apiProds.length > 0 && isMounted) {
+          const existingIds = new Set(products.map(p => String(p.id)));
+          const newApiProds = [];
+          for (const ap of apiProds) {
+            const idStr = String(ap.id);
+            if (!existingIds.has(idStr)) {
+              const resolvedCat = inferProductCategory(ap, allCategories);
+              newApiProds.push({
+                id: ap.id,
+                name: ap.name,
+                price: Number(ap.price) || 0,
+                mrp: Number(ap.mrp || ap.price) || 0,
+                discount: ap.mrp ? Math.round(((ap.mrp - ap.price) / ap.mrp) * 100) : 10,
+                image: ap.image || ap.image_url || 'default-product.png',
+                category: resolvedCat,
+                category_slug: resolvedCat,
+                brand: ap.brand || 'Grabit Seller',
+                weight: ap.weight || ap.unit || '1 unit',
+                rating: Number(ap.rating) || 4.8,
+                reviews: Number(ap.reviews) || 12,
+                inStock: ap.is_active !== false && ((ap.stock ?? ap.stock_quantity ?? 1) > 0),
+                stock_quantity: parseInt(ap.stock_quantity ?? ap.stock ?? 50, 10),
+              });
+              existingIds.add(idStr);
+            }
+          }
+          if (newApiProds.length > 0) {
+            products.push(...newApiProds);
+          }
+          if (isMounted) {
+            setAllProductsState([...products]);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch category products from API:', err);
+      }
+    };
+
+    fetchApiProducts();
+
     window.addEventListener('grabit_products_synced', updateProds);
     window.addEventListener('grabit_products_updated', updateProds);
     window.addEventListener('storage', updateProds);
     return () => {
+      isMounted = false;
       window.removeEventListener('grabit_products_synced', updateProds);
       window.removeEventListener('grabit_products_updated', updateProds);
       window.removeEventListener('storage', updateProds);
     };
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     if (subcatParam) {
