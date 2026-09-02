@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Zap, Pencil, Plus, Minus, Trash2, Tag, ChevronRight, X, CheckCircle2, Navigation, Lock, Clock, FileText } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -33,6 +33,27 @@ export default function CartPage() {
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [couponInputCode, setCouponInputCode] = useState('');
   const [couponFeedback, setCouponFeedback] = useState(null);
+  const couponTimerRef = useRef(null);
+
+  // Cancel any pending coupon timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (couponTimerRef.current) {
+        clearTimeout(couponTimerRef.current);
+        couponTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleCloseCouponModal = () => {
+    if (couponTimerRef.current) {
+      clearTimeout(couponTimerRef.current);
+      couponTimerRef.current = null;
+    }
+    setIsCouponModalOpen(false);
+    setCouponFeedback(null);
+    setCouponInputCode('');
+  };
 
   // Check login state
   const getStoredUser = () => {
@@ -53,14 +74,19 @@ export default function CartPage() {
   };
 
   const handleApplyCouponCode = (code) => {
+    if (couponTimerRef.current) {
+      clearTimeout(couponTimerRef.current);
+      couponTimerRef.current = null;
+    }
     const res = applyCoupon(code);
     if (res.success) {
       setCouponFeedback({ type: 'success', text: res.message });
       showToast(res.message);
-      setTimeout(() => {
+      couponTimerRef.current = setTimeout(() => {
         setIsCouponModalOpen(false);
         setCouponFeedback(null);
         setCouponInputCode('');
+        couponTimerRef.current = null;
       }, 700);
     } else {
       setCouponFeedback({ type: 'error', text: res.message });
@@ -588,18 +614,24 @@ export default function CartPage() {
 
       {/* ── 🌟 INTERACTIVE COUPONS & OFFERS MODAL ── */}
       {isCouponModalOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
-            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative',
-            maxHeight: '90vh', overflowY: 'auto'
-          }}>
+        <div
+          onClick={handleCloseCouponModal}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
+              padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative',
+              maxHeight: '90vh', overflowY: 'auto'
+            }}
+          >
             <button
-              onClick={() => { setIsCouponModalOpen(false); setCouponFeedback(null); }}
+              onClick={handleCloseCouponModal}
               style={{
                 position: 'absolute', top: '16px', right: '16px',
                 background: '#F1F5F9', border: 'none', borderRadius: '50%',
