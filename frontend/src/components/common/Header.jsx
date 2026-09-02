@@ -1074,12 +1074,26 @@ export default function Header() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 900, color: '#34C759', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                 <Zap size={13} color="#34C759" fill="#34C759" />
-                <span>Delivery in 30-45 mins</span>
+                <span>Delivery in 10-15 mins</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 800, color: '#1D1D1F', marginTop: '1px' }}>
-                <MapPin size={15} color="#0071E3" strokeWidth={2.2} />
-                <span>{location.city ? `${location.area}, ${location.city}` : (location.area || 'Select Location')}</span>
-                <ChevronDown size={13} color="#86868B" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 800, color: '#1D1D1F', marginTop: '1px', maxWidth: '240px' }}>
+                <MapPin size={15} color="#0071E3" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {(() => {
+                    const tag = (location?.tag || '').trim();
+                    const area = (location?.area || '').trim();
+                    let cityStr = (location?.city || '').trim().replace(/\d{5,6}/g, '').replace(/,\s*$/, '').trim();
+                    let mainLoc = area || cityStr || 'Select Location';
+                    if (area && cityStr && !area.toLowerCase().includes(cityStr.toLowerCase())) {
+                      mainLoc = `${area}, ${cityStr}`;
+                    }
+                    if (tag && tag !== 'Location' && tag !== 'Select Location' && tag !== 'Current Location') {
+                      return `${tag} • ${mainLoc}`;
+                    }
+                    return mainLoc;
+                  })()}
+                </span>
+                <ChevronDown size={13} color="#86868B" style={{ flexShrink: 0 }} />
               </div>
             </div>
           )}
@@ -1106,13 +1120,28 @@ export default function Header() {
                   <div
                     onClick={() => setIsModalOpen(true)}
                     style={{
-                      fontSize: '11.5px', fontWeight: 800, color: '#1E293B',
-                      display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', cursor: 'pointer'
+                      fontSize: '12px', fontWeight: 800, color: '#1E293B',
+                      display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', cursor: 'pointer',
+                      maxWidth: 'calc(100vw - 160px)', overflow: 'hidden'
                     }}
                   >
-                    <MapPin size={13} color="#0071E3" strokeWidth={2.2} />
-                    <span>{location.tag && location.tag !== 'Location' && location.tag !== 'Select Location' ? `${location.tag} - ` : ''}{location.city ? `${location.area}, ${location.city}` : (location.area || 'Select Location')}</span>
-                    <ChevronDown size={12} color="#64748B" />
+                    <MapPin size={13} color="#0071E3" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>
+                      {(() => {
+                        const tag = (location?.tag || '').trim();
+                        const area = (location?.area || '').trim();
+                        let cityStr = (location?.city || '').trim().replace(/\d{5,6}/g, '').replace(/,\s*$/, '').trim();
+                        let mainLoc = area || cityStr || 'Select Location';
+                        if (area && cityStr && !area.toLowerCase().includes(cityStr.toLowerCase())) {
+                          mainLoc = `${area}, ${cityStr}`;
+                        }
+                        if (tag && tag !== 'Location' && tag !== 'Select Location' && tag !== 'Current Location') {
+                          return `${tag} • ${mainLoc}`;
+                        }
+                        return mainLoc;
+                      })()}
+                    </span>
+                    <ChevronDown size={12} color="#0071E3" style={{ flexShrink: 0 }} />
                   </div>
                 </div>
 
