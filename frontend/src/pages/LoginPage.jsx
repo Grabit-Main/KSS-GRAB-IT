@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { post } from '../api';
@@ -44,6 +44,8 @@ export function LoginPage() {
   const [phoneDigits, setPhoneDigits] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'register' | 'otp'
   const [otp, setOtp] = useState('');
+  const [debugOtp, setDebugOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [registered, setRegistered] = useState(true);
@@ -53,17 +55,41 @@ export function LoginPage() {
 
   const fullPhone = '+91' + phoneDigits;
 
+  // Rate limiting countdown timer for OTP resends
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
   const requestOtpFor = async (phone) => {
     try {
       const res = await post('/auth/send-otp', { phone });
       if (res && res.debug_otp) {
-        setOtp(String(res.debug_otp));
+        setDebugOtp(String(res.debug_otp));
       } else {
-        setOtp('123456');
+        setDebugOtp('');
       }
+      setResendCooldown(30);
+      return true;
     } catch {
-      setOtp('123456');
+      setDebugOtp('');
+      setError('Unable to send verification code. Please check your connection and try again.');
+      return false;
     }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || busy) return;
+    setBusy(true);
+    setError('');
+    setOtp('');
+    await requestOtpFor(fullPhone);
+    setBusy(false);
   };
 
   const handlePhoneSubmit = async (e) => {
@@ -149,6 +175,7 @@ export function LoginPage() {
         if (res.user?.email) {
           setEmail(res.user.email);
         }
+        setOtp('');
         await requestOtpFor(fullPhone);
         setStep('otp');
       } else {
@@ -175,6 +202,7 @@ export function LoginPage() {
     setBusy(true);
     setError('');
     try {
+      setOtp('');
       await requestOtpFor(fullPhone);
       setStep('otp');
     } catch {
@@ -218,21 +246,7 @@ export function LoginPage() {
       else if (userRole === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
       else navigate(getRedirectPath('customer'), { replace: true });
     } catch (e) {
-      const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
-      localStorage.setItem('grabit_session', 'demo-token');
-      localStorage.setItem('grabit_user', JSON.stringify(fallbackUser));
-      sessionStorage.setItem('grabit_skipped_login', 'true');
-      if (fallbackUser.role === 'seller' || fallbackUser.role === 'admin') {
-        localStorage.setItem('grabit_seller_access', 'demo-token');
-        localStorage.setItem('grabit_seller_profile', JSON.stringify(fallbackUser));
-      }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
-      }
-      if (fallbackUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
-      else if (fallbackUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
-      else if (fallbackUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate(getRedirectPath('customer'), { replace: true });
+      setError(e?.response?.data?.detail || e?.detail || e?.message || 'Invalid verification code. Please check and try again.');
     } finally {
       setBusy(false);
     }
@@ -631,22 +645,24 @@ export function LoginPage() {
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>
                     Enter 6-Digit OTP
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setOtp('123456')}
-                    style={{
-                      background: '#EFF6FF',
-                      border: '1px solid #BFDBFE',
-                      color: '#0071E3',
-                      padding: '3px 9px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ⚡ Auto-fill OTP
-                  </button>
+                  {debugOtp ? (
+                    <button
+                      type="button"
+                      onClick={() => setOtp(debugOtp)}
+                      style={{
+                        background: '#EFF6FF',
+                        border: '1px solid #BFDBFE',
+                        color: '#0071E3',
+                        padding: '3px 9px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ⚡ Auto-fill OTP
+                    </button>
+                  ) : null}
                 </div>
                 <input
                   required
@@ -704,10 +720,17 @@ export function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => requestOtpFor(fullPhone)}
-                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
+                  disabled={resendCooldown > 0 || busy}
+                  onClick={handleResendOtp}
+                  style={{
+                    background: 'none',
+                    border: 0,
+                    color: (resendCooldown > 0 || busy) ? '#94A3B8' : '#0071E3',
+                    cursor: (resendCooldown > 0 || busy) ? 'not-allowed' : 'pointer',
+                    fontWeight: 800
+                  }}
                 >
-                  Resend code
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
                 </button>
               </div>
             </form>

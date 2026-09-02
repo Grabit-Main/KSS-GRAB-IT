@@ -406,8 +406,7 @@ async def verify_otp(body: VerifyOtpRequest):
     try:
         stored = await redis_exec(["GET", f"otp:{body.phone}"])
         if stored and not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
-            if len(body.otp) != 6:
-                raise HTTPException(400, "Invalid verification code")
+            raise HTTPException(400, "Invalid verification code")
         if stored:
             await cache_del(f"otp:{body.phone}")
     except HTTPException:

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X } from 'lucide-react';
 import { trackerSteps } from '../data/orders';
+import { products } from '../data/products';
 import ProductSvg from '../components/common/ProductSvg';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
@@ -428,13 +429,24 @@ export default function OrdersPage() {
   });
 
   const handleReorder = (order) => {
-    (order.items || []).forEach(item => addItem({
-      id: item.name,
-      name: item.name,
-      price: item.price,
-      image: item.image,
-      qty: 1
-    }));
+    (order.items || []).forEach(item => {
+      const matchedProd = products.find(p => 
+        (item.id && String(p.id) === String(item.id)) ||
+        (item.product_id && String(p.id) === String(item.product_id)) ||
+        (p.name && item.name && p.name.toLowerCase().trim() === item.name.toLowerCase().trim()) ||
+        (p.name && item.name && item.name.toLowerCase().startsWith(p.name.toLowerCase()))
+      );
+
+      const targetId = item.id || item.product_id || matchedProd?.id || item.name;
+      addItem({
+        id: targetId,
+        name: matchedProd?.name || item.name,
+        price: Number(item.price) || Number(matchedProd?.price) || 50,
+        mrp: Number(item.mrp) || Number(matchedProd?.mrp) || Math.round((Number(item.price) || 50) * 1.15),
+        image: item.image || matchedProd?.image || 'lays-classic-salted',
+        weight: item.weight || matchedProd?.weight || ''
+      }, Number(item.qty || item.quantity) || 1);
+    });
     showToast(`Added items from Order #${order.id} to your Cart!`);
   };
 

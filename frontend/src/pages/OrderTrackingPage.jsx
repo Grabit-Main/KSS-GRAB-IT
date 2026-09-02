@@ -13,6 +13,7 @@ import ProductSvg from '../components/common/ProductSvg';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../utils/scrollToTop';
 import CustomerReviewSection from '../components/common/CustomerReviewSection';
+import { products } from '../data/products';
 
 const canCancelOrder = (statusStr) => {
   const st = String(statusStr || '').toLowerCase();
@@ -231,16 +232,26 @@ export default function OrderTrackingPage() {
 
   const handleReorder = () => {
     if (!order || !order.items) return;
-    order.items.forEach(it => {
+    const itemList = Array.isArray(order.items) ? order.items : [];
+    itemList.forEach(it => {
+      const matchedProd = products.find(p =>
+        (it.id && String(p.id) === String(it.id)) ||
+        (it.product_id && String(p.id) === String(it.product_id)) ||
+        (p.name && it.name && p.name.toLowerCase().trim() === it.name.toLowerCase().trim()) ||
+        (p.name && it.name && it.name.toLowerCase().startsWith(p.name.toLowerCase()))
+      );
+
+      const targetId = it.id || it.product_id || matchedProd?.id || it.name;
       addItem({
-        id: it.name.replace(/\s+/g, '-').toLowerCase(),
-        name: it.name,
-        price: it.price,
-        mrp: Math.round(it.price * 1.15),
-        image: it.image
-      }, it.qty);
+        id: targetId,
+        name: matchedProd?.name || it.name,
+        price: Number(it.price) || Number(matchedProd?.price) || 50,
+        mrp: Number(it.mrp) || Number(matchedProd?.mrp) || Math.round((Number(it.price) || 50) * 1.15),
+        image: it.image || matchedProd?.image || 'lays-classic-salted',
+        weight: it.weight || matchedProd?.weight || ''
+      }, Number(it.qty || it.quantity) || 1);
     });
-    showToast(`${order.items.length} items added back to your cart! 🛒`);
+    showToast(`${itemList.length} items added back to your cart! 🛒`);
     navigate('/cart');
   };
 
