@@ -1459,16 +1459,18 @@ export default function Header() {
       {/* 📱 NON-STICKY MICRO CATEGORY VISUAL STRIP (Scrolls away naturally with page content) */}
       {isMobile && showCategoryStrip && (
         <div style={{
-          background: 'rgba(255, 255, 255, 0.88)',
+          background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
-          padding: '10px 12px 8px'
+          padding: '8px 12px 6px'
         }}>
           <div style={{
             display: 'flex', gap: '14px', overflowX: 'auto',
             scrollbarWidth: 'none', msOverflowStyle: 'none',
-            whiteSpace: 'nowrap', flexWrap: 'nowrap'
+            whiteSpace: 'nowrap', flexWrap: 'nowrap',
+            paddingTop: '6px', paddingBottom: '8px',
+            alignItems: 'center'
           }}>
             {[
               { name: 'All', link: '/', img: 'lays-classic-salted.png', color: '#0071E3' },
@@ -1503,28 +1505,28 @@ export default function Header() {
                   key={idx}
                   to={item.link}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
                     textDecoration: 'none', flexShrink: 0,
-                    position: 'relative', paddingBottom: '6px',
-                    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                    position: 'relative', paddingBottom: '8px', paddingTop: '2px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <div style={{
-                    width: '48px', height: '48px', borderRadius: '14px',
+                    width: '46px', height: '46px', borderRadius: '13px',
                     background: '#FFFFFF',
-                    border: isActive ? `2.5px solid ${item.color}` : '1.5px solid #E2E8F0',
+                    border: isActive ? `2px solid ${item.color}` : '1.5px solid #E2E8F0',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     overflow: 'hidden',
-                    boxShadow: isActive ? `0 6px 16px ${item.color}35` : '0 2px 6px rgba(0,0,0,0.04)',
-                    transform: isActive ? 'scale(1.05)' : 'none',
-                    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                    boxShadow: isActive ? `0 4px 12px ${item.color}30` : '0 2px 5px rgba(0,0,0,0.04)',
+                    transform: isActive ? 'scale(1.02)' : 'none',
+                    transition: 'all 0.2s ease'
                   }}>
-                    <ProductSvg name={item.img} size={36} />
+                    <ProductSvg name={item.img} size={34} />
                   </div>
                   <span style={{
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: isActive ? 900 : 700,
-                    color: isActive ? item.color : '#86868B',
+                    color: isActive ? item.color : '#64748B',
                     transition: 'color 0.2s ease, font-weight 0.2s ease'
                   }}>
                     {item.name}
@@ -1532,10 +1534,10 @@ export default function Header() {
 
                   {/* Smooth Active Indicator Bar */}
                   <div style={{
-                    position: 'absolute', bottom: 0, left: '50%',
+                    position: 'absolute', bottom: '1px', left: '50%',
                     transform: 'translateX(-50%)',
-                    width: isActive ? '100%' : '0%',
-                    height: '3px', borderRadius: '3px',
+                    width: isActive ? '24px' : '0%',
+                    height: '3px', borderRadius: '4px',
                     background: item.color,
                     opacity: isActive ? 1 : 0,
                     transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
