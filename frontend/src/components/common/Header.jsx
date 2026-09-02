@@ -352,6 +352,39 @@ export default function Header() {
   const isProfilePage = routerLocation.pathname === '/profile';
 
   const matchingProducts = searchQuery.trim() ? searchProducts(searchQuery.trim()).slice(0, 5) : [];
+
+  const categorySuggestions = searchQuery.trim() ? (
+    (() => {
+      const q = searchQuery.toLowerCase().trim();
+      const allCategoryKeys = [
+        { slug: 'produce', name: 'Fresh Fruits & Veggies', words: ['fruits', 'veggies', 'vegetables', 'apple', 'banana', 'tomato', 'onion', 'produce'] },
+        { slug: 'dairy-bakery', name: 'Dairy & Bakery', words: ['dairy', 'milk', 'cheese', 'butter', 'bread', 'paneer', 'bakery', 'dahi', 'curd'] },
+        { slug: 'beverages', name: 'Cold Drinks & Juices', words: ['beverages', 'drinks', 'coke', 'pepsi', 'juice', 'soda', 'cold drink'] },
+        { slug: 'snacks-munchies', name: 'Snacks & Munchies', words: ['snacks', 'munchies', 'chips', 'lays', 'kurkure', 'namkeen', 'biscuit'] },
+        { slug: 'staples', name: 'Atta, Rice & Dal', words: ['staples', 'atta', 'rice', 'dal', 'flour', 'pulses', 'chawal', 'wheat'] },
+        { slug: 'chocolates', name: 'Chocolates & Sweets', words: ['chocolate', 'chocolates', 'sweets', 'cadbury', 'silk', 'mithai'] },
+        { slug: 'personal-care', name: 'Personal Care', words: ['personal care', 'soap', 'shampoo', 'toothpaste', 'brush', 'body wash'] },
+        { slug: 'baby-care', name: 'Baby Care', words: ['baby', 'baby care', 'diaper', 'diapers', 'pampers', 'wipes', 'cerelac'] },
+        { slug: 'pet-care', name: 'Pet Care & Food', words: ['pet', 'pet care', 'dog', 'cat', 'dog food', 'cat food', 'pedigree', 'whiskas'] },
+        { slug: 'beauty-cosmetics', name: 'Beauty & Cosmetics', words: ['beauty', 'cosmetics', 'makeup', 'lipstick', 'kajal', 'skin'] },
+        { slug: 'health-wellness', name: 'Health & Wellness', words: ['health', 'wellness', 'pharmacy', 'medicine', 'vitamins', 'dettol'] },
+        { slug: 'meat-seafood', name: 'Meat & Seafood', words: ['meat', 'chicken', 'fish', 'eggs', 'egg', 'seafood', 'mutton'] },
+        { slug: 'home-kitchen', name: 'Home & Kitchen', words: ['home', 'kitchen', 'cookware', 'pan', 'cooker', 'flask', 'bottle'] },
+        { slug: 'stationery-office', name: 'Stationery & Office', words: ['stationery', 'office', 'notebook', 'pen', 'pencil', 'book', 'paper'] },
+        { slug: 'sports-fitness', name: 'Sports & Fitness', words: ['sports', 'fitness', 'cricket', 'badminton', 'gym', 'yoga', 'protein'] },
+        { slug: 'toys-games', name: 'Toys & Games', words: ['toys', 'games', 'game', 'puzzle', 'board game', 'toy'] },
+        { slug: 'pooja-needs', name: 'Pooja Needs', words: ['pooja', 'agarbatti', 'diya', 'incense', 'camphor', 'dhoop', 'puja'] }
+      ];
+      return allCategoryKeys.filter(c => {
+        return c.slug.includes(q) || c.name.toLowerCase().includes(q) || c.words.some(w => q.includes(w) || w.includes(q));
+      }).slice(0, 2);
+    })()
+  ) : [];
+
+  const brandSuggestions = searchQuery.trim() ? (
+    [...new Set(matchingProducts.map(p => p.brand).filter(Boolean))].slice(0, 3)
+  ) : [];
+
   const trendingSearches = [
     { label: "Lay's Chips", query: "lays", icon: '🍿' },
     { label: 'Amul Butter', query: 'butter', icon: '🥛' },
@@ -470,6 +503,53 @@ export default function Header() {
           </div>
         ) : (
           <div>
+            {categorySuggestions.length > 0 && (
+              <div style={{ padding: '4px 14px 10px', display: 'flex', flexWrap: 'wrap', gap: '6px', borderBottom: '1px solid #F1F5F9', marginBottom: '8px' }}>
+                {categorySuggestions.map(c => (
+                  <button
+                    key={c.slug}
+                    type="button"
+                    onMouseDown={() => {
+                      navigate(`/category/${c.slug}`);
+                      setIsSearchFocused(false);
+                    }}
+                    style={{
+                      background: '#EFF6FF', border: '1px solid #BFDBFE',
+                      borderRadius: '16px', padding: '5px 12px', fontSize: '11.5px',
+                      fontWeight: 700, color: '#1E40AF', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>📂 Explore in <strong>{c.name}</strong></span>
+                    <ArrowRight size={11} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {brandSuggestions.length > 0 && (
+              <div style={{ padding: '2px 14px 8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {brandSuggestions.map(b => (
+                  <button
+                    key={b}
+                    type="button"
+                    onMouseDown={() => {
+                      setSearchQuery(b);
+                      navigate(`/search?q=${encodeURIComponent(b)}`);
+                      setIsSearchFocused(false);
+                    }}
+                    style={{
+                      background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: '14px', padding: '3px 9px', fontSize: '11px',
+                      fontWeight: 700, color: '#475569', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px'
+                    }}
+                  >
+                    <span>🏷️ Brand: <strong>{b}</strong></span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div style={{ padding: '4px 16px 6px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               Product Suggestions ({matchingProducts.length})
             </div>
@@ -1066,6 +1146,25 @@ export default function Header() {
                       boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)'
                     }}
                   />
+                  {searchQuery.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSearchQuery('');
+                        setIsSearchFocused(true);
+                      }}
+                      style={{
+                        position: 'absolute', right: '10px', top: '10px',
+                        background: '#E2E8F0', border: 'none', borderRadius: '50%',
+                        width: '20px', height: '20px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', zIndex: 2
+                      }}
+                      aria-label="Clear search"
+                    >
+                      <X size={12} color="#64748B" />
+                    </button>
+                  )}
                   {renderSearchSuggestions()}
                 </form>
               </div>
@@ -1104,6 +1203,25 @@ export default function Header() {
                     transition: 'all 0.15s ease'
                   }}
                 />
+                {searchQuery.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSearchQuery('');
+                      setIsSearchFocused(true);
+                    }}
+                    style={{
+                      position: 'absolute', right: '88px',
+                      background: '#E2E8F0', border: 'none', borderRadius: '50%',
+                      width: '20px', height: '20px', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', cursor: 'pointer', zIndex: 2
+                    }}
+                    aria-label="Clear search"
+                  >
+                    <X size={12} color="#64748B" />
+                  </button>
+                )}
                 <button
                   type="submit"
                   style={{

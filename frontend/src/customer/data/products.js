@@ -425,28 +425,196 @@ export const getProductById = (id) => {
   return products.find(p => p.id === Number(id)) || null;
 };
 
+export const SEARCH_SYNONYMS = {
+  coke: ['coca-cola', 'coca cola', 'soft drink', 'beverages', 'cold drinks', 'drink', 'soda'],
+  pepsi: ['cold drinks', 'soft drink', 'beverages', 'soda'],
+  chips: ['lays', 'potato chips', 'namkeen', 'bingo', 'doritos', 'kurkure', 'snacks', 'munchies'],
+  wafer: ['wafers', 'chips', 'snacks'],
+  milk: ['amul', 'nandini', 'dairy', 'taaza', 'toned', 'cow milk'],
+  doodh: ['milk', 'dairy', 'amul'],
+  curd: ['dahi', 'yogurt', 'dairy', 'amul'],
+  cheese: ['amul', 'slices', 'paneer', 'dairy'],
+  butter: ['amul', 'dairy', 'table butter'],
+  bread: ['bakery', 'loaf', 'pav', 'dairy-bakery'],
+  apple: ['apples', 'fresh', 'fruits', 'produce', 'royal gala'],
+  fruits: ['produce', 'fruit', 'apple', 'banana', 'orange', 'fresh', 'fruits-vegetables'],
+  fruit: ['produce', 'fruits', 'apple', 'banana', 'fresh', 'fruits-vegetables'],
+  vegetables: ['veggies', 'produce', 'fresh', 'tomato', 'potato', 'onion', 'capsicum', 'fruits-vegetables'],
+  veggies: ['vegetables', 'produce', 'fresh', 'tomato', 'onion', 'capsicum', 'fruits-vegetables'],
+  sabzi: ['vegetables', 'veggies', 'produce'],
+  tomato: ['tomatoes', 'produce', 'vegetables'],
+  onion: ['onions', 'produce', 'vegetables'],
+  banana: ['bananas', 'produce', 'fruits'],
+  atta: ['wheat', 'flour', 'aashirvaad', 'chakki', 'staples'],
+  rice: ['basmati', 'chawal', 'daawat', 'india gate', 'staples', 'grains'],
+  dal: ['dals', 'pulses', 'toor', 'moong', 'chana', 'staples'],
+  oil: ['edible oil', 'sunflower', 'mustard', 'fortune', 'ghee'],
+  tel: ['oil', 'edible oil', 'ghee'],
+  ghee: ['amul', 'pure ghee', 'desi ghee', 'oil', 'dairy'],
+  biscuit: ['biscuits', 'cookies', 'parle', 'oreo', 'good day', 'britannia'],
+  biscuits: ['biscuit', 'cookies', 'parle', 'oreo', 'good day', 'britannia'],
+  cookies: ['biscuits', 'biscuit', 'cookies'],
+  chocolate: ['chocolates', 'cadbury', 'silk', 'dairy milk', 'kitkat', 'nestle', 'sweets'],
+  chocolates: ['chocolate', 'cadbury', 'silk', 'dairy milk', 'kitkat', 'sweets'],
+  sweet: ['sweets', 'mithai', 'chocolate', 'chocolates'],
+  icecream: ['ice cream', 'ice-cream', 'amul', 'kwality walls'],
+  diaper: ['diapers', 'pampers', 'baby-care', 'huggies', 'pants'],
+  diapers: ['diaper', 'pampers', 'baby-care', 'huggies'],
+  baby: ['baby-care', 'pampers', 'himalaya', 'johnson', 'cerelac', 'diaper', 'wipes'],
+  wipes: ['baby-care', 'himalaya', 'wet wipes'],
+  dog: ['pet-care', 'pedigree', 'dog food', 'dentastix', 'drools'],
+  cat: ['pet-care', 'whiskas', 'cat food'],
+  pet: ['pet-care', 'dog food', 'cat food', 'pedigree', 'whiskas'],
+  shampoo: ['personal-care', 'hair', 'head & shoulders', 'pantene', 'dove', 'baby shampoo'],
+  soap: ['personal-care', 'bath', 'dettol', 'dove', 'lifebuoy', 'pears', 'lux'],
+  toothpaste: ['personal-care', 'colgate', 'pepsodent', 'sensodyne', 'brush'],
+  cream: ['beauty-cosmetics', 'personal-care', 'lotion', 'nivea', 'ponds', 'skin'],
+  lotion: ['beauty-cosmetics', 'personal-care', 'nivea', 'vaseline', 'moisturizer'],
+  lipstick: ['beauty-cosmetics', 'makeup', 'maybelline', 'lakme'],
+  makeup: ['beauty-cosmetics', 'lipstick', 'kajal', 'foundation', 'eyeliner'],
+  medicine: ['health-wellness', 'pharmacy', 'dettol', 'bandage', 'vicks', 'crocin'],
+  health: ['health-wellness', 'wellness', 'vitamins', 'protein', 'dettol'],
+  chicken: ['meat-seafood', 'fresh chicken', 'meat', 'poultry'],
+  meat: ['meat-seafood', 'chicken', 'mutton', 'fish', 'eggs'],
+  egg: ['eggs', 'meat-seafood', 'farm fresh eggs'],
+  eggs: ['egg', 'meat-seafood', 'farm fresh eggs'],
+  fish: ['meat-seafood', 'seafood', 'prawns'],
+  pan: ['home-kitchen', 'cookware', 'kitchen', 'tawa', 'kadhai'],
+  kitchen: ['home-kitchen', 'bottle', 'container', 'knife', 'cooker'],
+  pen: ['stationery-office', 'pencil', 'notebook', 'parker', 'classmate'],
+  notebook: ['stationery-office', 'book', 'paper', 'classmate', 'register'],
+  cricket: ['sports-fitness', 'bat', 'ball', 'sports'],
+  badminton: ['sports-fitness', 'racket', 'shuttlecock', 'sports'],
+  yoga: ['sports-fitness', 'mat', 'fitness'],
+  gym: ['sports-fitness', 'fitness', 'protein', 'dumbbell'],
+  toy: ['toys-games', 'game', 'puzzle', 'board game', 'car'],
+  toys: ['toys-games', 'games', 'puzzle', 'lego'],
+  puzzle: ['toys-games', 'puzzles', 'board games'],
+  game: ['toys-games', 'games', 'board game'],
+  pooja: ['pooja-needs', 'agarbatti', 'diya', 'camphor', 'incense', 'dhoop'],
+  agarbatti: ['pooja-needs', 'incense sticks', 'cycle', 'zed black'],
+  diya: ['pooja-needs', 'batti', 'wicks', 'oil lamp'],
+  tea: ['tea-coffee', 'chai', 'red label', 'tata tea', 'taj mahal'],
+  coffee: ['tea-coffee', 'nescafe', 'bru'],
+  maggi: ['instant-food', 'noodles', 'instant noodles', 'nestle'],
+  noodles: ['instant-food', 'maggi', 'yippee', 'ramen', 'instant noodles']
+};
+
 export const searchProducts = (query) => {
-  if (!query) return products.slice(0, 45);
-  const q = query.toLowerCase().trim();
-  
-  if (q === 'trending' || q === 'popular' || q === 'top' || q === 'best') {
+  if (!query || typeof query !== 'string') return [];
+  const rawQ = query.trim();
+  if (!rawQ) return [];
+
+  const normalize = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/'/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const normalizeNoSpace = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+
+  const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const containsWord = (text, word) => new RegExp('\\b' + escapeRe(word) + '\\b', 'i').test(text);
+  const startsWithWord = (text, word) => new RegExp('\\b' + escapeRe(word), 'i').test(text);
+
+  const qNorm = normalize(rawQ);
+  const qNoSpace = normalizeNoSpace(rawQ);
+  if (!qNorm) return [];
+
+  if (qNorm === 'trending' || qNorm === 'popular' || qNorm === 'top' || qNorm === 'best') {
     return products.filter(p => ['snacks','dairy','beverages','staples','household'].includes(p.category));
   }
-  if (q === 'deals' || q === 'offers' || q === 'discount') {
+  if (qNorm === 'deals' || qNorm === 'offers' || qNorm === 'discount') {
     return products.filter(p => p.discount >= 15);
   }
-  if (q === 'all') {
-    return products;
+  if (qNorm === 'all') {
+    return [...products];
   }
 
-  const matches = products.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    (p.category && p.category.toLowerCase().includes(q)) ||
-    (p.brand && p.brand.toLowerCase().includes(q)) ||
-    (p.weight && p.weight.toLowerCase().includes(q))
-  );
+  const queryWords = qNorm.split(' ').filter(Boolean);
 
-  return matches.length > 0 ? matches : products.filter(p => p.rating >= 4.7).slice(0, 30);
+  const querySynonyms = new Set();
+  queryWords.forEach(w => {
+    if (SEARCH_SYNONYMS[w]) {
+      SEARCH_SYNONYMS[w].forEach(s => {
+        const sNorm = normalize(s);
+        if (sNorm && sNorm !== qNorm) querySynonyms.add(sNorm);
+      });
+    }
+  });
+
+  const scored = [];
+
+  for (const p of products) {
+    const pNameNorm = normalize(p.name);
+    const pBrandNorm = normalize(p.brand);
+    const pCatNorm = normalize(p.category + ' ' + (p.category_name || ''));
+    const pSubNorm = normalize(p.subCategory || '');
+    const pNameNoSpace = normalizeNoSpace(p.name);
+    const pBrandNoSpace = normalizeNoSpace(p.brand);
+
+    let score = 0;
+
+    // 1. Exact phrase matches in Name
+    if (pNameNorm === qNorm || pNameNoSpace === qNoSpace) {
+      score += 500;
+    } else if (pNameNorm.startsWith(qNorm) || pNameNoSpace.startsWith(qNoSpace)) {
+      score += 350;
+    } else if (pNameNorm.includes(qNorm) || pNameNoSpace.includes(qNoSpace)) {
+      score += 250;
+    }
+
+    // 2. Brand phrase match
+    if (pBrandNorm === qNorm || pBrandNoSpace === qNoSpace) {
+      score += 300;
+    } else if (pBrandNorm.includes(qNorm) || pBrandNoSpace.includes(qNoSpace)) {
+      score += 180;
+    }
+
+    // 3. Query words matching with word boundary
+    for (const qw of queryWords) {
+      if (containsWord(pNameNorm, qw)) {
+        score += 120;
+      } else if (startsWithWord(pNameNorm, qw)) {
+        score += 80;
+      } else if (containsWord(pBrandNorm, qw)) {
+        score += 90;
+      } else if (containsWord(pCatNorm, qw) || containsWord(pSubNorm, qw)) {
+        score += 50;
+      }
+    }
+
+    // 4. Synonym / alias matches (only if whole word or exact phrase)
+    for (const syn of querySynonyms) {
+      if (syn.includes(' ')) {
+        if (pNameNorm.includes(syn) || pBrandNorm.includes(syn)) {
+          score += 140;
+        }
+      } else {
+        if (containsWord(pNameNorm, syn)) {
+          score += 100;
+        } else if (containsWord(pBrandNorm, syn)) {
+          score += 80;
+        } else if (containsWord(pCatNorm, syn)) {
+          score += 40;
+        }
+      }
+    }
+
+    if (score > 0) {
+      if (p.inStock) score += 5;
+      score += (p.rating || 0) * 0.5;
+      scored.push({ product: p, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map(s => s.product);
 };
 
 export const baseProducts = [...products];

@@ -17,33 +17,63 @@ const SORT_OPTIONS = [
 
 const ALL_CATEGORIES_LIST = [
   { name: 'All Categories', val: 'All', icon: '🛍️' },
-  { name: 'Snacks & Munchies', val: 'Snacks & Munchies', icon: '🍿' },
+  { name: 'Fresh Fruits & Veggies', val: 'Fresh Fruits & Veggies', icon: '🍎' },
   { name: 'Dairy & Bakery', val: 'Dairy & Bakery', icon: '🥛' },
   { name: 'Cold Drinks & Juices', val: 'Cold Drinks & Juices', icon: '🥤' },
+  { name: 'Snacks & Munchies', val: 'Snacks & Munchies', icon: '🍿' },
   { name: 'Atta, Rice & Dal', val: 'Atta, Rice & Dal', icon: '🌾' },
   { name: 'Chocolates & Sweets', val: 'Chocolates & Sweets', icon: '🍫' },
-  { name: 'Personal Care', val: 'Personal Care', icon: '🧴' },
-  { name: 'Household Essentials', val: 'Household Essentials', icon: '🧼' },
-  { name: 'Fresh Fruits & Veggies', val: 'Fresh Fruits & Veggies', icon: '🍎' },
   { name: 'Biscuits & Cookies', val: 'Biscuits & Cookies', icon: '🍪' },
   { name: 'Edible Oils & Ghee', val: 'Edible Oils & Ghee', icon: '🛢️' },
+  { name: 'Instant & Packaged Food', val: 'Instant & Packaged Food', icon: '🍜' },
+  { name: 'Tea, Coffee & More', val: 'Tea, Coffee & More', icon: '☕' },
+  { name: 'Personal Care', val: 'Personal Care', icon: '🧴' },
+  { name: 'Baby Care', val: 'Baby Care', icon: '👶' },
+  { name: 'Pet Care & Food', val: 'Pet Care & Food', icon: '🐾' },
+  { name: 'Beauty & Cosmetics', val: 'Beauty & Cosmetics', icon: '💄' },
+  { name: 'Health & Wellness', val: 'Health & Wellness', icon: '💊' },
+  { name: 'Meat & Seafood', val: 'Meat & Seafood', icon: '🥩' },
+  { name: 'Home & Kitchen', val: 'Home & Kitchen', icon: '🍳' },
+  { name: 'Stationery & Office', val: 'Stationery & Office', icon: '📚' },
+  { name: 'Sports & Fitness', val: 'Sports & Fitness', icon: '🏸' },
+  { name: 'Toys & Games', val: 'Toys & Games', icon: '🧩' },
+  { name: 'Pooja Needs', val: 'Pooja Needs', icon: '🪔' },
+  { name: 'Household Essentials', val: 'Household Essentials', icon: '🧼' },
   { name: 'Electronics & Gadgets', val: 'Electronics & Gadgets', icon: '⚡' },
   { name: 'Fashion & Accessories', val: 'Fashion & Accessories', icon: '👟' }
 ];
 
-const CATEGORY_NAMES = {
-  'snacks': 'Snacks & Munchies',
+export const CATEGORY_NAMES = {
+  'fruits-vegetables': 'Fresh Fruits & Veggies',
+  'produce': 'Fresh Fruits & Veggies',
+  'dairy-bakery': 'Dairy & Bakery',
   'dairy': 'Dairy & Bakery',
+  'snacks-munchies': 'Snacks & Munchies',
+  'snacks': 'Snacks & Munchies',
   'beverages': 'Cold Drinks & Juices',
   'staples': 'Atta, Rice & Dal',
+  'sweet-tooth': 'Sweet Tooth & Confectionery',
   'chocolates': 'Chocolates & Sweets',
-  'personal-care': 'Personal Care',
-  'household': 'Household Essentials',
-  'produce': 'Fresh Fruits & Veggies',
+  'ice-creams': 'Ice Creams & More',
   'biscuits': 'Biscuits & Cookies',
   'oil': 'Edible Oils & Ghee',
-  'electronics': 'Electronics & Gadgets',
-  'fashion': 'Fashion & Accessories'
+  'instant-food': 'Instant & Packaged Food',
+  'tea-coffee': 'Tea, Coffee & More',
+  'personal-care': 'Personal Care',
+  'baby-care': 'Baby Care',
+  'health-wellness': 'Health & Wellness',
+  'household': 'Household Essentials',
+  'cleaning': 'Cleaning & Household',
+  'home-kitchen': 'Home & Kitchen',
+  'stationery-office': 'Stationery & Office',
+  'pet-care': 'Pet Care & Food',
+  'beauty-cosmetics': 'Beauty & Cosmetics',
+  'meat-seafood': 'Meat & Seafood',
+  'sports-fitness': 'Sports & Fitness',
+  'toys-games': 'Toys & Games',
+  'pooja-needs': 'Pooja Needs',
+  'fashion': 'Fashion & Accessories',
+  'electronics': 'Electronics & Gadgets'
 };
 
 export default function SearchResultsPage() {
@@ -79,8 +109,11 @@ export default function SearchResultsPage() {
   // Calculate dynamic category counts
   const categoryCounts = { 'All': initialResults.length };
   initialResults.forEach(p => {
-    const name = CATEGORY_NAMES[p.category] || p.category;
-    categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+    const catSlug = p.category || p.category_slug || '';
+    const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+    if (name) {
+      categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+    }
   });
 
   // Calculate dynamic brand counts
@@ -100,11 +133,10 @@ export default function SearchResultsPage() {
     { name: 'All', count: initialResults.length, icon: null },
     ...Object.entries(categoryCounts)
       .filter(([cat]) => cat !== 'All')
-      .slice(0, 5)
       .map(([catName, count]) => ({
         name: catName,
         count,
-        icon: 'lays-classic-salted'
+        icon: null
       }))
   ];
 
@@ -112,11 +144,19 @@ export default function SearchResultsPage() {
   let filtered = [...initialResults];
 
   if (activeCat !== 'All') {
-    filtered = filtered.filter(p => (CATEGORY_NAMES[p.category] || p.category) === activeCat);
+    filtered = filtered.filter(p => {
+      const catSlug = p.category || p.category_slug || '';
+      const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+      return name === activeCat || catSlug === activeCat;
+    });
   }
 
   if (activeSubCat !== 'All') {
-    filtered = filtered.filter(p => (CATEGORY_NAMES[p.category] || p.category) === activeSubCat);
+    filtered = filtered.filter(p => {
+      const catSlug = p.category || p.category_slug || '';
+      const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+      return name === activeSubCat || catSlug === activeSubCat;
+    });
   }
 
   if (activeBrands.length > 0) {
@@ -280,6 +320,49 @@ export default function SearchResultsPage() {
               )}
             </div>
           </div>
+
+          {/* Row 2: Category Filter Pills */}
+          {subCatPills.length > 1 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none',
+              marginBottom: '14px'
+            }}>
+              {subCatPills.map(pill => {
+                const isSelected = activeCat === pill.name || (pill.name === 'All' && activeCat === 'All');
+                return (
+                  <button
+                    key={pill.name}
+                    type="button"
+                    onClick={() => {
+                      setActiveCat(pill.name);
+                      setActiveSubCat(pill.name);
+                    }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      background: isSelected ? '#0071E3' : '#FFFFFF',
+                      color: isSelected ? '#FFFFFF' : '#334155',
+                      border: isSelected ? '1.5px solid #0071E3' : '1px solid #E2E8F0',
+                      borderRadius: '20px', padding: '6px 14px', fontSize: '12.5px',
+                      fontWeight: isSelected ? 800 : 600, cursor: 'pointer',
+                      whiteSpace: 'nowrap', transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 4px 12px rgba(0,113,227,0.25)' : '0 1px 3px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <span>{pill.name}</span>
+                    <span style={{
+                      fontSize: '11px',
+                      background: isSelected ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
+                      color: isSelected ? '#FFFFFF' : '#64748B',
+                      padding: '1px 6px', borderRadius: '10px', fontWeight: 800
+                    }}>
+                      {pill.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* 🌟 ULTRA-EXECUTIVE ACTIVE FILTER BADGES STRIP */}
           {activeFilterCount > 0 && (

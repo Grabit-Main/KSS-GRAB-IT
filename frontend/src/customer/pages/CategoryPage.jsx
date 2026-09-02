@@ -285,7 +285,7 @@ CATEGORY_MAP['meat'] = CATEGORY_MAP['meat-seafood'];
 CATEGORY_MAP['seafood'] = CATEGORY_MAP['meat-seafood'];
 CATEGORY_MAP['chicken-meat'] = CATEGORY_MAP['meat-seafood'];
 
-const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'];
+const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low', 'Discount: High to Low'];
 
 const matchesSubCategory = (product, subCat, categorySlug = '') => {
   if (!subCat || subCat === 'All') return true;
@@ -780,7 +780,8 @@ export default function CategoryPage() {
 
   if (sort === 'Price: Low to High') filtered.sort((a, b) => a.price - b.price);
   if (sort === 'Price: High to Low') filtered.sort((a, b) => b.price - a.price);
-  if (sort === 'Rating: High to Low') filtered.sort((a, b) => b.rating - a.rating);
+  if (sort === 'Rating: High to Low') filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  if (sort === 'Discount: High to Low') filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
 
   const prodGridCols = isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)';
 
@@ -1118,7 +1119,7 @@ export default function CategoryPage() {
       </div>
 
       {/* 🌟 ULTRA-PREMIUM ACTIVE FILTERS BAR */}
-      {(activeBrands.length > 0 || activeSubCat !== 'All') && (
+      {(activeBrands.length > 0 || activeSubCat !== 'All' || priceRange < 5000) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
           marginBottom: '18px', padding: '10px 14px', background: '#F8FAFC',
@@ -1168,6 +1169,26 @@ export default function CategoryPage() {
               </div>
             </span>
           ))}
+
+          {priceRange < 5000 && (
+            <span
+              onClick={() => setPriceRange(5000)}
+              style={{
+                background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1',
+                borderRadius: '20px', padding: '5px 12px', fontSize: '12px',
+                fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s ease'
+              }}
+            >
+              <span>Price: Under ₹{priceRange}</span>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#F1F5F9',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <X size={10} color="#64748B" strokeWidth={2.5} />
+              </div>
+            </span>
+          )}
 
           <button
             onClick={() => { setActiveSubCat('All'); setActiveBrands([]); setPriceRange(5000); }}
@@ -1443,7 +1464,17 @@ export default function CategoryPage() {
             <div style={{ background: '#FFFFFF', padding: '40px', borderRadius: '16px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>No products found</h3>
-              <p style={{ fontSize: '13px', color: '#64748B' }}>Try clearing brand or price filters to view items in {catInfo.title}.</p>
+              <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>Try clearing brand or price filters to view items in {catInfo.title}.</p>
+              <button
+                onClick={() => { setActiveBrands([]); setActiveSubCat('All'); setPriceRange(5000); }}
+                style={{
+                  background: '#0071E3', color: '#FFFFFF', border: 'none',
+                  borderRadius: '12px', padding: '10px 20px', fontSize: '13px',
+                  fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.2)'
+                }}
+              >
+                Reset All Filters
+              </button>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: prodGridCols, gap: isMobile ? '10px' : '16px' }}>
