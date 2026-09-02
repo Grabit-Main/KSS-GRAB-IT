@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Zap, Clock, Check, ChevronRight, Plus, CreditCard, Smartphone, Building2, Wallet, Banknote, Tag, FileText, ArrowLeft, Pencil, X, CheckCircle2, Navigation } from 'lucide-react';
+import { MapPin, Zap, Clock, Check, ChevronRight, Plus, CreditCard, Smartphone, Building2, Wallet, Banknote, Tag, FileText, ArrowLeft, Pencil, X, CheckCircle2, Navigation, ShoppingBag } from 'lucide-react';
 import DeliveryLocationMapPicker from '../components/common/DeliveryLocationMapPicker';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
@@ -48,6 +48,14 @@ export default function CheckoutPage() {
       navigate('/login', { replace: true });
     }
   }, [navigate]);
+
+  // Redirect to /cart if cart is empty and order has not been placed
+  useEffect(() => {
+    if (!orderPlaced && (!items || items.length === 0)) {
+      showToast('Your cart is empty. Please add items before checking out.');
+      navigate('/cart', { replace: true });
+    }
+  }, [items, orderPlaced, navigate, showToast]);
 
   const w = useWindowWidth();
   const isMobile = w <= 768;
@@ -257,6 +265,11 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!items || items.length === 0) {
+      showToast('Your cart is empty. Please add items before placing an order.');
+      navigate('/cart', { replace: true });
+      return;
+    }
     if (!selectedAddress || !selectedAddress.address) {
       showToast('Please add or choose a delivery address first.');
       setIsLocationModalOpen(true);
@@ -626,6 +639,26 @@ export default function CheckoutPage() {
     );
   }
 
+  // Guard against navigating directly to checkout with an empty cart
+  if (!orderPlaced && (!items || items.length === 0)) {
+    return (
+      <div className="container section" style={{ paddingTop: '60px', paddingBottom: '80px', textAlign: 'center', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#EFF6FF', color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <ShoppingBag size={40} />
+        </div>
+        <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginBottom: '8px' }}>Your Cart is Empty</h2>
+        <p style={{ fontSize: '14px', color: '#64748B', maxWidth: '400px', margin: '0 auto 24px' }}>
+          Looks like you don't have any items in your cart to checkout. Add some fresh groceries to get started!
+        </p>
+        <Link
+          to="/"
+          style={{ background: '#0071E3', color: '#FFFFFF', textDecoration: 'none', borderRadius: '12px', padding: '12px 24px', fontSize: '14px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          Explore Groceries
+        </Link>
+      </div>
+    );
+  }
 
   const OrderSummaryCard = () => (
     <div className="card card-body" style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', position: isMobile ? 'static' : 'sticky', top: '80px' }}>
@@ -678,7 +711,12 @@ export default function CheckoutPage() {
       </div>
 
       {step === 2 && (
-        <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: '16px', justifyContent: 'center', background: '#0071E3', borderRadius: '12px', fontWeight: 900, minHeight: '46px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handlePlaceOrder}>
+        <button
+          className="btn btn-primary btn-lg"
+          disabled={!items || items.length === 0}
+          style={{ width: '100%', marginTop: '16px', justifyContent: 'center', background: (!items || items.length === 0) ? '#94A3B8' : '#0071E3', borderRadius: '12px', fontWeight: 900, minHeight: '46px', display: 'flex', alignItems: 'center', gap: '8px', cursor: (!items || items.length === 0) ? 'not-allowed' : 'pointer' }}
+          onClick={handlePlaceOrder}
+        >
           🔒 Place Order ₹{toPay}
         </button>
       )}
@@ -890,8 +928,9 @@ export default function CheckoutPage() {
             ) : (
               <button
                 type="button"
+                disabled={!items || items.length === 0}
                 onClick={handlePlaceOrder}
-                style={{ width: '100%', background: '#10B981', border: 'none', borderRadius: '12px', padding: '14px', color: '#FFFFFF', fontWeight: 900, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}
+                style={{ width: '100%', background: (!items || items.length === 0) ? '#94A3B8' : '#10B981', border: 'none', borderRadius: '12px', padding: '14px', color: '#FFFFFF', fontWeight: 900, fontSize: '14px', cursor: (!items || items.length === 0) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: (!items || items.length === 0) ? 'none' : '0 4px 12px rgba(16,185,129,0.25)' }}
               >
                 Place Express Order (₹{toPay})
               </button>

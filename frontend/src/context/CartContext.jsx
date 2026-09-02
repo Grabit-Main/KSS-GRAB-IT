@@ -163,9 +163,9 @@ export function CartProvider({ children }) {
   const addItem = useCallback((product) => {
     if (!product || !product.id) return;
     setItems(prev => {
-      const existing = prev.find(i => i.id === product.id);
+      const existing = prev.find(i => String(i.id) === String(product.id));
       if (existing) {
-        return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return prev.map(i => String(i.id) === String(product.id) ? { ...i, qty: i.qty + 1 } : i);
       }
       const safePrice = Number(product.price) || 0;
       const safeMrp = Number(product.mrp) || safePrice;
@@ -182,12 +182,12 @@ export function CartProvider({ children }) {
   }, []);
 
   const removeItem = useCallback((id) => {
-    setItems(prev => prev.filter(i => i.id !== id));
+    setItems(prev => prev.filter(i => String(i.id) !== String(id)));
   }, []);
 
   const updateQty = useCallback((id, qty) => {
     if (qty <= 0) { removeItem(id); return; }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, qty: Number(qty) || 1 } : i));
+    setItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, qty: Number(qty) || 1 } : i));
   }, [removeItem]);
 
   const clearCart = useCallback(() => {
@@ -219,7 +219,7 @@ export function CartProvider({ children }) {
   }, []);
 
   const getItemQty = useCallback((id) => {
-    return items.find(i => i.id === id)?.qty || 0;
+    return items.find(i => String(i.id) === String(id))?.qty || 0;
   }, [items]);
 
   const totalItems = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);

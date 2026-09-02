@@ -306,9 +306,12 @@ export default function ProductDetailPage() {
     setSelectedThumb(0);
   }, [id]);
   
-  // Custom cart item id for variant
-  const cartItemId = `${product.id}-${selectedVariantIdx}`;
-  const qty = getItemQty(product.id);
+  // Custom cart item id for variant: variant 0 maps to base product.id, variants >= 1 get distinct id
+  const cartItemId = selectedVariantIdx === 0 ? product.id : `${product.id}-${selectedVariantIdx}`;
+  const qty = getItemQty(cartItemId) || (selectedVariantIdx === 0 ? (getItemQty(product.id) || getItemQty(`${product.id}-0`)) : 0);
+  const activeCartId = (selectedVariantIdx === 0 && getItemQty(product.id) > 0)
+    ? product.id
+    : ((selectedVariantIdx === 0 && getItemQty(`${product.id}-0`) > 0) ? `${product.id}-0` : cartItemId);
 
   // Bundle Items for Frequently Bought Together
   const bundleItems = [
@@ -326,10 +329,11 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     const itemToAdd = {
       ...product,
+      id: cartItemId,
       price: activePrice,
       mrp: activeMrp,
       weight: activeWeight,
-      name: `${product.name} (${activeWeight})`
+      name: selectedVariantIdx === 0 ? product.name : `${product.name} (${activeWeight})`
     };
     addItem(itemToAdd);
   };
@@ -723,7 +727,7 @@ export default function ProductDetailPage() {
                 }}
               >
                 <button
-                  onClick={() => updateQty(product.id, qty - 1)}
+                  onClick={() => updateQty(activeCartId, qty - 1)}
                   style={{
                     background: 'rgba(255, 255, 255, 0.22)', border: 'none', color: '#FFFFFF',
                     width: '38px', height: '38px', borderRadius: '12px',
@@ -744,7 +748,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 <button
-                  onClick={() => updateQty(product.id, qty + 1)}
+                  onClick={() => updateQty(activeCartId, qty + 1)}
                   style={{
                     background: 'rgba(255, 255, 255, 0.22)', border: 'none', color: '#FFFFFF',
                     width: '38px', height: '38px', borderRadius: '12px',
