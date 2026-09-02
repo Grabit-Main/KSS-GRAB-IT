@@ -369,6 +369,7 @@ export default function OrdersPage() {
   const [ordersList, setOrdersList] = useState(loadFastCachedOrders);
 
   const fetchCloudOrders = useCallback(async () => {
+    if (document.hidden) return; // Pause polling when browser tab is in background
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
@@ -401,9 +402,44 @@ export default function OrdersPage() {
   }, [activeTab, selectedOrderModal]);
 
   useEffect(() => {
+    let isMounted = true;
+    isFetchingRef.current = false;
+
+    // Initial fetch on mount
     fetchCloudOrders();
-    const interval = setInterval(fetchCloudOrders, 10000);
-    return () => clearInterval(interval);
+
+    // Relaxed smart polling every 20s when tab is active
+    const interval = setInterval(() => {
+      if (isMounted && !document.hidden) {
+        fetchCloudOrders();
+      }
+    }, 20000);
+
+    // Refresh immediately when returning to tab
+    const handleVisibilityChange = () => {
+      if (isMounted && !document.hidden) {
+        fetchCloudOrders();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Refresh immediately on local orders/notification updates without waiting for polling
+    const handleOrdersUpdated = () => {
+      if (isMounted) {
+        fetchCloudOrders();
+      }
+    };
+    window.addEventListener('grabit_orders_updated', handleOrdersUpdated);
+    window.addEventListener('storage', handleOrdersUpdated);
+
+    return () => {
+      isMounted = false;
+      isFetchingRef.current = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('grabit_orders_updated', handleOrdersUpdated);
+      window.removeEventListener('storage', handleOrdersUpdated);
+    };
   }, [fetchCloudOrders]);
 
 

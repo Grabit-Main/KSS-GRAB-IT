@@ -92,6 +92,18 @@ export function LoginPage() {
     setBusy(false);
   };
 
+  const handleChangeNumber = () => {
+    setStep('phone');
+    setOtp('');
+    setDebugOtp('');
+    setName('');
+    setEmail('');
+    setRegistered(true);
+    setDetectedRole('customer');
+    setError('');
+    setResendCooldown(0);
+  };
+
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
     if (phoneDigits.length !== 10) {
@@ -632,7 +644,7 @@ export function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => setStep('phone')}
+                onClick={handleChangeNumber}
                 style={{ background: 'none', border: 0, color: '#6B7280', fontSize: '13px', cursor: 'pointer', fontWeight: 700, textAlign: 'center' }}
               >
                 ← Back to Phone Number
@@ -716,7 +728,7 @@ export function LoginPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                 <button
                   type="button"
-                  onClick={() => setStep('phone')}
+                  onClick={handleChangeNumber}
                   style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
                 >
                   Change number
