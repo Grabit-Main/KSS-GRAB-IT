@@ -205,7 +205,7 @@ export const subCategoryImages = {
   'Salt & Spices': '/tata-salt-real.jpg',
   'Sunflower & Mustard Oil': '/fortune-oil-real.jpg',
   'Pure Desi Ghee': '/amul-ghee.jpg',
-  'Olive & Heart Care Oils': '/fortune-oil-real.jpg',
+  'Olive & Heart Care Oils': '/oil-hero-cutout.png',
 
   // Chocolates & Sweets
   'Premium Chocolates': '/subcat-chocolates.jpg',
@@ -222,40 +222,45 @@ export const subCategoryImages = {
 
   // Instant Food
   'Instant Noodles': '/maggi-noodles-real.jpg',
-  'Soups & Chinese': '/maggi-noodles-real.jpg',
+  'Soups & Chinese': '/instant-noodles-hero-transparent.png',
   'Ready to Eat Curries': '/aashirvaad-atta-real.jpg',
 
   // Personal Care & Beauty
   'Handwash & Hygiene': '/dettol-handwash-real.jpg',
   'Hair Care': '/dettol-real.jpg',
-  'Bath & Body Soaps': '/dettol-real.jpg',
+  'Bath & Body Soaps': '/combo-hygiene.jpg',
   'Oral Care & Skin': '/dettol-handwash-real.jpg',
   'Face Serums & Creams': '/subcat-face-serums.jpg',
-  'Sunscreens & Cleansers': '/subcat-face-serums.jpg',
+  'Sunscreens & Cleansers': '/banner-skincare-sale.png',
   'Makeup & Kajal': '/category-beauty-cosmetics.jpg',
 
   // Electronics & Gadgets
   'Headphones & TWS': '/subcat-headphones.jpg',
-  'Bluetooth Speakers': '/camera.jpg',
+  'Bluetooth Speakers': '/electronics-hero-cutout.png',
   'Smartwatches': '/electronics-hero-banner.jpg',
-  'Power Banks & Accessories': '/camera.jpg',
+  'Power Banks & Accessories': '/electronics-hero-transparent.png',
 
   // Household Essentials
   'Detergents & Wash': '/surf-excel-real.jpg',
-  'Dishwash & Cleaners': '/dettol-real.jpg',
+  'Dishwash & Cleaners': '/household-hero-transparent.png',
   'Disinfectants': '/dettol-real.jpg',
-  'Glass Cleaners': '/dettol-real.jpg',
+  'Glass Cleaners': '/household-hero-cutout.png',
 
   // Baby & Pet Care
-  'Diapers & Wipes': '/category-baby-care.jpg',
+  'Diapers & Wipes': '/promo-baby.png',
   'Baby Bath & Skin': '/category-baby-care.jpg',
   'Baby Food & Cereal': '/category-baby-care.jpg',
   'Dog Food & Treats': '/category-pet-care.jpg',
   'Cat Food': '/category-pet-care.jpg',
   'Pet Grooming': '/category-pet-care.jpg',
 
+  // Health & Wellness
+  'Immunity & Ayurveda': '/category-health-wellness.jpg',
+  'Vitamins & Supplements': '/category-health-wellness.jpg',
+  'Pain Relief & Devices': '/banner-pharmacy.png',
+
   // Meat & Seafood
-  'Fresh Chicken': '/banner-chicken-eggs.jpg',
+  'Fresh Chicken': '/banner-fresh-meat-section.jpg',
   'Farm Eggs': '/banner-chicken-eggs.jpg',
   'Fish & Seafood': '/category-meat-seafood.jpg',
 
@@ -264,6 +269,27 @@ export const subCategoryImages = {
   'Bottles & Flasks': '/category-home-kitchen.jpg',
   'Storage & Containers': '/category-home-kitchen.jpg',
   'Kitchen Tools': '/category-home-kitchen.jpg',
+
+  // Fashion, Sports, Pooja, Stationery, Toys
+  'Men Running Shoes': '/fashion-hero-cutout.png',
+  'Designer Sunglasses': '/fashion-hero-cutout.png',
+  'Watches & Wallets': '/fashion-hero-cutout.png',
+  'Notebooks & Pads': '/category-stationery-office.jpg',
+  'Pens & Markers': '/category-stationery-office.jpg',
+  'Desk Tools & Tapes': '/category-stationery-office.jpg',
+  'Calculators': '/category-stationery-office.jpg',
+  'Rackets & Balls': '/category-sports-fitness.jpg',
+  'Fitness Supplements': '/category-sports-fitness.jpg',
+  'Gym Shakers & Bottles': '/category-sports-fitness.jpg',
+  'Yoga & Mats': '/category-sports-fitness.jpg',
+  'Building Blocks': '/category-toys-games.jpg',
+  'Board Games & Puzzles': '/category-toys-games.jpg',
+  'Diecast Cars & Tracks': '/category-toys-games.jpg',
+  'Dolls & Figurines': '/category-toys-games.jpg',
+  'Agarbatti & Incense': '/category-pooja-needs.jpg',
+  'Brass Diyas & Lamps': '/category-pooja-needs.jpg',
+  'Pure Camphor & Wicks': '/category-pooja-needs.jpg',
+  'Haldi Kumkum & Roli': '/category-pooja-needs.jpg',
 };
 
 export const brands = {
