@@ -54,15 +54,13 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
 
   return (
     <div style={{
-      background: expanded
-        ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
-        : '#F8FAFC',
-      borderRadius: '16px',
-      padding: expanded ? '20px' : '14px 16px',
-      border: expanded ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
-      color: expanded ? '#FFFFFF' : '#0F172A',
+      background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)',
+      borderRadius: '18px',
+      padding: expanded ? '18px 20px' : '14px 16px',
+      border: '1.5px solid #DBEAFE',
+      color: '#0F172A',
       marginBottom: '16px',
-      boxShadow: expanded ? '0 10px 30px rgba(0,0,0,0.25)' : 'none'
+      boxShadow: '0 4px 16px rgba(0, 113, 227, 0.06)'
     }}>
       <style>{`
         @keyframes trackerPulse {
@@ -85,19 +83,19 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
             animation: isDelivered ? 'none' : 'trackerPulse 1.8s ease-in-out infinite'
           }} />
           <span style={{
-            fontSize: '12px', fontWeight: 800,
-            color: expanded ? '#93C5FD' : '#0071E3',
+            fontSize: '12px', fontWeight: 900,
+            color: '#0071E3',
             textTransform: 'uppercase', letterSpacing: '0.5px'
           }}>
-            {isDelivered ? '✓ Order Delivered' : 'Live Tracker Status'}
+            {isDelivered ? '✓ Order Delivered' : 'LIVE TRACKER STATUS'}
           </span>
         </div>
         {!isDelivered && (
           <div style={{
-            background: expanded ? 'rgba(0,113,227,0.25)' : '#EFF6FF',
-            color: expanded ? '#60A5FA' : '#0071E3',
-            border: expanded ? '1px solid rgba(0,113,227,0.4)' : '1px solid #BFDBFE',
-            padding: '3px 10px', borderRadius: '20px',
+            background: '#DBEAFE',
+            color: '#1E40AF',
+            border: '1px solid #93C5FD',
+            padding: '4px 12px', borderRadius: '20px',
             fontSize: '11.5px', fontWeight: 800,
             display: 'inline-flex', alignItems: 'center', gap: '4px'
           }}>
@@ -111,7 +109,7 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
         {/* Background track */}
         <div style={{
           position: 'absolute', top: '15px', left: '16px', right: '16px', height: '3px',
-          background: expanded ? 'rgba(255,255,255,0.12)' : '#E2E8F0', zIndex: 0
+          background: '#CBD5E1', zIndex: 0
         }} />
         {/* Progress track */}
         <div style={{
@@ -137,32 +135,32 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
                     ? '#10B981'
                     : isCurrent
                     ? '#0071E3'
-                    : expanded ? 'rgba(255,255,255,0.1)' : '#FFFFFF',
+                    : '#FFFFFF',
                   border: isCurrent
-                    ? '3px solid #FFFFFF'
+                    ? '3px solid #0071E3'
                     : isDone
                     ? '2px solid #10B981'
-                    : expanded ? '2px solid rgba(255,255,255,0.2)' : '2px solid #CBD5E1',
+                    : '2px solid #94A3B8',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: isCurrent ? '0 0 12px rgba(0,113,227,0.5)' : isDone ? '0 2px 6px rgba(16,185,129,0.2)' : 'none',
+                  boxShadow: isCurrent ? '0 0 10px rgba(0,113,227,0.35)' : isDone ? '0 2px 6px rgba(16,185,129,0.2)' : 'none',
                   fontSize: isCurrent ? '14px' : '11px',
                   transition: 'all 0.25s ease'
                 }}>
                   {isDone ? (
                     <Check size={13} color="#FFFFFF" strokeWidth={3} />
                   ) : (
-                    <span>{stage.icon}</span>
+                    <span style={{ color: isCurrent ? '#FFFFFF' : '#475569' }}>{stage.icon}</span>
                   )}
                 </div>
 
-                {/* Short Clean Label (No Overlap) */}
+                {/* Short Clean Label */}
                 <span style={{
-                  fontSize: '10px', fontWeight: isCurrent ? 800 : 600,
+                  fontSize: '10.5px', fontWeight: isCurrent ? 900 : 700,
                   color: isCurrent
-                    ? (expanded ? '#60A5FA' : '#0071E3')
+                    ? '#0071E3'
                     : isDone
-                    ? (expanded ? '#34D399' : '#10B981')
-                    : (expanded ? 'rgba(255,255,255,0.35)' : '#94A3B8'),
+                    ? '#059669'
+                    : '#64748B',
                   marginTop: '5px', textAlign: 'center',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   maxWidth: '100%'
@@ -177,15 +175,17 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
 
       {/* Active Stage Details Card */}
       <div style={{
-        padding: '12px 14px', borderRadius: '12px',
-        background: expanded ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-        border: expanded ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px'
+        padding: '12px 14px', borderRadius: '14px',
+        background: '#FFFFFF',
+        border: '1px solid #BFDBFE',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+        boxShadow: '0 2px 8px rgba(0,113,227,0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
           <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: expanded ? 'rgba(0,113,227,0.2)' : '#EFF6FF',
+            width: '38px', height: '38px', borderRadius: '10px',
+            background: '#EFF6FF',
+            border: '1px solid #DBEAFE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '18px', flexShrink: 0,
             animation: currentStep === 3 ? 'riderMove 1.5s ease-in-out infinite' : 'none'
@@ -193,10 +193,10 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
             {activeStage.icon}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12.5px', fontWeight: 800, color: expanded ? '#FFFFFF' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Current Status: {activeStage.fullLabel}
             </div>
-            <div style={{ fontSize: '11px', color: expanded ? 'rgba(255,255,255,0.6)' : '#64748B', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeStage.desc}
             </div>
           </div>
