@@ -388,25 +388,32 @@ async def phone_start(body: PhoneRequest):
     }
 
 # In-memory OTP store: phone -> (otp_code, expires_at_unix_ts)
-# No Redis needed — fast, random, per-request, shown on screen
 _OTP_STORE: dict[str, tuple[str, float]] = {}
+# Phones that passed OTP check but haven't completed profile yet
+_VERIFIED_PHONES: dict[str, float] = {}
 
 @router.post("/auth/send-otp")
 async def send_otp(body: PhoneRequest):
-    # Generate a fresh random 6-digit OTP every time
+    """Generate a fresh random OTP and return it for display (demo portal)."""
     code = f"{secrets.randbelow(1000000):06d}"
     import time as _time
     _OTP_STORE[body.phone] = (code, _time.time() + 300)  # expires in 5 min
     return {
         "message": "Verification code sent",
         "expires_in": 300,
-        "debug_otp": code,   # always returned — shown on-screen in demo portal
+        "debug_otp": code,  # always shown on screen in demo portal
     }
 
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyOtpRequest):
-    # Check against in-memory OTP store (no Redis needed)
+    """
+    Verify OTP. Returns:
+      - {access_token, user, is_new: false}  →  existing user, login complete
+      - {needs_profile: true}                →  new user, must complete profile
+    """
     import time as _time
+
+    # Validate OTP from in-memory store
     stored = _OTP_STORE.get(body.phone)
     if stored:
         stored_code, expires_at = stored
@@ -415,25 +422,52 @@ async def verify_otp(body: VerifyOtpRequest):
             raise HTTPException(400, "Verification code expired. Please request a new one.")
         if body.otp != stored_code:
             raise HTTPException(400, "Invalid verification code.")
-        _OTP_STORE.pop(body.phone, None)  # consume OTP — one-time use
-    # If OTP not in store (e.g. server restarted), still proceed — dev/demo portal is open
+        _OTP_STORE.pop(body.phone, None)  # one-time use
+    # If not in store (e.g. server restarted), allow through — open demo portal
 
-    # Look up existing profile or create a new one
+    # Check if user already exists
+    rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
+    if rows:
+        # Existing user — login complete
+        profile = rows[0]
+        token = create_token(profile)
+        return {"access_token": token, "token_type": "bearer", "user": profile, "is_new": False}
+
+    # New user — mark phone as verified, ask frontend to collect profile info
+    _VERIFIED_PHONES[body.phone] = _time.time() + 600  # 10 min to complete profile
+    return {"needs_profile": True}
+
+@router.post("/auth/complete-profile")
+async def complete_profile(body: VerifyOtpRequest):
+    """
+    Called after OTP verify for new users. Collects name + email and creates the account.
+    Phone must have been verified via /auth/verify within the last 10 minutes.
+    """
+    import time as _time
+
+    # Ensure phone was recently OTP-verified
+    exp = _VERIFIED_PHONES.get(body.phone)
+    if not exp or _time.time() > exp:
+        raise HTTPException(400, "Phone verification expired. Please start over.")
+    if not body.full_name or not body.full_name.strip():
+        raise HTTPException(400, "Full name is required.")
+
+    _VERIFIED_PHONES.pop(body.phone, None)
+
+    # Double-check user doesn't already exist (race condition guard)
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
     if rows:
         profile = rows[0]
     else:
-        if not body.full_name:
-            raise HTTPException(400, "Full name is required for registration.")
         profile = await store.insert("profiles", {
             "phone": body.phone,
-            "full_name": body.full_name,
+            "full_name": body.full_name.strip(),
             "email": body.email or None,
             "role": "customer"
         })
 
     token = create_token(profile)
-    return {"access_token": token, "token_type": "bearer", "user": profile}
+    return {"access_token": token, "token_type": "bearer", "user": profile, "is_new": True}
 
 @router.get("/auth/me")
 async def auth_me(user=Depends(current_user)):
