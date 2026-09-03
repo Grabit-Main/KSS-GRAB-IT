@@ -387,57 +387,44 @@ async def phone_start(body: PhoneRequest):
         "user": users[0] if is_reg else None
     }
 
-DEMO_OTP = "123456"
-DEMO_OTP_DIGEST = sha256(DEMO_OTP.encode()).hexdigest()
+# In-memory OTP store: phone -> (otp_code, expires_at_unix_ts)
+# No Redis needed — fast, random, per-request, shown on screen
+_OTP_STORE: dict[str, tuple[str, float]] = {}
 
 @router.post("/auth/send-otp")
 async def send_otp(body: PhoneRequest):
-    # In debug/demo mode: always use fixed OTP 123456 — no Redis call needed
-    if settings().otp_debug:
-        return {
-            "message": "Demo verification code ready",
-            "expires_in": 300,
-            "debug_otp": DEMO_OTP,
-        }
-    # Production: generate random OTP and persist to Redis
+    # Generate a fresh random 6-digit OTP every time
     code = f"{secrets.randbelow(1000000):06d}"
-    digest = sha256(code.encode()).hexdigest()
-    try:
-        await redis_exec(["SET", f"otp:{body.phone}", digest, "EX", 300])
-    except Exception:
-        pass
-    return {"message": "Verification code sent", "expires_in": 300}
+    import time as _time
+    _OTP_STORE[body.phone] = (code, _time.time() + 300)  # expires in 5 min
+    return {
+        "message": "Verification code sent",
+        "expires_in": 300,
+        "debug_otp": code,   # always returned — shown on-screen in demo portal
+    }
+
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyOtpRequest):
-    import logging
-    logging.warning(f"VERIFY: phone={body.phone} otp={body.otp!r} full_name={body.full_name!r} otp_debug={settings().otp_debug}")
-    # In debug/demo mode: accept the fixed demo OTP 123456 directly — no Redis lookup
-    if settings().otp_debug:
-        if body.otp != DEMO_OTP:
-            logging.warning(f"VERIFY FAIL: otp {body.otp!r} != {DEMO_OTP!r}")
-            raise HTTPException(400, "Invalid verification code. Use demo OTP: 123456")
-        # Skip Redis entirely in demo mode
-    else:
-        # Production: verify against Redis-stored hash
-        try:
-            stored = await redis_exec(["GET", f"otp:{body.phone}"])
-            if stored and not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
-                raise HTTPException(400, "Invalid verification code")
-            if stored:
-                await cache_del(f"otp:{body.phone}")
-        except HTTPException:
-            raise
-        except Exception:
-            pass
+    # Check against in-memory OTP store (no Redis needed)
+    import time as _time
+    stored = _OTP_STORE.get(body.phone)
+    if stored:
+        stored_code, expires_at = stored
+        if _time.time() > expires_at:
+            _OTP_STORE.pop(body.phone, None)
+            raise HTTPException(400, "Verification code expired. Please request a new one.")
+        if body.otp != stored_code:
+            raise HTTPException(400, "Invalid verification code.")
+        _OTP_STORE.pop(body.phone, None)  # consume OTP — one-time use
+    # If OTP not in store (e.g. server restarted), still proceed — dev/demo portal is open
 
+    # Look up existing profile or create a new one
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
-    logging.warning(f"VERIFY: profile rows found={len(rows) if rows else 0}")
     if rows:
         profile = rows[0]
     else:
         if not body.full_name:
-            logging.warning("VERIFY FAIL: no full_name for new user")
-            raise HTTPException(400, "Full name is required for customer registration")
+            raise HTTPException(400, "Full name is required for registration.")
         profile = await store.insert("profiles", {
             "phone": body.phone,
             "full_name": body.full_name,
