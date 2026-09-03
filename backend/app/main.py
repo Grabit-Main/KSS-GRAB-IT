@@ -387,32 +387,46 @@ async def phone_start(body: PhoneRequest):
         "user": users[0] if is_reg else None
     }
 
+DEMO_OTP = "123456"
+DEMO_OTP_DIGEST = sha256(DEMO_OTP.encode()).hexdigest()
+
 @router.post("/auth/send-otp")
 async def send_otp(body: PhoneRequest):
+    # In debug/demo mode: always use fixed OTP 123456 — no Redis call needed
+    if settings().otp_debug:
+        return {
+            "message": "Demo verification code ready",
+            "expires_in": 300,
+            "debug_otp": DEMO_OTP,
+        }
+    # Production: generate random OTP and persist to Redis
     code = f"{secrets.randbelow(1000000):06d}"
     digest = sha256(code.encode()).hexdigest()
     try:
         await redis_exec(["SET", f"otp:{body.phone}", digest, "EX", 300])
     except Exception:
         pass
-    response = {"message": "Verification code sent", "expires_in": 300}
-    if settings().otp_debug or True:
-        response["debug_otp"] = code
-    return response
+    return {"message": "Verification code sent", "expires_in": 300}
 
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyOtpRequest):
-    # Verify OTP against Redis or debug code
-    try:
-        stored = await redis_exec(["GET", f"otp:{body.phone}"])
-        if stored and not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
-            raise HTTPException(400, "Invalid verification code")
-        if stored:
-            await cache_del(f"otp:{body.phone}")
-    except HTTPException:
-        raise
-    except Exception:
-        pass
+    # In debug/demo mode: accept the fixed demo OTP 123456 directly — no Redis lookup
+    if settings().otp_debug:
+        if body.otp != DEMO_OTP:
+            raise HTTPException(400, "Invalid verification code. Use demo OTP: 123456")
+        # Skip Redis entirely in demo mode
+    else:
+        # Production: verify against Redis-stored hash
+        try:
+            stored = await redis_exec(["GET", f"otp:{body.phone}"])
+            if stored and not secrets.compare_digest(stored, sha256(body.otp.encode()).hexdigest()):
+                raise HTTPException(400, "Invalid verification code")
+            if stored:
+                await cache_del(f"otp:{body.phone}")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
 
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
     if rows:
