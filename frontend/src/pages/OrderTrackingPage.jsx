@@ -17,7 +17,7 @@ import { products } from '../data/products';
 
 const canCancelOrder = (statusStr) => {
   const st = String(statusStr || '').toLowerCase();
-  return st === 'placed' || st === 'preparing' || st === 'confirmed' || st === 'pending';
+  return st === 'placed' || st === 'preparing' || st === 'confirmed' || st === 'pending' || st === 'packed' || st === 'ready' || st === 'ready_for_pickup';
 };
 
 const ORDER_CYCLE_STAGES = [
