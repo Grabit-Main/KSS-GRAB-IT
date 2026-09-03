@@ -956,7 +956,7 @@ export default function OrdersPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-                  Cancel Order #{cancellingOrder.id}?
+                  Cancel Order #{String(cancellingOrder.id || cancellingOrder.rawId || '').startsWith('ORD-') ? (cancellingOrder.id || cancellingOrder.rawId) : `ORD-${String(cancellingOrder.id || cancellingOrder.rawId || '').slice(0, 8).toUpperCase()}`}?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
                   Are you sure you want to cancel this order? Once cancelled, this action cannot be undone.
@@ -992,7 +992,7 @@ export default function OrdersPage() {
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
                 Reason for cancellation:
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
                   'Placed order by mistake',
                   'Need to change delivery address or phone',
@@ -1008,16 +1008,18 @@ export default function OrdersPage() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        borderRadius: '10px',
+                        justifyContent: 'flex-start',
+                        gap: '12px',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
                         background: isChecked ? '#EFF6FF' : '#F8FAFC',
-                        border: isChecked ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
+                        border: isChecked ? '1.5px solid #0071E3' : '1px solid #E2E8F0',
                         cursor: 'pointer',
-                        fontSize: '12.5px',
+                        fontSize: '13px',
                         fontWeight: isChecked ? 700 : 500,
-                        color: isChecked ? '#1E40AF' : '#475569',
-                        transition: 'all 0.12s ease'
+                        color: isChecked ? '#0071E3' : '#334155',
+                        transition: 'all 0.12s ease',
+                        textAlign: 'left'
                       }}
                     >
                       <input
@@ -1025,9 +1027,9 @@ export default function OrdersPage() {
                         name="cancelReason"
                         checked={isChecked}
                         onChange={() => setCancelReason(reason)}
-                        style={{ accentColor: '#0071E3', margin: 0 }}
+                        style={{ accentColor: '#0071E3', margin: 0, width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
                       />
-                      <span>{reason}</span>
+                      <span style={{ textAlign: 'left', margin: 0 }}>{reason}</span>
                     </label>
                   );
                 })}
