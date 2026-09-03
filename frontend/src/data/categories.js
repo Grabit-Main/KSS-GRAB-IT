@@ -555,7 +555,6 @@ export const subCategoryImages = {
   'Handwash & Hygiene': '/dettol-handwash-real.jpg',
   'Hair Care': '/dettol-real.jpg',
   'Bath & Body Soaps': '/combo-hygiene.jpg',
-  'Oral Care & Skin': '/dettol-handwash-real.jpg',
   'Face Serums & Creams': '/subcat-face-serums.jpg',
   'Sunscreens & Cleansers': '/banner-skincare-sale.png',
   'Makeup & Kajal': '/category-beauty-cosmetics.jpg',
@@ -574,48 +573,11 @@ export const subCategoryImages = {
 
   // Baby & Pet Care
   'Diapers & Wipes': '/promo-baby.png',
-  'Baby Bath & Skin': '/category-baby-care.jpg',
-  'Baby Food & Cereal': '/category-baby-care.jpg',
-  'Dog Food & Treats': '/category-pet-care.jpg',
-  'Cat Food': '/category-pet-care.jpg',
-  'Pet Grooming': '/category-pet-care.jpg',
-
-  // Health & Wellness
-  'Immunity & Ayurveda': '/category-health-wellness.jpg',
-  'Vitamins & Supplements': '/category-health-wellness.jpg',
-  'Pain Relief & Devices': '/banner-pharmacy.png',
 
   // Meat & Seafood
   'Fresh Chicken': '/banner-fresh-meat-section.jpg',
   'Farm Eggs': '/banner-chicken-eggs.jpg',
   'Fish & Seafood': '/category-meat-seafood.jpg',
-
-  // Home & Kitchen
-  'Cookware & Pans': '/category-home-kitchen.jpg',
-  'Bottles & Flasks': '/category-home-kitchen.jpg',
-  'Storage & Containers': '/category-home-kitchen.jpg',
-  'Kitchen Tools': '/category-home-kitchen.jpg',
-
-  // Fashion, Sports, Pooja, Stationery, Toys
-  'Men Running Shoes': '/fashion-hero-cutout.png',
-  'Designer Sunglasses': '/fashion-hero-cutout.png',
-  'Watches & Wallets': '/fashion-hero-cutout.png',
-  'Notebooks & Pads': '/category-stationery-office.jpg',
-  'Pens & Markers': '/category-stationery-office.jpg',
-  'Desk Tools & Tapes': '/category-stationery-office.jpg',
-  'Calculators': '/category-stationery-office.jpg',
-  'Rackets & Balls': '/category-sports-fitness.jpg',
-  'Fitness Supplements': '/category-sports-fitness.jpg',
-  'Gym Shakers & Bottles': '/category-sports-fitness.jpg',
-  'Yoga & Mats': '/category-sports-fitness.jpg',
-  'Building Blocks': '/category-toys-games.jpg',
-  'Board Games & Puzzles': '/category-toys-games.jpg',
-  'Diecast Cars & Tracks': '/category-toys-games.jpg',
-  'Dolls & Figurines': '/category-toys-games.jpg',
-  'Agarbatti & Incense': '/category-pooja-needs.jpg',
-  'Brass Diyas & Lamps': '/category-pooja-needs.jpg',
-  'Pure Camphor & Wicks': '/category-pooja-needs.jpg',
-  'Haldi Kumkum & Roli': '/category-pooja-needs.jpg',
 };
 
 export const brands = {

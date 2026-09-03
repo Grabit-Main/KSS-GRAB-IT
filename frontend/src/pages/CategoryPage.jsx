@@ -1049,9 +1049,9 @@ export default function CategoryPage() {
                 ? categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug))
                 : null;
               
-              const candidateUrl = isAll
-                ? (catInfo?.icon || catInfo?.bannerIcons?.[0] || categoryProducts[0]?.image)
-                : (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null));
+              const candidateUrl = !isAll
+                ? (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null))
+                : null;
 
               return (
                 <button
@@ -1111,7 +1111,9 @@ export default function CategoryPage() {
                     flexShrink: 0,
                     position: 'relative'
                   }}>
-                    {candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
+                    {isAll ? (
+                      <Grid size={isMobile ? 20 : 24} color={isSelected ? '#0071E3' : '#475569'} />
+                    ) : candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
                       <>
                         <img
                           src={candidateUrl.startsWith('http') || candidateUrl.startsWith('/') ? candidateUrl : `/${candidateUrl}`}
@@ -1128,11 +1130,11 @@ export default function CategoryPage() {
                           }}
                         />
                         <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                          <ProductSvg name={isAll ? catInfo?.name || slug : (sampleProd?.name || s.name)} size={isMobile ? 24 : 30} />
+                          <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
                         </div>
                       </>
                     ) : (
-                      <ProductSvg name={isAll ? catInfo?.name || slug : (sampleProd?.name || s.name)} size={isMobile ? 24 : 30} />
+                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
                     )}
                   </div>
 
