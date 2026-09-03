@@ -298,18 +298,20 @@ export function LocationProvider({ children }) {
       onClick={hasConfirmedLocation ? handleCloseModal : undefined}
       style={{
         position: 'fixed', inset: 0, zIndex: 99999,
-        background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+        padding: '16px 20px'
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#FFFFFF', borderRadius: '20px', padding: modalTab === 'map' ? '18px' : '20px',
-          maxWidth: modalTab === 'map' ? '460px' : '370px', width: '100%',
-          boxShadow: '0 20px 50px -10px rgba(15, 23, 42, 0.25)',
+          background: '#FFFFFF', borderRadius: '18px', padding: modalTab === 'map' ? '16px' : '16px',
+          maxWidth: modalTab === 'map' ? '440px' : '310px', width: '100%',
+          boxShadow: '0 16px 40px -10px rgba(15, 23, 42, 0.3)',
           position: 'relative', border: '1px solid #E2E8F0',
-          maxHeight: '90vh', overflowY: 'auto'
+          maxHeight: '90vh', overflowY: 'auto',
+          marginTop: '10px'
         }}
       >
         {/* Modal Close Button - Only shown when a delivery location has already been confirmed */}
@@ -318,8 +320,8 @@ export function LocationProvider({ children }) {
             onClick={handleCloseModal}
             aria-label="Close location modal"
             style={{
-              position: 'absolute', top: '14px', right: '14px',
-              width: '30px', height: '30px', borderRadius: '50%',
+              position: 'absolute', top: '12px', right: '12px',
+              width: '26px', height: '26px', borderRadius: '50%',
               background: '#F1F5F9', border: 'none', display: 'flex',
               alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
               color: '#64748B', transition: 'all 0.15s ease', zIndex: 50
@@ -327,25 +329,25 @@ export function LocationProvider({ children }) {
             onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
           >
-            <X size={16} strokeWidth={2.4} />
+            <X size={14} strokeWidth={2.4} />
           </button>
         )}
 
         {/* WELCOMING LOCATION PROMPT HEADER */}
         {!isAddingNew && modalTab === 'list' && (
-          <div style={{ textAlign: 'center', marginBottom: '16px', paddingTop: '4px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '14px', paddingTop: '2px' }}>
             <div style={{
-              width: '44px', height: '44px', borderRadius: '50%',
+              width: '38px', height: '38px', borderRadius: '50%',
               background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)',
               color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 10px', boxShadow: '0 6px 16px -3px rgba(0, 113, 227, 0.25)'
+              margin: '0 auto 8px', boxShadow: '0 4px 12px -2px rgba(0, 113, 227, 0.25)'
             }}>
-              <MapPin size={22} strokeWidth={2.4} />
+              <MapPin size={18} strokeWidth={2.4} />
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: '0 0 3px', letterSpacing: '-0.02em' }}>
               Select Delivery Location
             </h3>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.35, maxWidth: '290px', marginLeft: 'auto', marginRight: 'auto' }}>
+            <p style={{ fontSize: '11.5px', color: '#64748B', margin: 0, lineHeight: 1.35, maxWidth: '260px', marginLeft: 'auto', marginRight: 'auto' }}>
               Add your delivery address to see live stock availability and 10-minute delivery in your area.
             </p>
           </div>
@@ -353,16 +355,16 @@ export function LocationProvider({ children }) {
 
         {/* HEADER FOR MAP OR ADD FORM */}
         {(isAddingNew || modalTab === 'map') && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               {isAddingNew ? (editingLoc ? 'Edit Address' : 'Add New Address') : 'Pin Delivery Location on Map'}
             </h3>
           </div>
         )}
 
-        {/* 2 PROMINENT ACTION BUTTONS REQUESTED BY USER */}
+        {/* 2 PROMINENT ACTION BUTTONS */}
         {!isAddingNew && modalTab === 'list' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
             {/* OPTION 1: USE CURRENT LOCATION */}
             <button
               type="button"
@@ -371,28 +373,28 @@ export function LocationProvider({ children }) {
               disabled={isLocating}
               style={{
                 width: '100%',
-                padding: '11px 16px',
-                borderRadius: '14px',
+                padding: '9px 14px',
+                borderRadius: '12px',
                 border: 'none',
                 background: isLocating ? '#EFF6FF' : 'linear-gradient(135deg, #0071E3 0%, #0056B3 100%)',
                 color: isLocating ? '#0071E3' : '#FFFFFF',
-                fontSize: '13px',
+                fontSize: '12.5px',
                 fontWeight: 900,
                 cursor: isLocating ? 'wait' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                boxShadow: isLocating ? 'none' : '0 4px 14px rgba(0, 113, 227, 0.28)',
+                gap: '8px',
+                boxShadow: isLocating ? 'none' : '0 4px 12px rgba(0, 113, 227, 0.25)',
                 transition: 'all 0.2s ease'
               }}
             >
-              <Navigation size={16} fill={isLocating ? 'none' : '#FFFFFF'} />
+              <Navigation size={15} fill={isLocating ? 'none' : '#FFFFFF'} />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '13px', fontWeight: 900, lineHeight: 1.2 }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 900, lineHeight: 1.2 }}>
                   {isLocating ? (locateStatus || 'Locating GPS...') : 'Use Current Location'}
                 </div>
-                <div style={{ fontSize: '10.5px', opacity: isLocating ? 0.7 : 0.9, fontWeight: 600 }}>
+                <div style={{ fontSize: '10px', opacity: isLocating ? 0.7 : 0.9, fontWeight: 600 }}>
                   Detect device GPS & fetch street address
                 </div>
               </div>
@@ -405,28 +407,28 @@ export function LocationProvider({ children }) {
               onClick={handleOpenSetAddress}
               style={{
                 width: '100%',
-                padding: '10px 16px',
-                borderRadius: '14px',
+                padding: '8px 14px',
+                borderRadius: '12px',
                 border: '1.5px solid #0071E3',
                 background: '#FFFFFF',
                 color: '#0071E3',
-                fontSize: '13px',
+                fontSize: '12.5px',
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                gap: '8px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={e => { e.currentTarget.style.background = '#F0F7FF'; }}
               onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; }}
             >
-              <MapPin size={16} strokeWidth={2.4} color="#0071E3" />
+              <MapPin size={15} strokeWidth={2.4} color="#0071E3" />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '13px', fontWeight: 900, lineHeight: 1.2 }}>Set Address / Pin on Map</div>
-                <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>Interactive map picker & address search</div>
+                <div style={{ fontSize: '12.5px', fontWeight: 900, lineHeight: 1.2 }}>Set Address / Pin on Map</div>
+                <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Interactive map picker & address search</div>
               </div>
             </button>
           </div>
