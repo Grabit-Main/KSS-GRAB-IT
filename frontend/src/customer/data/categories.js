@@ -179,16 +179,104 @@ export const subCategories = {
 };
 
 export const subCategoryImages = {
+  // Snacks & Munchies
   'Potato Chips': '/subcat-potato-chips.jpg',
-  'Soft Drinks & Sodas': '/subcat-soft-drinks.jpg',
+  'Tortilla & Corn': '/bingo-mad-angles.png',
+  'Namkeen & Crunch': '/lays-magic-masala.png',
+
+  // Dairy & Bakery
   'Milk & Butter': '/subcat-milk-butter.jpg',
+  'Cheese & Paneer': '/amul-butter-real.jpg',
+  'Fresh Bread': '/biscuits-hero-cutout.png',
+
+  // Beverages
+  'Soft Drinks & Sodas': '/subcat-soft-drinks.jpg',
+  'Energy Drinks': '/beverages-hero-transparent.png',
+  'Fruit Juices': '/fresh-produce-splash-transparent.png',
+
+  // Produce
   'Fresh Fruits': '/subcat-fresh-fruits.jpg',
   'Fresh Vegetables': '/subcat-fresh-vegetables.jpg',
-  'Premium Chocolates': '/subcat-chocolates.jpg',
-  'Instant Coffee': '/subcat-instant-coffee.jpg',
-  'Headphones & TWS': '/subcat-headphones.jpg',
+
+  // Staples & Cooking
   'Atta & Flours': '/subcat-atta-flours.jpg',
+  'Basmati Rice': '/aashirvaad-atta-real.jpg',
+  'Dals & Pulses': '/banner-grocery-staples.png',
+  'Salt & Spices': '/combo-staples.jpg',
+  'Sunflower & Mustard Oil': '/oil-hero-cutout.png',
+  'Pure Desi Ghee': '/amul-butter-real.jpg',
+  'Olive & Heart Care Oils': '/oil-hero-cutout.png',
+
+  // Chocolates & Sweets
+  'Premium Chocolates': '/subcat-chocolates.jpg',
+  'Wafer Bars': '/chocolates-hero-cutout.png',
+  'Spreads & Gifts': '/cadbury-silk-real.jpg',
+
+  // Tea & Coffee
+  'Instant Coffee': '/subcat-instant-coffee.jpg',
+  'Premium Tea Powder': '/combo-chai.jpg',
+
+  // Biscuits & Cookies
+  'Cream Biscuits': '/biscuits-hero-cutout.png',
+  'Glucose & Cookies': '/biscuits-hero-cutout.png',
+
+  // Instant Food
+  'Instant Noodles': '/instant-noodles-hero-transparent.png',
+  'Soups & Chinese': '/instant-noodles-hero-transparent.png',
+  'Ready to Eat Curries': '/combo-fresh.jpg',
+
+  // Personal Care & Beauty
+  'Handwash & Hygiene': '/dettol-handwash-real.jpg',
+  'Hair Care': '/personal-care-hero-cutout.png',
+  'Bath & Body Soaps': '/combo-hygiene.jpg',
+  'Oral Care & Skin': '/personal-care-hero-cutout.png',
   'Face Serums & Creams': '/subcat-face-serums.jpg',
+  'Sunscreens & Cleansers': '/subcat-face-serums.jpg',
+  'Makeup & Kajal': '/category-beauty-cosmetics.jpg',
+
+  // Electronics & Gadgets
+  'Headphones & TWS': '/subcat-headphones.jpg',
+  'Bluetooth Speakers': '/electronics-hero-cutout.png',
+  'Smartwatches': '/electronics-hero-banner.jpg',
+  'Power Banks & Accessories': '/electronics-hero-transparent.png',
+
+  // Household Essentials
+  'Detergents & Wash': '/household-hero-cutout.png',
+  'Dishwash & Cleaners': '/household-hero-transparent.png',
+  'Disinfectants': '/combo-hygiene.jpg',
+  'Glass Cleaners': '/household-hero-cutout.png',
+
+  // Baby & Pet Care
+  'Diapers & Wipes': '/promo-baby.png',
+  'Baby Bath & Skin': '/category-baby-care.jpg',
+  'Baby Food & Cereal': '/category-baby-care.jpg',
+  'Dog Food & Treats': '/category-pet-care.jpg',
+  'Cat Food': '/category-pet-care.jpg',
+  'Pet Grooming': '/category-pet-care.jpg',
+
+  // Meat & Seafood
+  'Fresh Chicken': '/banner-chicken-eggs.png',
+  'Farm Eggs': '/banner-chicken-eggs.jpg',
+  'Fish & Seafood': '/category-meat-seafood.jpg',
+
+  // Home & Kitchen
+  'Cookware & Pans': '/category-home-kitchen.jpg',
+  'Bottles & Flasks': '/category-home-kitchen.jpg',
+  'Storage & Containers': '/category-home-kitchen.jpg',
+  'Kitchen Tools': '/category-home-kitchen.jpg',
+
+  // Fashion, Sports, Pooja, Stationery, Toys
+  'Men Running Shoes': '/fashion-hero-cutout.png',
+  'Designer Sunglasses': '/fashion-hero-cutout.png',
+  'Watches & Wallets': '/fashion-hero-cutout.png',
+  'Notebooks & Pads': '/category-stationery-office.jpg',
+  'Pens & Markers': '/category-stationery-office.jpg',
+  'Rackets & Balls': '/category-sports-fitness.jpg',
+  'Yoga & Mats': '/category-sports-fitness.jpg',
+  'Building Blocks': '/category-toys-games.jpg',
+  'Board Games & Puzzles': '/category-toys-games.jpg',
+  'Agarbatti & Incense': '/category-pooja-needs.jpg',
+  'Brass Diyas & Lamps': '/category-pooja-needs.jpg',
 };
 
 export const brands = {

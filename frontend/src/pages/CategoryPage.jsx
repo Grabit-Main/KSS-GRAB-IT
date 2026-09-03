@@ -1043,11 +1043,15 @@ export default function CategoryPage() {
           }}>
             {subCats.map(s => {
               const isSelected = activeSubCat === s.name;
+              const isAll = s.name === 'All';
               const dedicatedImg = subCategoryImages && subCategoryImages[s.name];
-              const sampleProd = s.name === 'All'
-                ? categoryProducts[0]
-                : categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug));
-              const imgUrl = dedicatedImg || sampleProd?.image || 'default-product.png';
+              const sampleProd = !isAll
+                ? categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug))
+                : null;
+              
+              const candidateUrl = isAll
+                ? (catInfo?.icon || catInfo?.bannerIcons?.[0] || categoryProducts[0]?.image)
+                : (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null));
 
               return (
                 <button
@@ -1104,22 +1108,31 @@ export default function CategoryPage() {
                     justifyContent: 'center',
                     marginBottom: '4px',
                     overflow: 'hidden',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    position: 'relative'
                   }}>
-                    {imgUrl && (imgUrl.startsWith('http') || imgUrl.endsWith('.jpg') || imgUrl.endsWith('.png') || imgUrl.endsWith('.webp')) ? (
-                      <img
-                        src={imgUrl}
-                        alt={s.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          padding: '2px'
-                        }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
+                    {candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
+                      <>
+                        <img
+                          src={candidateUrl.startsWith('http') || candidateUrl.startsWith('/') ? candidateUrl : `/${candidateUrl}`}
+                          alt={s.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            padding: '2px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          <ProductSvg name={isAll ? catInfo?.name || slug : (sampleProd?.name || s.name)} size={isMobile ? 24 : 30} />
+                        </div>
+                      </>
                     ) : (
-                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
+                      <ProductSvg name={isAll ? catInfo?.name || slug : (sampleProd?.name || s.name)} size={isMobile ? 24 : 30} />
                     )}
                   </div>
 
