@@ -1112,7 +1112,12 @@ export default function CategoryPage() {
                     position: 'relative'
                   }}>
                     {isAll ? (
-                      <Grid size={isMobile ? 20 : 24} color={isSelected ? '#0071E3' : '#475569'} />
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke={isSelected ? '#0071E3' : '#475569'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      </svg>
                     ) : candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
                       <>
                         <img
