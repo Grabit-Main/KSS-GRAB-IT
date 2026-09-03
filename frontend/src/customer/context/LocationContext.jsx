@@ -291,12 +291,14 @@ export function LocationProvider({ children }) {
 
   const handleFetchCurrentLocation = handleUseCurrentGpsLocation;
 
+  const hasConfirmedLocation = typeof window !== 'undefined' && !!localStorage.getItem('grabit_location_confirmed');
+
   const modalContent = isModalOpen && (
     <div
-      onClick={handleCloseModal}
+      onClick={hasConfirmedLocation ? handleCloseModal : undefined}
       style={{
         position: 'fixed', inset: 0, zIndex: 99999,
-        background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)',
+        background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
       }}
     >
@@ -310,22 +312,24 @@ export function LocationProvider({ children }) {
           maxHeight: '90vh', overflowY: 'auto'
         }}
       >
-        {/* Modal Close Button */}
-        <button
-          onClick={handleCloseModal}
-          aria-label="Close location modal"
-          style={{
-            position: 'absolute', top: '14px', right: '14px',
-            width: '30px', height: '30px', borderRadius: '50%',
-            background: '#F1F5F9', border: 'none', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            color: '#64748B', transition: 'all 0.15s ease', zIndex: 50
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
-        >
-          <X size={16} strokeWidth={2.4} />
-        </button>
+        {/* Modal Close Button - Only shown when a delivery location has already been confirmed */}
+        {hasConfirmedLocation && (
+          <button
+            onClick={handleCloseModal}
+            aria-label="Close location modal"
+            style={{
+              position: 'absolute', top: '14px', right: '14px',
+              width: '30px', height: '30px', borderRadius: '50%',
+              background: '#F1F5F9', border: 'none', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              color: '#64748B', transition: 'all 0.15s ease', zIndex: 50
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+          >
+            <X size={16} strokeWidth={2.4} />
+          </button>
+        )}
 
         {/* WELCOMING LOCATION PROMPT HEADER */}
         {!isAddingNew && modalTab === 'list' && (
