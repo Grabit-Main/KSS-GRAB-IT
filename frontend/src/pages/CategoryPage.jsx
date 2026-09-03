@@ -7,7 +7,7 @@ import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { products, syncProductsFromBackend } from '../data/products';
-import { subCategories, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
+import { categories as defaultCategories, subCategories, subCategoryImages, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../utils/scrollToTop';
 import { get } from '../api';
@@ -1043,10 +1043,11 @@ export default function CategoryPage() {
           }}>
             {subCats.map(s => {
               const isSelected = activeSubCat === s.name;
+              const dedicatedImg = subCategoryImages && subCategoryImages[s.name];
               const sampleProd = s.name === 'All'
                 ? categoryProducts[0]
                 : categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug));
-              const imgUrl = sampleProd?.image || 'default-product.png';
+              const imgUrl = dedicatedImg || sampleProd?.image || 'default-product.png';
 
               return (
                 <button

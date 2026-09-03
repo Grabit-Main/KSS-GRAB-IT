@@ -504,6 +504,19 @@ export const subCategories = {
   ],
 };
 
+export const subCategoryImages = {
+  'Potato Chips': '/subcat-potato-chips.jpg',
+  'Soft Drinks & Sodas': '/subcat-soft-drinks.jpg',
+  'Milk & Butter': '/subcat-milk-butter.jpg',
+  'Fresh Fruits': '/subcat-fresh-fruits.jpg',
+  'Fresh Vegetables': '/subcat-fresh-vegetables.jpg',
+  'Premium Chocolates': '/subcat-chocolates.jpg',
+  'Instant Coffee': '/subcat-instant-coffee.jpg',
+  'Headphones & TWS': '/subcat-headphones.jpg',
+  'Atta & Flours': '/subcat-atta-flours.jpg',
+  'Face Serums & Creams': '/subcat-face-serums.jpg',
+};
+
 export const brands = {
   'snacks-munchies': [
     { name: "Lay's", count: 2 },
