@@ -1104,23 +1104,6 @@ export default function CategoryPage() {
                     outline: 'none'
                   }}
                 >
-                  {/* Small Count Badge */}
-                  <span style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    fontSize: '9px',
-                    fontWeight: 900,
-                    background: isSelected ? '#0071E3' : '#F1F5F9',
-                    color: isSelected ? '#FFFFFF' : '#64748B',
-                    padding: '0px 5px',
-                    borderRadius: '8px',
-                    zIndex: 2,
-                    lineHeight: '13px'
-                  }}>
-                    {s.count}
-                  </span>
-
                   {/* Thumbnail Image Container */}
                   <div style={{
                     width: isMobile ? '38px' : '46px',
