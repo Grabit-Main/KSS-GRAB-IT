@@ -724,10 +724,10 @@ export default function CheckoutPage() {
   );
 
   return (
-    <div className="container section" style={{ paddingTop: isMobile ? '12px' : '24px', minHeight: '100vh' }}>
+    <div className="container section" style={{ paddingTop: isMobile ? '80px' : '44px', minHeight: '100vh' }}>
 
       {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px', marginTop: isMobile ? '24px' : '16px', paddingTop: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: 0, color: '#0F172A' }}>{STEPS[step]}</h1>
         </div>
