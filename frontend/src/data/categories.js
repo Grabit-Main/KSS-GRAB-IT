@@ -504,6 +504,82 @@ export const subCategories = {
   ],
 };
 
+export const subCategoryImages = {
+  // Snacks & Munchies
+  'Potato Chips': '/subcat-potato-chips.jpg',
+  'Tortilla & Corn': '/subcat-tortilla-corn.jpg',
+  'Namkeen & Crunch': '/subcat-namkeen.jpg',
+
+  // Dairy & Bakery
+  'Milk & Butter': '/subcat-milk-butter.jpg',
+  'Cheese & Paneer': '/amul-butter-real.jpg',
+  'Fresh Bread': '/brown-bread-real.jpg',
+
+  // Beverages
+  'Soft Drinks & Sodas': '/subcat-soft-drinks.jpg',
+  'Energy Drinks': '/red-bull-real.jpg',
+  'Fruit Juices': '/tropicana-juice-real.jpg',
+
+  // Produce
+  'Fresh Fruits': '/subcat-fresh-fruits.jpg',
+  'Fresh Vegetables': '/subcat-fresh-vegetables.jpg',
+
+  // Staples & Cooking
+  'Atta & Flours': '/subcat-atta-flours.jpg',
+  'Basmati Rice': '/fortune-basmati-real.jpg',
+  'Dals & Pulses': '/toor-dal-real.jpg',
+  'Salt & Spices': '/tata-salt-real.jpg',
+  'Sunflower & Mustard Oil': '/fortune-oil-real.jpg',
+  'Pure Desi Ghee': '/amul-ghee.jpg',
+  'Olive & Heart Care Oils': '/oil-hero-cutout.png',
+
+  // Chocolates & Sweets
+  'Premium Chocolates': '/subcat-chocolates.jpg',
+  'Wafer Bars': '/kitkat-real.jpg',
+  'Spreads & Gifts': '/cadbury-silk-real.jpg',
+
+  // Tea & Coffee
+  'Instant Coffee': '/subcat-instant-coffee.jpg',
+  'Premium Tea Powder': '/red-label-tea.jpg',
+
+  // Biscuits & Cookies
+  'Cream Biscuits': '/oreo-biscuits-real.jpg',
+  'Glucose & Cookies': '/parle-g-real.jpg',
+
+  // Instant Food
+  'Instant Noodles': '/maggi-noodles-real.jpg',
+  'Soups & Chinese': '/instant-noodles-hero-transparent.png',
+  'Ready to Eat Curries': '/aashirvaad-atta-real.jpg',
+
+  // Personal Care & Beauty
+  'Handwash & Hygiene': '/dettol-handwash-real.jpg',
+  'Hair Care': '/dettol-real.jpg',
+  'Bath & Body Soaps': '/combo-hygiene.jpg',
+  'Face Serums & Creams': '/subcat-face-serums.jpg',
+  'Sunscreens & Cleansers': '/banner-skincare-sale.png',
+  'Makeup & Kajal': '/category-beauty-cosmetics.jpg',
+
+  // Electronics & Gadgets
+  'Headphones & TWS': '/subcat-headphones.jpg',
+  'Bluetooth Speakers': '/electronics-hero-cutout.png',
+  'Smartwatches': '/electronics-hero-banner.jpg',
+  'Power Banks & Accessories': '/electronics-hero-transparent.png',
+
+  // Household Essentials
+  'Detergents & Wash': '/surf-excel-real.jpg',
+  'Dishwash & Cleaners': '/household-hero-transparent.png',
+  'Disinfectants': '/dettol-real.jpg',
+  'Glass Cleaners': '/household-hero-cutout.png',
+
+  // Baby & Pet Care
+  'Diapers & Wipes': '/promo-baby.png',
+
+  // Meat & Seafood
+  'Fresh Chicken': '/banner-fresh-meat-section.jpg',
+  'Farm Eggs': '/banner-chicken-eggs.jpg',
+  'Fish & Seafood': '/category-meat-seafood.jpg',
+};
+
 export const brands = {
   'snacks-munchies': [
     { name: "Lay's", count: 2 },

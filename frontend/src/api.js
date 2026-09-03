@@ -4,15 +4,19 @@ const API = import.meta.env.VITE_API_URL || (
     : (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api')
 );
 
-// Resolve the best available auth token from all known storage keys
+// Resolve the best available auth token from all known storage keys safely
 function getAuthToken() {
-  return (
-    localStorage.getItem('grabit_session') ||
-    localStorage.getItem('grabit_seller_access') ||
-    localStorage.getItem('grabit_jwt') ||
-    localStorage.getItem('grabit_auth_token') ||
-    null
-  );
+  try {
+    return (
+      localStorage.getItem('grabit_session') ||
+      localStorage.getItem('grabit_seller_access') ||
+      localStorage.getItem('grabit_jwt') ||
+      localStorage.getItem('grabit_auth_token') ||
+      null
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function api(path, options = {}) {

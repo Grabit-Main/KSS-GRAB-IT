@@ -277,10 +277,10 @@ export default function CartPage() {
   };
 
   return (
-    <div className="container section" style={{ paddingTop: isMobile ? '36px' : '44px', paddingBottom: isMobile ? '100px' : '40px' }}>
+    <div className="container section" style={{ paddingTop: isMobile ? '80px' : '44px', paddingBottom: isMobile ? '100px' : '40px' }}>
 
       {/* Header */}
-      <div style={{ marginBottom: '14px', marginTop: isMobile ? '8px' : '12px' }}>
+      <div style={{ marginBottom: '16px', marginTop: isMobile ? '24px' : '16px', paddingTop: '8px' }}>
         <h1 style={{ fontSize: isMobile ? '22px' : '24px', fontWeight: 900, color: '#111827', margin: 0 }}>
           Cart ({totalItems} Items)
         </h1>

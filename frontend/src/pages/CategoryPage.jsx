@@ -7,7 +7,7 @@ import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { products, syncProductsFromBackend } from '../data/products';
-import { subCategories, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
+import { categories as defaultCategories, subCategories, subCategoryImages, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../utils/scrollToTop';
 import { get } from '../api';
@@ -1025,57 +1025,121 @@ export default function CategoryPage() {
         )}
       </div>
 
-      {/* 🚀 TOUCHABLE SUBCATEGORIES BAR (Directly below category image banner) */}
+      {/* 🚀 COMPACT SUBCATEGORY CARDS BAR */}
       {subCats.length > 1 && (
         <div style={{
-          marginBottom: '20px',
+          marginBottom: '14px',
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: '4px'
+          padding: '2px 2px 6px 2px'
         }}>
           <div style={{
             display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
+            gap: isMobile ? '8px' : '10px',
+            alignItems: 'stretch',
             width: 'max-content'
           }}>
             {subCats.map(s => {
               const isSelected = activeSubCat === s.name;
+              const isAll = s.name === 'All';
+              const dedicatedImg = subCategoryImages && subCategoryImages[s.name];
+              const sampleProd = !isAll
+                ? categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug))
+                : null;
+              
+              const candidateUrl = !isAll
+                ? (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null))
+                : null;
+
               return (
                 <button
                   key={s.name}
                   type="button"
                   onClick={() => setActiveSubCat(s.name)}
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
-                    background: isSelected ? '#0071E3' : '#FFFFFF',
-                    color: isSelected ? '#FFFFFF' : '#334155',
-                    border: isSelected ? '1.5px solid #0071E3' : '1px solid #CBD5E1',
-                    borderRadius: '24px',
-                    padding: isMobile ? '8px 14px' : '9px 18px',
-                    fontSize: isMobile ? '12.5px' : '13px',
-                    fontWeight: 800,
+                    justifyContent: 'space-between',
+                    width: isMobile ? '68px' : '82px',
+                    minWidth: isMobile ? '68px' : '82px',
+                    background: isSelected ? 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)' : '#FFFFFF',
+                    border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                    borderRadius: '13px',
+                    padding: isMobile ? '6px 4px 6px' : '8px 6px 6px',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: isSelected ? '0 4px 12px rgba(0,113,227,0.3)' : '0 1px 4px rgba(0,0,0,0.03)',
+                    boxShadow: isSelected
+                      ? '0 4px 14px rgba(0,113,227,0.18)'
+                      : '0 1px 4px rgba(0,0,0,0.03)',
                     transition: 'all 0.15s ease',
-                    flexShrink: 0
+                    position: 'relative',
+                    flexShrink: 0,
+                    outline: 'none'
                   }}
                 >
-                  <span>{s.name}</span>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 900,
-                    padding: '1px 6px',
-                    borderRadius: '10px',
-                    background: isSelected ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
-                    color: isSelected ? '#FFFFFF' : '#64748B'
+                  {/* Thumbnail Image Container */}
+                  <div style={{
+                    width: isMobile ? '38px' : '46px',
+                    height: isMobile ? '38px' : '46px',
+                    borderRadius: '9px',
+                    background: '#F8FAFC',
+                    border: '1px solid #F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '4px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    position: 'relative'
                   }}>
-                    {s.count}
+                    {isAll ? (
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke={isSelected ? '#0071E3' : '#475569'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      </svg>
+                    ) : candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
+                      <>
+                        <img
+                          src={candidateUrl.startsWith('http') || candidateUrl.startsWith('/') ? candidateUrl : `/${candidateUrl}`}
+                          alt={s.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            padding: '2px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
+                        </div>
+                      </>
+                    ) : (
+                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
+                    )}
+                  </div>
+
+                  {/* Subcategory Name */}
+                  <span style={{
+                    fontSize: isMobile ? '10px' : '11px',
+                    fontWeight: isSelected ? 900 : 700,
+                    color: isSelected ? '#0071E3' : '#0F172A',
+                    textAlign: 'center',
+                    lineHeight: 1.15,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    wordBreak: 'break-word'
+                  }}>
+                    {s.name}
                   </span>
                 </button>
               );

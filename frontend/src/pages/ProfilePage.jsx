@@ -54,7 +54,7 @@ export default function ProfilePage() {
     let isMounted = true;
     const fetchRemoteProfile = async () => {
       const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
-      if (!token) return;
+      if (!token || token === 'demo-token') return;
       try {
         const remote = await get('/users/me');
         if (remote && isMounted) {
