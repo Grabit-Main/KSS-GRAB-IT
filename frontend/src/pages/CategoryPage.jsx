@@ -1028,16 +1028,16 @@ export default function CategoryPage() {
       {/* 🚀 COMPACT SUBCATEGORY CARDS BAR */}
       {subCats.length > 1 && (
         <div style={{
-          marginBottom: '22px',
+          marginBottom: '14px',
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          padding: '4px 2px 8px 2px'
+          padding: '2px 2px 6px 2px'
         }}>
           <div style={{
             display: 'flex',
-            gap: isMobile ? '10px' : '14px',
+            gap: isMobile ? '8px' : '10px',
             alignItems: 'stretch',
             width: 'max-content'
           }}>
@@ -1058,17 +1058,17 @@ export default function CategoryPage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    width: isMobile ? '86px' : '105px',
-                    minWidth: isMobile ? '86px' : '105px',
+                    width: isMobile ? '68px' : '82px',
+                    minWidth: isMobile ? '68px' : '82px',
                     background: isSelected ? 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)' : '#FFFFFF',
                     border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
-                    borderRadius: '16px',
-                    padding: isMobile ? '10px 8px 8px' : '12px 10px 10px',
+                    borderRadius: '13px',
+                    padding: isMobile ? '6px 4px 6px' : '8px 6px 6px',
                     cursor: 'pointer',
                     boxShadow: isSelected
-                      ? '0 6px 20px rgba(0,113,227,0.18)'
-                      : '0 2px 8px rgba(0,0,0,0.04)',
-                    transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                      ? '0 4px 14px rgba(0,113,227,0.18)'
+                      : '0 1px 4px rgba(0,0,0,0.03)',
+                    transition: 'all 0.15s ease',
                     position: 'relative',
                     flexShrink: 0,
                     outline: 'none'
@@ -1077,30 +1077,31 @@ export default function CategoryPage() {
                   {/* Small Count Badge */}
                   <span style={{
                     position: 'absolute',
-                    top: '6px',
-                    right: '6px',
-                    fontSize: '10px',
+                    top: '4px',
+                    right: '4px',
+                    fontSize: '9px',
                     fontWeight: 900,
                     background: isSelected ? '#0071E3' : '#F1F5F9',
                     color: isSelected ? '#FFFFFF' : '#64748B',
-                    padding: '1px 6px',
-                    borderRadius: '10px',
-                    zIndex: 2
+                    padding: '0px 5px',
+                    borderRadius: '8px',
+                    zIndex: 2,
+                    lineHeight: '13px'
                   }}>
                     {s.count}
                   </span>
 
                   {/* Thumbnail Image Container */}
                   <div style={{
-                    width: isMobile ? '52px' : '64px',
-                    height: isMobile ? '52px' : '64px',
-                    borderRadius: '12px',
+                    width: isMobile ? '38px' : '46px',
+                    height: isMobile ? '38px' : '46px',
+                    borderRadius: '9px',
                     background: '#F8FAFC',
                     border: '1px solid #F1F5F9',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '8px',
+                    marginBottom: '4px',
                     overflow: 'hidden',
                     flexShrink: 0
                   }}>
@@ -1112,22 +1113,22 @@ export default function CategoryPage() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'contain',
-                          padding: '4px'
+                          padding: '2px'
                         }}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 32 : 40} />
+                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
                     )}
                   </div>
 
                   {/* Subcategory Name */}
                   <span style={{
-                    fontSize: isMobile ? '11px' : '12px',
+                    fontSize: isMobile ? '10px' : '11px',
                     fontWeight: isSelected ? 900 : 700,
                     color: isSelected ? '#0071E3' : '#0F172A',
                     textAlign: 'center',
-                    lineHeight: 1.25,
+                    lineHeight: 1.15,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
