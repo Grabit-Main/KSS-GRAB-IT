@@ -407,12 +407,14 @@ async def send_otp(body: PhoneRequest):
     except Exception:
         pass
     return {"message": "Verification code sent", "expires_in": 300}
-
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyOtpRequest):
+    import logging
+    logging.warning(f"VERIFY: phone={body.phone} otp={body.otp!r} full_name={body.full_name!r} otp_debug={settings().otp_debug}")
     # In debug/demo mode: accept the fixed demo OTP 123456 directly — no Redis lookup
     if settings().otp_debug:
         if body.otp != DEMO_OTP:
+            logging.warning(f"VERIFY FAIL: otp {body.otp!r} != {DEMO_OTP!r}")
             raise HTTPException(400, "Invalid verification code. Use demo OTP: 123456")
         # Skip Redis entirely in demo mode
     else:
@@ -429,10 +431,12 @@ async def verify_otp(body: VerifyOtpRequest):
             pass
 
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
+    logging.warning(f"VERIFY: profile rows found={len(rows) if rows else 0}")
     if rows:
         profile = rows[0]
     else:
         if not body.full_name:
+            logging.warning("VERIFY FAIL: no full_name for new user")
             raise HTTPException(400, "Full name is required for customer registration")
         profile = await store.insert("profiles", {
             "phone": body.phone,

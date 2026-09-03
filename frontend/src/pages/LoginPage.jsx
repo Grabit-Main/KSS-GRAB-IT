@@ -661,29 +661,55 @@ export function LoginPage() {
           {/* STEP 3: OTP VERIFICATION */}
           {step === 'otp' && (
             <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* Demo OTP Banner — always shown in debug mode */}
+              {debugOtp && (
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                    border: '1.5px solid #93C5FD',
+                    borderRadius: '14px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#1D4ED8', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      ⚡ Demo OTP
+                    </div>
+                    <div style={{ fontSize: '26px', fontWeight: 900, color: '#1E40AF', letterSpacing: '8px', fontFamily: 'monospace' }}>
+                      {debugOtp}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOtp(debugOtp)}
+                    style={{
+                      background: '#2563EB',
+                      color: '#fff',
+                      border: 0,
+                      borderRadius: '10px',
+                      padding: '8px 14px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Use this OTP
+                  </button>
+                </div>
+              )}
+
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>
                     Enter 6-Digit OTP
                   </label>
-                  {debugOtp ? (
-                    <button
-                      type="button"
-                      onClick={() => setOtp(debugOtp)}
-                      style={{
-                        background: '#EFF6FF',
-                        border: '1px solid #BFDBFE',
-                        color: '#0071E3',
-                        padding: '3px 9px',
-                        borderRadius: '8px',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ⚡ Auto-fill OTP
-                    </button>
-                  ) : null}
                 </div>
                 <input
                   required
