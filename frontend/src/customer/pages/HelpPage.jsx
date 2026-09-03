@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Truck, RotateCcw, HelpCircle, FileText, Phone, MessageSquare, ChevronRight, ChevronDown, CheckCircle2, Search, ArrowLeft } from 'lucide-react';
 import useWindowWidth from '../hooks/useWindowWidth';
 
@@ -78,20 +78,38 @@ const POLICY_DATA = {
 };
 
 export default function HelpPage() {
+  const navigate = useNavigate();
   const { tab = 'help-support' } = useParams();
   const w = useWindowWidth();
   const isMobile = w <= 640;
 
-  const [activeTab, setActiveTab] = useState(tab);
+  const VALID_TABS = Object.keys(POLICY_DATA);
+  const isValidTab = VALID_TABS.includes(tab);
+
+  const [activeTab, setActiveTab] = useState(isValidTab ? tab : 'help-support');
   const [orderQuery, setOrderQuery] = useState('');
   const [trackedOrder, setTrackedOrder] = useState(null);
   const [expandedFaq, setExpandedFaq] = useState(0);
 
   useEffect(() => {
-    if (tab) setActiveTab(tab);
-  }, [tab]);
+    if (isValidTab) {
+      setActiveTab(tab);
+    }
+  }, [tab, isValidTab]);
 
-  const activePolicy = POLICY_DATA[activeTab] || POLICY_DATA['help-support'];
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    navigate(`/help/${newTab}`);
+  };
+
+  const activePolicy = isValidTab
+    ? (POLICY_DATA[activeTab] || POLICY_DATA['help-support'])
+    : {
+        title: 'Help Topic Not Found',
+        subtitle: `No articles or support pages found matching "${tab}".`,
+        icon: HelpCircle,
+        color: '#DC2626',
+      };
   const IconComp = activePolicy.icon;
 
   const handleTrackSearch = (e) => {
@@ -163,7 +181,7 @@ export default function HelpPage() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabChange(item.id)}
                   style={{
                     background: isActive ? '#FFFFFF' : '#FFFFFF',
                     border: isActive ? `2px solid ${item.color}` : '1px solid #E2E8F0',
@@ -220,7 +238,7 @@ export default function HelpPage() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => handleTabChange(item.id)}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '10px 12px', borderRadius: '10px', border: 'none',
@@ -249,7 +267,50 @@ export default function HelpPage() {
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
           }}>
 
-            {/* TRACK ORDER SECTION */}
+            {!isValidTab ? (
+              <div style={{ textAlign: 'center', padding: isMobile ? '20px 8px' : '40px 16px' }}>
+                <div style={{
+                  width: '60px', height: '60px', borderRadius: '50%',
+                  background: '#FEE2E2', color: '#DC2626',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px'
+                }}>
+                  <HelpCircle size={30} />
+                </div>
+                <h3 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 8px' }}>
+                  Help Topic "{tab}" Not Found
+                </h3>
+                <p style={{ fontSize: '13.5px', color: '#64748B', maxWidth: '440px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                  The help topic or policy section you requested does not exist. Please browse our official help topics below or get in touch with 24x7 support.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('help-support')}
+                    style={{
+                      background: '#0066FF', color: '#FFFFFF', border: 'none',
+                      borderRadius: '12px', padding: '12px 20px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,102,255,0.2)'
+                    }}
+                  >
+                    Go to 24x7 Help &amp; Support
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('track-order')}
+                    style={{
+                      background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1',
+                      borderRadius: '12px', padding: '12px 20px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer'
+                    }}
+                  >
+                    Track Live Order
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* TRACK ORDER SECTION */}
             {activeTab === 'track-order' && (
               <div>
                 <h3 style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
@@ -395,7 +456,8 @@ export default function HelpPage() {
                 </div>
               </div>
             )}
-
+              </>
+            )}
           </div>
 
         </div>

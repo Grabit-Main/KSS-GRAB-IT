@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Sparkles, Zap, Search, ShieldCheck, Clock, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import ProductSvg from '../components/common/ProductSvg';
 import { products } from '../data/products';
-import { categories } from '../data/categories';
+import { categories, inferProductCategory } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 const CATEGORY_DETAILS = [
@@ -150,6 +150,126 @@ const CATEGORY_DETAILS = [
     sla: '25 mins',
     tags: ['Sneakers', 'Sunglasses', 'Accessories'],
     icons: ['https://res.cloudinary.com/hmx3azp6/image/upload/v1787645101/grabit_media/p1.jpg', 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645094/grabit_media/p2.jpg']
+  },
+  {
+    slug: 'baby-care',
+    name: 'Baby Care',
+    sub: 'Pampers diapers, gentle wipes, baby shampoo & cerelac',
+    group: 'care',
+    badgeColor: '#0284C7',
+    badgeBg: '#F0F9FF',
+    accentColor: '#0369A1',
+    sla: '15 mins',
+    tags: ['Pampers Diapers', 'Baby Wipes', 'Baby Lotion'],
+    icons: ['/category-baby-care.jpg']
+  },
+  {
+    slug: 'pet-care',
+    name: 'Pet Care & Food',
+    sub: 'Pedigree dog food, Whiskas cat food & grooming treats',
+    group: 'lifestyle',
+    badgeColor: '#EA580C',
+    badgeBg: '#FFF7ED',
+    accentColor: '#C2410C',
+    sla: '20 mins',
+    tags: ['Pedigree Dog Food', 'Cat Treats', 'Pet Shampoo'],
+    icons: ['/category-pet-care.jpg']
+  },
+  {
+    slug: 'beauty-cosmetics',
+    name: 'Beauty & Cosmetics',
+    sub: 'Face serums, kajal, sunscreens & moisturizing creams',
+    group: 'care',
+    badgeColor: '#E11D48',
+    badgeBg: '#FFF1F2',
+    accentColor: '#BE123C',
+    sla: '15 mins',
+    tags: ['Face Serums', 'Kajal', 'Sunscreens'],
+    icons: ['/category-beauty-cosmetics.jpg']
+  },
+  {
+    slug: 'health-wellness',
+    name: 'Health & Wellness',
+    sub: 'Dabur chyawanprash, multivitamins, pain sprays & first aid',
+    group: 'care',
+    badgeColor: '#16A34A',
+    badgeBg: '#F0FDF4',
+    accentColor: '#15803D',
+    sla: '15 mins',
+    tags: ['Chyawanprash', 'Multivitamins', 'Pain Relief'],
+    icons: ['/category-health-wellness.jpg']
+  },
+  {
+    slug: 'meat-seafood',
+    name: 'Meat, Fish & Eggs',
+    sub: 'Farm fresh chicken, pink salmon steaks & country brown eggs',
+    group: 'fresh',
+    badgeColor: '#DC2626',
+    badgeBg: '#FEF2F2',
+    accentColor: '#991B1B',
+    sla: '20 mins',
+    tags: ['Fresh Chicken', 'Salmon Fish', 'Brown Eggs'],
+    icons: ['/category-meat-seafood.jpg']
+  },
+  {
+    slug: 'home-kitchen',
+    name: 'Home & Kitchen',
+    sub: 'Pressure cookers, thermal bottles, non-stick pans & glass lunch boxes',
+    group: 'lifestyle',
+    badgeColor: '#EA580C',
+    badgeBg: '#FFF7ED',
+    accentColor: '#C2410C',
+    sla: '25 mins',
+    tags: ['Cookware', 'Flask Bottles', 'Lunch Boxes'],
+    icons: ['/category-home-kitchen.jpg']
+  },
+  {
+    slug: 'stationery-office',
+    name: 'Stationery & Office',
+    sub: 'Classmate spiral notebooks, Parker pens, markers & Casio calculators',
+    group: 'lifestyle',
+    badgeColor: '#2563EB',
+    badgeBg: '#EFF6FF',
+    accentColor: '#1D4ED8',
+    sla: '15 mins',
+    tags: ['Notebooks', 'Parker Pens', 'Calculators'],
+    icons: ['/category-stationery-office.jpg']
+  },
+  {
+    slug: 'sports-fitness',
+    name: 'Sports & Fitness',
+    sub: 'Yonex badminton rackets, MuscleBlaze whey protein & yoga mats',
+    group: 'lifestyle',
+    badgeColor: '#16A34A',
+    badgeBg: '#F0FDF4',
+    accentColor: '#15803D',
+    sla: '20 mins',
+    tags: ['Badminton', 'Whey Protein', 'Yoga Mats'],
+    icons: ['/category-sports-fitness.jpg']
+  },
+  {
+    slug: 'toys-games',
+    name: 'Toys & Games',
+    sub: 'LEGO creative bricks, Monopoly, Hot Wheels cars & Rubik cubes',
+    group: 'lifestyle',
+    badgeColor: '#9333EA',
+    badgeBg: '#FAF5FF',
+    accentColor: '#7E22CE',
+    sla: '20 mins',
+    tags: ['LEGO', 'Board Games', 'Hot Wheels'],
+    icons: ['/category-toys-games.jpg']
+  },
+  {
+    slug: 'pooja-needs',
+    name: 'Pooja & Spiritual Needs',
+    sub: 'Cycle pure agarbatti, brass diyas, pure camphor & ghee wicks',
+    group: 'lifestyle',
+    badgeColor: '#D97706',
+    badgeBg: '#FFFBEB',
+    accentColor: '#B45309',
+    sla: '15 mins',
+    tags: ['Agarbatti', 'Brass Diyas', 'Pure Camphor'],
+    icons: ['/category-pooja-needs.jpg']
   }
 ];
 
@@ -173,68 +293,85 @@ export default function CategoriesOverviewPage() {
         
 
 
-        {/* 👑 HEADER BANNER CARD WITH MATCHING ROYAL BLUE & ICE BLUE GRADIENT */}
-        <div style={{
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 45%, #DBEAFE 100%)',
-          borderRadius: isMobile ? '20px' : '28px',
-          border: '1.5px solid #BFDBFE',
-          padding: isMobile ? '20px 16px' : '36px 44px',
-          marginBottom: isMobile ? '20px' : '28px',
-          boxShadow: '0 12px 36px rgba(0, 113, 227, 0.08)',
-          position: 'relative', overflow: 'hidden'
-        }}>
+        {/* 👑 HEADER BANNER CARD (DESKTOP) / COMPACT SEARCH BAR (MOBILE) */}
+        {!isMobile ? (
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column-reverse' : 'row', gap: '20px',
-            marginBottom: '16px'
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 45%, #DBEAFE 100%)',
+            borderRadius: '28px',
+            border: '1.5px solid #BFDBFE',
+            padding: '36px 44px',
+            marginBottom: '28px',
+            boxShadow: '0 12px 36px rgba(0, 113, 227, 0.08)',
+            position: 'relative', overflow: 'hidden'
           }}>
-            {/* Left Content Column */}
-            <div style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
-              <h1 style={{ fontSize: isMobile ? '24px' : '38px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
-                All Categories
-              </h1>
-              
-              <p style={{ fontSize: isMobile ? '13px' : '14.5px', color: '#475569', margin: '0 0 18px', fontWeight: 500, lineHeight: 1.45 }}>
-                Explore 278+ daily groceries, fresh produce, cold beverages, electronics &amp; essentials
-              </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: '20px', marginBottom: '16px'
+            }}>
+              {/* Left Content Column */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 style={{ fontSize: '38px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
+                  All Categories
+                </h1>
+                
+                <p style={{ fontSize: '14.5px', color: '#475569', margin: '0 0 18px', fontWeight: 500, lineHeight: 1.45 }}>
+                  Explore 278+ daily groceries, fresh produce, cold beverages, electronics &amp; essentials
+                </p>
 
-              {/* Instant Category Filter Search */}
-              <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
-                <Search size={17} color="#0071E3" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="text"
-                  placeholder="Search categories (e.g. Snacks, Milk)..."
-                  value={filterQuery}
-                  onChange={e => setFilterQuery(e.target.value)}
+                {/* Instant Category Filter Search */}
+                <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
+                  <Search size={17} color="#0071E3" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search categories (e.g. Snacks, Milk)..."
+                    value={filterQuery}
+                    onChange={e => setFilterQuery(e.target.value)}
+                    style={{
+                      width: '100%', padding: '13px 14px 13px 42px', borderRadius: '14px',
+                      border: '1.5px solid #BFDBFE', background: '#FFFFFF',
+                      fontSize: '13.5px', color: '#0F172A', outline: 'none',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)', fontWeight: 600
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Right Hero Image Column */}
+              <div style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <img
+                  src="https://res.cloudinary.com/hmx3azp6/image/upload/v1787645063/grabit_media/grabit_all_categories_hero_transparent.png"
+                  alt="All Grabit Categories Hero"
                   style={{
-                    width: '100%', padding: '13px 14px 13px 42px', borderRadius: '14px',
-                    border: '1.5px solid #BFDBFE', background: '#FFFFFF',
-                    fontSize: '13.5px', color: '#0F172A', outline: 'none',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)', fontWeight: 600
+                    height: '230px', width: 'auto', maxWidth: '400px',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 16px 32px rgba(0, 113, 227, 0.2))'
                   }}
                 />
               </div>
             </div>
-
-            {/* Right Hero Image Column (Clean Isolated Tote Bag on 100% Transparent Background) */}
-            <div style={{
-              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <img
-                src="https://res.cloudinary.com/hmx3azp6/image/upload/v1787645063/grabit_media/grabit_all_categories_hero_transparent.png"
-                alt="All Grabit Categories Hero"
+          </div>
+        ) : (
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <Search size={16} color="#0071E3" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={filterQuery}
+                onChange={e => setFilterQuery(e.target.value)}
                 style={{
-                  height: isMobile ? '170px' : '230px', width: 'auto', maxWidth: isMobile ? '100%' : '400px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 16px 32px rgba(0, 113, 227, 0.2))',
-                  transition: 'transform 0.3s ease'
+                  width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px',
+                  border: '1.5px solid #CBD5E1', background: '#FFFFFF',
+                  fontSize: '13px', color: '#0F172A', outline: 'none',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)', fontWeight: 600,
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
           </div>
-
-        </div>
+        )}
 
         {/* 📱 ZEPTO-STYLE NATIVE MOBILE & DESKTOP GRID */}
         <div key={activeGroup} className="category-transition-container" style={{
@@ -243,8 +380,8 @@ export default function CategoriesOverviewPage() {
           gap: isMobile ? '8px' : '20px'
         }}>
           {filteredCategories.map(cat => {
-            const catItems = products.filter(p => p.category === cat.slug || (cat.slug === 'produce' && p.category === 'produce'));
-            const count = catItems.length > 0 ? catItems.length : 24;
+            const catItems = products.filter(p => inferProductCategory(p, liveCategories) === cat.slug);
+            const count = catItems.length > 0 ? catItems.length : 5;
 
             {/* MOBILE COMPACT TILE CARD DESIGN */}
             if (isMobile) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { post } from '../api';
@@ -22,10 +22,13 @@ export function LoginPage() {
   const handleSkip = () => {
     sessionStorage.setItem('grabit_skipped_login', 'true');
     const intended = sessionStorage.getItem('grabit_intended_path');
-    if (intended) {
-      sessionStorage.removeItem('grabit_intended_path');
+    sessionStorage.removeItem('grabit_intended_path');
+    localStorage.removeItem('grabit_intended_path');
+    if (intended && intended !== '/login') {
+      navigate(intended, { replace: true });
+    } else {
+      navigate('/', { replace: true });
     }
-    navigate('/', { replace: true });
   };
 
   // After login, restore the page the user was trying to reach (set by ProtectedRoute)
@@ -42,30 +45,63 @@ export function LoginPage() {
   };
 
   const [phoneDigits, setPhoneDigits] = useState('');
-  const [step, setStep] = useState('phone'); // 'phone' | 'register' | 'otp'
+  // Steps: 'phone' | 'otp' | 'profile'
+  const [step, setStep] = useState('phone');
   const [otp, setOtp] = useState('');
+  const [debugOtp, setDebugOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [registered, setRegistered] = useState(true);
-  const [detectedRole, setDetectedRole] = useState('customer');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const fullPhone = '+91' + phoneDigits;
 
+  // Resend cooldown countdown
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Send OTP and store debug code
   const requestOtpFor = async (phone) => {
     try {
       const res = await post('/auth/send-otp', { phone });
-      if (res && res.debug_otp) {
-        setOtp(String(res.debug_otp));
-      } else {
-        setOtp('123456');
-      }
-    } catch {
-      setOtp('123456');
+      setDebugOtp(res?.debug_otp ? String(res.debug_otp) : '');
+      setResendCooldown(30);
+      setError('');
+      return true;
+    } catch (err) {
+      setDebugOtp('');
+      setError(err?.message || 'Unable to send verification code. Please check your connection and try again.');
+      return false;
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || busy) return;
+    setBusy(true);
+    setOtp('');
+    await requestOtpFor(fullPhone);
+    setBusy(false);
+  };
+
+  const handleChangeNumber = () => {
+    setStep('phone');
+    setOtp('');
+    setDebugOtp('');
+    setName('');
+    setEmail('');
+    setError('');
+    setResendCooldown(0);
+  };
+
+  // Step 1: Phone submitted → send OTP directly (no /auth/phone check)
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
     if (phoneDigits.length !== 10) {
@@ -75,7 +111,7 @@ export function LoginPage() {
     setBusy(true);
     setError('');
 
-    // Instant recognition for known demo credentials entered or selected
+    // Instant demo portal access for known demo phones
     const knownDemoMap = {
       '+919999900001': { name: 'Admin Supervisor', role: 'admin' },
       '+919999900002': { name: 'GrabIt Supermarket', role: 'seller' },
@@ -83,39 +119,21 @@ export function LoginPage() {
       '+919999900004': { name: 'Rahul Sharma', role: 'customer' },
       '+919080841727': { name: 'Thabee', role: 'delivery_agent' },
     };
-
     const demoUser = knownDemoMap[fullPhone];
     if (demoUser) {
       let token = 'demo-token';
-      try {
-        await post('/auth/phone', { phone: fullPhone });
-        const v = await post('/auth/verify', { phone: fullPhone, otp: '123456', full_name: demoUser.name });
-        if (v?.access_token) token = v.access_token;
-      } catch {}
-
-      let existingUser = {};
-      try {
-        const existingStr = localStorage.getItem('grabit_user');
-        if (existingStr) existingUser = JSON.parse(existingStr);
-      } catch {}
-
-      const userObj = {
+      let userObj = {
         id: demoUser.role === 'admin' ? 1 : demoUser.role === 'seller' ? 2 : demoUser.role === 'delivery_agent' ? 3 : 4,
-        role: demoUser.role,
-        full_name: demoUser.name,
-        name: demoUser.name,
-        phone: fullPhone,
-        email: `${demoUser.role}@grabit.local`,
-        ...(existingUser.phone === fullPhone || existingUser.name === demoUser.name ? {
-          selfieImage: existingUser.selfieImage || existingUser.selfie_image || existingUser.avatar_url,
-          selfie_image: existingUser.selfie_image || existingUser.selfieImage || existingUser.avatar_url,
-          avatar_url: existingUser.avatar_url || existingUser.selfieImage || existingUser.selfie_image,
-          biometricsDone: existingUser.biometricsDone,
-          clearances: existingUser.clearances,
-          clearanceTimestamps: existingUser.clearanceTimestamps,
-        } : {})
+        role: demoUser.role, full_name: demoUser.name, name: demoUser.name,
+        phone: fullPhone, email: `${demoUser.role}@grabit.local`,
       };
-
+      try {
+        const sent = await requestOtpFor(fullPhone);
+        if (sent) {
+          const v = await post('/auth/verify', { phone: fullPhone, otp: debugOtp || '123456' });
+          if (v?.access_token) { token = v.access_token; if (v.user) userObj = { ...userObj, ...v.user }; }
+        }
+      } catch {}
       localStorage.setItem('grabit_session', token);
       localStorage.setItem('grabit_user', JSON.stringify(userObj));
       sessionStorage.setItem('grabit_skipped_login', 'true');
@@ -123,11 +141,7 @@ export function LoginPage() {
         localStorage.setItem('grabit_seller_access', token);
         localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
       }
-      try {
-        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
-        window.dispatchEvent(new Event('storage'));
-      } catch {}
-
+      try { window.dispatchEvent(new CustomEvent('grabit_auth_updated')); window.dispatchEvent(new Event('storage')); } catch {}
       if (demoUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
       else if (demoUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
       else if (demoUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
@@ -136,113 +150,76 @@ export function LoginPage() {
       return;
     }
 
-    try {
-      const res = await post('/auth/phone', { phone: fullPhone });
-      const isReg = Boolean(res && res.registered);
-      setRegistered(isReg);
-      setDetectedRole(res?.role || 'customer');
-
-      if (isReg) {
-        if (res.user?.full_name || res.user?.name) {
-          setName(res.user.full_name || res.user.name);
-        }
-        if (res.user?.email) {
-          setEmail(res.user.email);
-        }
-        await requestOtpFor(fullPhone);
-        setStep('otp');
-      } else {
-        setName('');
-        setEmail('');
-        setStep('register');
-      }
-    } catch (e) {
-      setRegistered(false);
-      setName('');
-      setEmail('');
-      setStep('register');
-    } finally {
-      setBusy(false);
+    // Regular login: just send OTP, no pre-check
+    const sent = await requestOtpFor(fullPhone);
+    setBusy(false);
+    if (sent) {
+      setOtp('');
+      setStep('otp');
     }
   };
 
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Please enter your full name to create an account');
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      await requestOtpFor(fullPhone);
-      setStep('otp');
-    } catch {
-      setStep('otp');
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  // Step 2: OTP submitted → verify
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (otp.length < 6) {
-      setError('Please enter the complete 6-digit OTP');
-      return;
-    }
+    if (otp.length < 6) { setError('Please enter the complete 6-digit OTP'); return; }
     setBusy(true);
     setError('');
     try {
-      const x = await post('/auth/verify', {
-        phone: fullPhone,
-        otp,
-        ...(!registered ? { full_name: name || 'Customer', email: email || null } : {}),
-      });
-      const resolvedUser = x.user || { role: detectedRole, name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
-      localStorage.setItem('grabit_session', x.access_token || 'session-token');
-      localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
-      sessionStorage.setItem('grabit_skipped_login', 'true');
-
-      const userRole = resolvedUser.role || detectedRole;
-      if (userRole === 'seller' || userRole === 'admin') {
-        localStorage.setItem('grabit_seller_access', x.access_token);
-        localStorage.setItem('grabit_seller_profile', JSON.stringify(resolvedUser));
+      const x = await post('/auth/verify', { phone: fullPhone, otp });
+      if (x?.needs_profile) {
+        // New user — collect profile info
+        setStep('profile');
+        setBusy(false);
+        return;
       }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
-      }
-
-      if (userRole === 'admin') navigate(getRedirectPath('admin'), { replace: true });
-      else if (userRole === 'seller') navigate(getRedirectPath('seller'), { replace: true });
-      else if (userRole === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate(getRedirectPath('customer'), { replace: true });
+      if (!x?.access_token || !x?.user) throw new Error('Verification failed. Please try again.');
+      finishLogin(x);
     } catch (e) {
-      const fallbackUser = { role: detectedRole || 'customer', name: name || 'Customer', full_name: name || 'Customer', phone: fullPhone, email: email || null };
-      localStorage.setItem('grabit_session', 'demo-token');
-      localStorage.setItem('grabit_user', JSON.stringify(fallbackUser));
-      sessionStorage.setItem('grabit_skipped_login', 'true');
-      if (fallbackUser.role === 'seller' || fallbackUser.role === 'admin') {
-        localStorage.setItem('grabit_seller_access', 'demo-token');
-        localStorage.setItem('grabit_seller_profile', JSON.stringify(fallbackUser));
-      }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
-      }
-      if (fallbackUser.role === 'admin') navigate(getRedirectPath('admin'), { replace: true });
-      else if (fallbackUser.role === 'seller') navigate(getRedirectPath('seller'), { replace: true });
-      else if (fallbackUser.role === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
-      else navigate(getRedirectPath('customer'), { replace: true });
+      setError(e?.message || 'Invalid verification code. Please check and try again.');
     } finally {
       setBusy(false);
     }
+  };
+
+  // Step 3: Profile submitted (new users only)
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Please enter your full name'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      const x = await post('/auth/complete-profile', { phone: fullPhone, otp, full_name: name.trim(), email: email || null });
+      if (!x?.access_token || !x?.user) throw new Error('Account creation failed. Please try again.');
+      finishLogin(x);
+    } catch (e) {
+      setError(e?.message || 'Could not create account. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Shared post-login handler
+  const finishLogin = (x) => {
+    const resolvedUser = x.user;
+    localStorage.setItem('grabit_session', x.access_token);
+    localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
+    sessionStorage.setItem('grabit_skipped_login', 'true');
+    const userRole = resolvedUser.role || 'customer';
+    if (userRole === 'seller' || userRole === 'admin') {
+      localStorage.setItem('grabit_seller_access', x.access_token);
+      localStorage.setItem('grabit_seller_profile', JSON.stringify(resolvedUser));
+    }
+    try { window.dispatchEvent(new CustomEvent('grabit_auth_updated')); } catch {}
+    if (userRole === 'admin') navigate(getRedirectPath('admin'), { replace: true });
+    else if (userRole === 'seller') navigate(getRedirectPath('seller'), { replace: true });
+    else if (userRole === 'delivery_agent') navigate(getRedirectPath('delivery_agent'), { replace: true });
+    else navigate(getRedirectPath('customer'), { replace: true });
   };
 
   const selectDemoRole = (demoPhone, demoName, role) => {
-    const digits = demoPhone.replace('+91', '');
-    setPhoneDigits(digits);
+    setPhoneDigits(demoPhone.replace('+91', ''));
     setName(demoName);
-    setDetectedRole(role);
     setError('');
   };
 
@@ -396,8 +373,8 @@ export function LoginPage() {
             </h2>
             {step !== 'phone' && (
               <p style={{ color: '#4B5563', fontSize: '13px', margin: '8px 0 0', fontWeight: 600 }}>
-                {step === 'register'
-                  ? 'Enter your full name to set up your account'
+                {step === 'profile'
+                  ? 'Enter your name and email to complete registration'
                   : `We sent a 6-digit verification code to ${fullPhone}`}
               </p>
             )}
@@ -519,9 +496,134 @@ export function LoginPage() {
             </form>
           )}
 
-          {/* STEP 2: NEW CUSTOMER REGISTRATION */}
-          {step === 'register' && (
-            <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* STEP 2: OTP VERIFICATION */}
+          {step === 'otp' && (
+            <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* Demo OTP Banner — always shown in debug mode */}
+              {debugOtp && (
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                    border: '1.5px solid #93C5FD',
+                    borderRadius: '14px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#1D4ED8', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      ⚡ Demo OTP
+                    </div>
+                    <div style={{ fontSize: '26px', fontWeight: 900, color: '#1E40AF', letterSpacing: '8px', fontFamily: 'monospace' }}>
+                      {debugOtp}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOtp(debugOtp)}
+                    style={{
+                      background: '#2563EB',
+                      color: '#fff',
+                      border: 0,
+                      borderRadius: '10px',
+                      padding: '8px 14px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Use this OTP
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>
+                    Enter 6-Digit OTP
+                  </label>
+                </div>
+                <input
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="· · · · · ·"
+                  maxLength={6}
+                  style={{
+                    width: '100%',
+                    border: '1.5px solid #D1D5DB',
+                    borderRadius: '14px',
+                    padding: '12px',
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    letterSpacing: '8px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    color: '#111827',
+                    backgroundColor: '#F9FAFB',
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
+                  color: '#FFFFFF',
+                  border: 0,
+                  borderRadius: '16px',
+                  padding: '14px',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '50px',
+                }}
+              >
+                {busy ? <ThreeDotsLoading /> : 'Verify & Continue'}
+              </button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <button
+                  type="button"
+                  onClick={handleChangeNumber}
+                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
+                >
+                  Change number
+                </button>
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || busy}
+                  onClick={handleResendOtp}
+                  style={{
+                    background: 'none',
+                    border: 0,
+                    color: (resendCooldown > 0 || busy) ? '#94A3B8' : '#0071E3',
+                    cursor: (resendCooldown > 0 || busy) ? 'not-allowed' : 'pointer',
+                    fontWeight: 800
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* STEP 3: NEW USER PROFILE COMPLETION */}
+          {step === 'profile' && (
+            <form onSubmit={handleProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#374151', marginBottom: '6px' }}>
                   Mobile Number
@@ -610,106 +712,16 @@ export function LoginPage() {
                   marginTop: '6px',
                 }}
               >
-                {busy ? <ThreeDotsLoading /> : 'Complete Registration'}
+                {busy ? <ThreeDotsLoading /> : 'Complete Sign Up'}
               </button>
 
               <button
                 type="button"
-                onClick={() => setStep('phone')}
+                onClick={handleChangeNumber}
                 style={{ background: 'none', border: 0, color: '#6B7280', fontSize: '13px', cursor: 'pointer', fontWeight: 700, textAlign: 'center' }}
               >
                 ← Back to Phone Number
               </button>
-            </form>
-          )}
-
-          {/* STEP 3: OTP VERIFICATION */}
-          {step === 'otp' && (
-            <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>
-                    Enter 6-Digit OTP
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setOtp('123456')}
-                    style={{
-                      background: '#EFF6FF',
-                      border: '1px solid #BFDBFE',
-                      color: '#0071E3',
-                      padding: '3px 9px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ⚡ Auto-fill OTP
-                  </button>
-                </div>
-                <input
-                  required
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                  maxLength={6}
-                  style={{
-                    width: '100%',
-                    border: '1.5px solid #D1D5DB',
-                    borderRadius: '14px',
-                    padding: '12px',
-                    fontSize: '24px',
-                    fontWeight: 900,
-                    letterSpacing: '8px',
-                    textAlign: 'center',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    color: '#111827',
-                    backgroundColor: '#F9FAFB',
-                  }}
-                  autoFocus
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={busy}
-                style={{
-                  background: 'linear-gradient(135deg, #0071E3 0%, #005BB5 100%)',
-                  color: '#FFFFFF',
-                  border: 0,
-                  borderRadius: '16px',
-                  padding: '14px',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: '50px',
-                }}
-              >
-                {busy ? <ThreeDotsLoading /> : 'Verify & Continue'}
-              </button>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <button
-                  type="button"
-                  onClick={() => setStep('phone')}
-                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
-                >
-                  Change number
-                </button>
-                <button
-                  type="button"
-                  onClick={() => requestOtpFor(fullPhone)}
-                  style={{ background: 'none', border: 0, color: '#0071E3', cursor: 'pointer', fontWeight: 800 }}
-                >
-                  Resend code
-                </button>
-              </div>
             </form>
           )}
 

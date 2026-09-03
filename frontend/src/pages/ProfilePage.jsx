@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { get, patch } from '../api';
 import { 
   DEFAULT_CUSTOMER_ADDRESSES,
   loadCustomerAddresses,
@@ -38,28 +39,117 @@ export default function ProfilePage() {
 
   const initialUser = getStoredUser();
   // ── USER STATE & WALLET ──
-  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || 'Customer');
+  const [userName, setUserName] = useState(initialUser?.full_name || initialUser?.name || '');
   const [userPhone, setUserPhone] = useState(initialUser?.phone || '');
   const [userEmail, setUserEmail] = useState(initialUser?.email || '');
   const [walletBalance, setWalletBalance] = useState(0);
   const [addAmount, setAddAmount] = useState('100');
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const isLoggedIn = !!(userPhone || userEmail || initialUser?.phone);
+
+  // Hydrate user profile from backend API (/users/me)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRemoteProfile = async () => {
+      const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+      if (!token) return;
+      try {
+        const remote = await get('/users/me');
+        if (remote && isMounted) {
+          const current = getStoredUser() || {};
+          const merged = {
+            ...current,
+            ...remote,
+            name: remote.full_name || remote.name || current.name || '',
+            full_name: remote.full_name || remote.name || current.full_name || '',
+            email: remote.email || current.email || '',
+            phone: remote.phone || current.phone || '',
+          };
+          localStorage.setItem('grabit_user', JSON.stringify(merged));
+          setUserName(merged.full_name || merged.name || '');
+          setUserEmail(merged.email || '');
+          if (merged.phone) setUserPhone(merged.phone);
+        }
+      } catch (err) {
+        // Fall back gracefully to local storage
+      }
+    };
+    fetchRemoteProfile();
+    return () => { isMounted = false; };
+  }, []);
 
   // Sync profile when auth state updates
-  useState(() => {
+  useEffect(() => {
     const syncUser = () => {
       const u = getStoredUser();
       if (u) {
-        setUserName(u.full_name || u.name || 'Customer');
+        setUserName(u.full_name || u.name || '');
         setUserPhone(u.phone || '');
         setUserEmail(u.email || '');
+      } else {
+        setUserName('');
+        setUserPhone('');
+        setUserEmail('');
       }
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('grabit_auth_updated', syncUser);
       window.addEventListener('storage', syncUser);
     }
-  });
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('grabit_auth_updated', syncUser);
+        window.removeEventListener('storage', syncUser);
+      }
+    };
+  }, []);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!userName.trim()) {
+      showToast('Please enter your full name.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const payload = {
+        full_name: userName.trim(),
+        email: userEmail.trim(),
+      };
+
+      // 1. Dispatch PATCH /users/me to backend API
+      const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+      if (token) {
+        try {
+          await patch('/users/me', payload);
+        } catch (apiErr) {
+          console.warn('API PATCH /users/me failed, preserving locally:', apiErr);
+        }
+      }
+
+      // 2. Persist to localStorage & broadcast event
+      const current = getStoredUser() || {};
+      const updatedUser = {
+        ...current,
+        name: userName.trim(),
+        full_name: userName.trim(),
+        email: userEmail.trim(),
+        phone: userPhone.trim(),
+      };
+      localStorage.setItem('grabit_user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new CustomEvent('grabit_auth_updated', { detail: updatedUser }));
+
+      showToast('Profile updated successfully!');
+      setActiveModal(null);
+    } catch (err) {
+      showToast('Failed to save profile. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // ── MODAL VISIBILITY STATES ──
   const [activeModal, setActiveModal] = useState(null); // 'add-balance' | 'refunds' | 'gift-cards' | 'addresses' | 'edit-profile' | 'rewards' | 'payments' | 'app-icon' | 'suggest' | 'notifications' | 'info'
@@ -163,8 +253,7 @@ export default function ProfilePage() {
       window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch {}
-    showToast('Logged out of Grabit successfully!');
-    setTimeout(() => navigate('/login'), 600);
+    navigate('/login', { replace: true });
   };
 
   const handleAddBalance = (e) => {
@@ -220,25 +309,42 @@ export default function ProfilePage() {
 
         {/* ── 2. USER PROFILE SUMMARY ── */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '14px',
-          marginBottom: '20px', padding: '4px 2px'
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '20px', padding: '14px 16px',
+          background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
         }}>
-          <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0071E3 0%, #0058B3 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(0, 113, 227, 0.25)', flexShrink: 0
-          }}>
-            <User size={32} color="#FFFFFF" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: isLoggedIn ? 'linear-gradient(135deg, #0071E3 0%, #0058B3 100%)' : '#F1F5F9',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: isLoggedIn ? '0 6px 16px rgba(0, 113, 227, 0.25)' : 'none', flexShrink: 0
+            }}>
+              <User size={28} color={isLoggedIn ? "#FFFFFF" : "#64748B"} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.3px' }}>
+                {isLoggedIn ? userName : 'Welcome to GrabIt'}
+              </h2>
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0, fontWeight: 600 }}>
+                {isLoggedIn ? (userPhone || userEmail) : 'Log in to view orders & saved addresses'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 2px 0', letterSpacing: '-0.3px' }}>
-              {userName}
-            </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: 0, fontWeight: 600 }}>
-              {userPhone}
-            </p>
-          </div>
+          {!isLoggedIn && (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: '#0071E3', color: '#FFFFFF', border: 'none',
+                borderRadius: '10px', padding: '8px 16px', fontSize: '13px',
+                fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.25)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Log In
+            </button>
+          )}
         </div>
 
         {/* ── 3. TOP 3 QUICK ACTION CARDS ── */}
@@ -440,18 +546,33 @@ export default function ProfilePage() {
 
         {/* ── 8. LOG OUT BUTTON & VERSION FOOTER ── */}
         <div style={{ textAlign: 'center', padding: '4px 0 2px', margin: '0 0 0' }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: '#FFFFFF', border: '1px solid #E2E8F0',
-              borderRadius: '12px', padding: '7px 20px',
-              fontSize: '12.5px', fontWeight: 800, color: '#EF4444',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '8px'
-            }}
-          >
-            <LogOut size={14} /> Log Out
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              style={{
+                background: '#FFFFFF', border: '1px solid #E2E8F0',
+                borderRadius: '12px', padding: '7px 20px',
+                fontSize: '12.5px', fontWeight: 800, color: '#EF4444',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '8px'
+              }}
+            >
+              <LogOut size={14} /> Log Out
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: '#0071E3', border: 'none',
+                borderRadius: '12px', padding: '8px 22px',
+                fontSize: '13px', fontWeight: 800, color: '#FFFFFF',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 12px rgba(0,113,227,0.2)', marginBottom: '8px'
+              }}
+            >
+              <LogIn size={14} /> Log In / Sign Up
+            </button>
+          )}
           <div style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: 600, letterSpacing: '0.2px', margin: 0, padding: 0 }}>
             App version 0.0.1
           </div>
@@ -518,15 +639,27 @@ export default function ProfilePage() {
 
       {/* 4. SAVED ADDRESSES MODAL WITH ADD, EDIT & DELETE */}
       {activeModal === 'addresses' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#0F172A" /></button>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 14px', color: '#0F172A' }}>
-              {isAddingAddress ? 'Add New Delivery Address' : editingAddrIdx !== null ? 'Edit Delivery Address' : 'Saved Delivery Locations'}
-            </h3>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)', position: 'relative', maxHeight: '90vh', overflowY: 'auto', border: '1px solid #E2E8F0' }}>
+            <button onClick={() => { setActiveModal(null); setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ position: 'sticky', top: '0px', float: 'right', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '16px 16px 0 auto', zIndex: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.15s ease', marginBottom: '-34px' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#E2E8F0'}
+              onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}
+            ><X size={18} strokeWidth={2.4} color="#334155" /></button>
 
+            <div style={{ padding: '24px' }}>
             {(isAddingAddress || editingAddrIdx !== null) ? (
-              <form onSubmit={handleSaveEditAddress}>
+              <>
+                {/* Centered icon header for Add/Edit view */}
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)', color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 6px 16px -4px rgba(0,113,227,0.25)' }}>
+                    <MapPin size={24} strokeWidth={2.4} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                    {isAddingAddress ? 'Add New Delivery Address' : 'Edit Delivery Address'}
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>Fill in your real delivery details below.</p>
+                </div>
+                <form onSubmit={handleSaveEditAddress}>
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px' }}>Address Title</label>
                   <input type="text" placeholder="e.g. Home, Work, Apartment" value={editAddrForm.title} onChange={e => setEditAddrForm({ ...editAddrForm, title: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: 700, outline: 'none' }} required />
@@ -547,9 +680,23 @@ export default function ProfilePage() {
                   <button type="button" onClick={() => { setEditingAddrIdx(null); setIsAddingAddress(false); }} style={{ flex: 1, background: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 800, color: '#475569', cursor: 'pointer' }}>Cancel</button>
                   <button type="submit" style={{ flex: 1, background: '#0071E3', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>{isAddingAddress ? 'Save Address' : 'Save Changes'}</button>
                 </div>
-              </form>
+                </form>
+              </>
             ) : (
               <>
+                {/* Centered icon header for list view - matching Image 1 */}
+                <div style={{ textAlign: 'center', marginBottom: '20px', paddingTop: '4px' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)', color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 8px 20px -4px rgba(0,113,227,0.25)' }}>
+                    <MapPin size={26} strokeWidth={2.4} />
+                  </div>
+                  <h3 style={{ fontSize: '19px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                    Saved Delivery Locations
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                    Add your delivery address to see live stock availability and 10-minute delivery in your area.
+                  </p>
+                </div>
+
                 {profileAddresses.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '28px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
                     <MapPin size={32} color="#94A3B8" style={{ margin: '0 auto 8px', display: 'block' }} />
@@ -596,9 +743,24 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 )}
-                <button onClick={handleStartAddAddress} style={{ width: '100%', background: '#F8FAFC', border: '1px dashed #0071E3', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: 800, color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Plus size={16} /> Add New Delivery Address</button>
+
+                {/* Add New Address button — styled like Image 1 button 3 */}
+                <button
+                  onClick={handleStartAddAddress}
+                  style={{
+                    width: '100%', background: '#F8FAFC', border: '1px dashed #CBD5E1',
+                    borderRadius: '14px', padding: '13px', fontSize: '14px', fontWeight: 800,
+                    color: '#0071E3', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F0F7FF'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}
+                >
+                  <Plus size={16} /> Add New Delivery Address
+                </button>
               </>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -609,20 +771,51 @@ export default function ProfilePage() {
           <div style={{ background: '#FFFFFF', borderRadius: '24px', maxWidth: '400px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
             <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 16px', color: '#0F172A' }}>Edit Account Profile</h3>
-            <form onSubmit={e => { e.preventDefault(); setActiveModal(null); showToast('Profile updated successfully!'); }}>
+            <form onSubmit={handleSaveProfile}>
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Full Name</label>
-                <input type="text" value={userName} onChange={e => setUserName(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="text"
+                  required
+                  value={userName}
+                  onChange={e => setUserName(e.target.value)}
+                  placeholder="Your Full Name"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Mobile Number</label>
-                <input type="text" value={userPhone} onChange={e => setUserPhone(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="text"
+                  value={userPhone}
+                  onChange={e => setUserPhone(e.target.value)}
+                  placeholder="+91 9876543210"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px' }}>Email Address</label>
-                <input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }} />
+                <input
+                  type="email"
+                  value={userEmail}
+                  onChange={e => setUserEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  style={{ width: '100%', height: '42px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
-              <button type="submit" style={{ width: '100%', background: '#0071E3', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '14px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer' }}>Save Profile Changes</button>
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                style={{
+                  width: '100%', background: isSavingProfile ? '#94A3B8' : '#0071E3',
+                  border: 'none', borderRadius: '12px', padding: '12px',
+                  fontSize: '14px', fontWeight: 900, color: '#FFFFFF',
+                  cursor: isSavingProfile ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,113,227,0.25)'
+                }}
+              >
+                {isSavingProfile ? 'Saving Changes...' : 'Save Profile Changes'}
+              </button>
             </form>
           </div>
         </div>

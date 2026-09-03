@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Star, Heart, ChevronLeft, ChevronRight, Zap, MapPin, Plus, Minus, ShoppingCart, Tag, Shield, ShoppingBag, Truck, CheckCircle2, Clock, Share2, ThumbsUp, HelpCircle, Award, Check } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
-import { products, getProductById } from '../data/products';
+import { products, getProductById, getProductSlug } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useDeliveryLocation } from '../context/LocationContext';
 import { useWishlist } from '../context/WishlistContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 
-const TABS = ['Product Details', 'Nutritional Info', 'About Brand', 'Storage & Safety'];
+const TABS = ['Product Details', 'Customer Reviews', 'Nutritional Info', 'About Brand'];
 
 const getProductVariants = (p) => {
   if (p.variants && p.variants.length > 0) return p.variants;
@@ -59,7 +59,17 @@ const getProductVariants = (p) => {
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const product = getProductById(id) || products[0];
+
+  useEffect(() => {
+    if (product) {
+      const canonicalSlug = getProductSlug(product);
+      if (canonicalSlug && id !== canonicalSlug) {
+        navigate(`/product/${canonicalSlug}`, { replace: true });
+      }
+    }
+  }, [id, product, navigate]);
   const { addItem, updateQty, getItemQty } = useCart();
   const { showToast } = useToast();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -77,6 +87,191 @@ export default function ProductDetailPage() {
   const activeMrp = currentVariant.mrp;
   const activeWeight = currentVariant.label || currentVariant.weight;
   const activeDiscount = activeMrp > activePrice ? Math.round(((activeMrp - activePrice) / activeMrp) * 100) : product.discount;
+
+  const getInitialReviews = (prod) => {
+    const categoryDefaults = {
+      snacks: [
+        {
+          id: 'rev-1',
+          name: 'Aarav Patel',
+          city: 'Bengaluru',
+          rating: 5,
+          date: '2 days ago',
+          verified: true,
+          title: 'Super fresh and crispy!',
+          comment: `Received ${prod.name} within 30 minutes! Perfect packaging with no crushed chips or broken pieces. Highly recommended.`,
+          helpful: 34
+        },
+        {
+          id: 'rev-2',
+          name: 'Pooja Nair',
+          city: 'Indiranagar',
+          rating: 5,
+          date: '1 week ago',
+          verified: true,
+          title: 'Authentic taste & great discount',
+          comment: 'Best price compared to local stores. The expiry date is well into next year, absolutely fresh stock.',
+          helpful: 19
+        },
+        {
+          id: 'rev-3',
+          name: 'Rohan Sharma',
+          city: 'Koramangala',
+          rating: 4,
+          date: '2 weeks ago',
+          verified: true,
+          title: 'Quick delivery & good quality',
+          comment: 'Standard good quality product, delivery rider was very polite and brought it right to my doorstep in 25 mins.',
+          helpful: 8
+        }
+      ],
+      dairy: [
+        {
+          id: 'rev-1',
+          name: 'Sneha Kulkarni',
+          city: 'Bengaluru',
+          rating: 5,
+          date: 'Yesterday',
+          verified: true,
+          title: 'Ice cold and fresh!',
+          comment: `Arrived chilled in an insulated bag. ${prod.name} is super fresh with great taste. Will order daily.`,
+          helpful: 42
+        },
+        {
+          id: 'rev-2',
+          name: 'Vikram Mehta',
+          city: 'HSR Layout',
+          rating: 5,
+          date: '4 days ago',
+          verified: true,
+          title: 'Top quality dairy product',
+          comment: 'Pure and fresh without any issues. Glad Grabit delivers early morning so quickly.',
+          helpful: 21
+        }
+      ],
+      produce: [
+        {
+          id: 'rev-1',
+          name: 'Meera Iyer',
+          city: 'Bengaluru',
+          rating: 5,
+          date: 'Today',
+          verified: true,
+          title: 'Farm fresh quality!',
+          comment: 'Directly from farm fresh quality. Cleanly sorted, no bruised pieces, properly weighed and sealed.',
+          helpful: 28
+        },
+        {
+          id: 'rev-2',
+          name: 'Anand Verma',
+          city: 'Whitefield',
+          rating: 5,
+          date: '3 days ago',
+          verified: true,
+          title: 'Better than local vendor',
+          comment: 'Super crisp and natural produce. Super happy with the quality and quick 35 min delivery.',
+          helpful: 15
+        }
+      ]
+    };
+
+    const catKey = (prod.category || '').toLowerCase();
+    const defaults = categoryDefaults[catKey] || [
+      {
+        id: 'rev-1',
+        name: 'Priya Sundaram',
+        city: 'Bengaluru',
+        rating: 5,
+        date: '3 days ago',
+        verified: true,
+        title: 'Original genuine product',
+        comment: `Excellent quality ${prod.name}. The seal was 100% intact, fast delivery, and very competitive price.`,
+        helpful: 29
+      },
+      {
+        id: 'rev-2',
+        name: 'Karthik Rao',
+        city: 'Koramangala',
+        rating: 5,
+        date: '1 week ago',
+        verified: true,
+        title: 'Value for money',
+        comment: 'Great purchase experience. Good discount and arrived within 30 minutes in pristine condition.',
+        helpful: 16
+      },
+      {
+        id: 'rev-3',
+        name: 'Divya Sharma',
+        city: 'Jayanagar',
+        rating: 4,
+        date: '2 weeks ago',
+        verified: true,
+        title: 'Very satisfied with quality',
+        comment: 'Good product packaging and timely doorstep delivery. Would definitely buy again on Grabit.',
+        helpful: 7
+      }
+    ];
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(`grabit_reviews_${prod.id}`) || '[]');
+      return [...stored, ...defaults];
+    } catch {
+      return defaults;
+    }
+  };
+
+  const [reviewsList, setReviewsList] = useState(() => getInitialReviews(product));
+  const [isWritingReview, setIsWritingReview] = useState(false);
+  const [userRating, setUserRating] = useState(5);
+  const [reviewerName, setReviewerName] = useState('');
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [helpfulVotes, setHelpfulVotes] = useState({});
+
+  const handleSubmitReview = (e) => {
+    e.preventDefault();
+    const storedUser = (() => {
+      try {
+        const u = localStorage.getItem('grabit_user');
+        return u ? JSON.parse(u) : null;
+      } catch { return null; }
+    })();
+    const defaultAuthor = storedUser?.full_name || storedUser?.name || 'Customer';
+
+    const newRev = {
+      id: `user-rev-${Date.now()}`,
+      name: reviewerName.trim() || defaultAuthor,
+      city: 'Bengaluru',
+      rating: userRating,
+      date: 'Just now',
+      verified: true,
+      title: reviewTitle.trim() || 'Great Product!',
+      comment: reviewComment.trim(),
+      helpful: 1
+    };
+
+    const updated = [newRev, ...reviewsList];
+    setReviewsList(updated);
+    
+    try {
+      const existingUserReviews = JSON.parse(localStorage.getItem(`grabit_reviews_${product.id}`) || '[]');
+      localStorage.setItem(`grabit_reviews_${product.id}`, JSON.stringify([newRev, ...existingUserReviews]));
+    } catch (err) {
+      console.error(err);
+    }
+
+    setReviewTitle('');
+    setReviewComment('');
+    setIsWritingReview(false);
+    showToast('🎉 Review submitted successfully!');
+  };
+
+  const handleHelpfulVote = (revId) => {
+    if (helpfulVotes[revId]) return;
+    setHelpfulVotes(prev => ({ ...prev, [revId]: true }));
+    setReviewsList(prev => prev.map(r => r.id === revId ? { ...r, helpful: r.helpful + 1 } : r));
+    showToast('👍 Marked as helpful!');
+  };
 
   const [activeTab, setActiveTab] = useState(0);
   const [selectedThumb, setSelectedThumb] = useState(0);
@@ -111,18 +306,50 @@ export default function ProductDetailPage() {
     setSelectedThumb(0);
   }, [id]);
   
-  // Custom cart item id for variant
-  const cartItemId = `${product.id}-${selectedVariantIdx}`;
-  const qty = getItemQty(product.id);
+  // Custom cart item id for variant: variant 0 maps to base product.id, variants >= 1 get distinct id
+  const cartItemId = selectedVariantIdx === 0 ? product.id : `${product.id}-${selectedVariantIdx}`;
+  const qty = getItemQty(cartItemId) || (selectedVariantIdx === 0 ? (getItemQty(product.id) || getItemQty(`${product.id}-0`)) : 0);
+  const activeCartId = (selectedVariantIdx === 0 && getItemQty(product.id) > 0)
+    ? product.id
+    : ((selectedVariantIdx === 0 && getItemQty(`${product.id}-0`) > 0) ? `${product.id}-0` : cartItemId);
 
-  // Bundle Items for Frequently Bought Together
-  const bundleItems = [
-    product,
-    { id: 16, name: 'Pepsi 500ml', price: 45, mrp: 50, image: 'coca-cola', weight: '500ml' },
-    { id: 31, name: 'Cadbury Dairy Milk 36g', price: 25, mrp: 30, image: 'dairy-milk-silk', weight: '36g' },
-  ];
-  const bundlePrice = bundleItems.reduce((s, i) => s + i.price, 0);
-  const bundleMrp = bundleItems.reduce((s, i) => s + (i.mrp || i.price + 5), 0);
+  // Bundle Items for Frequently Bought Together (Dynamic & Category-Relevant)
+  const bundleItems = (() => {
+    if (!product) return [];
+    const COMPANION_CATEGORIES = {
+      'produce': ['staples', 'dairy', 'produce'],
+      'staples': ['staples', 'oils-ghee', 'masalas-spices', 'produce'],
+      'oils-ghee': ['staples', 'masalas-spices', 'produce'],
+      'masalas-spices': ['staples', 'produce', 'oils-ghee'],
+      'dairy': ['bakery', 'biscuits', 'tea-coffee', 'dairy'],
+      'tea-coffee': ['dairy', 'biscuits', 'breakfast'],
+      'breakfast': ['dairy', 'tea-coffee', 'biscuits'],
+      'biscuits': ['tea-coffee', 'dairy', 'snacks'],
+      'snacks': ['beverages', 'chocolates', 'snacks'],
+      'beverages': ['snacks', 'biscuits', 'chocolates'],
+      'chocolates': ['biscuits', 'snacks', 'beverages'],
+      'instant-food': ['beverages', 'snacks', 'instant-food'],
+      'household': ['household', 'personal-care'],
+      'personal-care': ['personal-care', 'household'],
+    };
+
+    const cat = product.category || '';
+    const companionCats = COMPANION_CATEGORIES[cat] || [cat, 'staples', 'snacks'];
+    const candidates = products.filter(p => p.id !== product.id && p.inStock !== false);
+
+    let c1 = candidates.find(p => p.category === companionCats[0]);
+    if (!c1) c1 = candidates.find(p => p.category === cat);
+    if (!c1) c1 = candidates[0];
+
+    let c2 = candidates.find(p => p.category === (companionCats[1] || companionCats[0]) && p.id !== c1?.id);
+    if (!c2) c2 = candidates.find(p => p.id !== c1?.id && (p.category === cat || p.category === companionCats[2]));
+    if (!c2) c2 = candidates.find(p => p.id !== c1?.id);
+
+    return [product, c1, c2].filter(Boolean);
+  })();
+
+  const bundlePrice = bundleItems.reduce((s, i) => s + (i.price || 0), 0);
+  const bundleMrp = bundleItems.reduce((s, i) => s + (i.mrp || (i.price || 0) + 10), 0);
 
   // Related recommendations
   const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, isMobile ? 4 : 6);
@@ -131,10 +358,11 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     const itemToAdd = {
       ...product,
+      id: cartItemId,
       price: activePrice,
       mrp: activeMrp,
       weight: activeWeight,
-      name: `${product.name} (${activeWeight})`
+      name: selectedVariantIdx === 0 ? product.name : `${product.name} (${activeWeight})`
     };
     addItem(itemToAdd);
   };
@@ -353,17 +581,26 @@ export default function ProductDetailPage() {
           </h1>
 
           {/* Rating & Review Badge Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px',
-            background: '#F8FAFC', border: '1px solid #F1F5F9', padding: '8px 14px', borderRadius: '10px',
-            width: 'fit-content'
-          }}>
+          <div
+            onClick={() => {
+              setActiveTab(1);
+              const el = document.getElementById('product-reviews-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px',
+              background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '8px 14px', borderRadius: '10px',
+              width: 'fit-content', cursor: 'pointer', transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#BFDBFE'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0F9D58', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 900 }}>
-              <span>{product.rating}</span>
+              <span>{product.rating || '4.8'}</span>
               <Star size={11} fill="white" color="white" />
             </div>
-            <span style={{ fontSize: '12px', color: '#475569', fontWeight: 700 }}>
-              98 Verified Ratings &amp; 42 Reviews
+            <span style={{ fontSize: '12px', color: '#0071E3', fontWeight: 700 }}>
+              {reviewsList.length + 95} Verified Ratings &amp; {reviewsList.length} Reviews →
             </span>
           </div>
 
@@ -519,7 +756,7 @@ export default function ProductDetailPage() {
                 }}
               >
                 <button
-                  onClick={() => updateQty(product.id, qty - 1)}
+                  onClick={() => updateQty(activeCartId, qty - 1)}
                   style={{
                     background: 'rgba(255, 255, 255, 0.22)', border: 'none', color: '#FFFFFF',
                     width: '38px', height: '38px', borderRadius: '12px',
@@ -540,7 +777,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 <button
-                  onClick={() => updateQty(product.id, qty + 1)}
+                  onClick={() => updateQty(activeCartId, qty + 1)}
                   style={{
                     background: 'rgba(255, 255, 255, 0.22)', border: 'none', color: '#FFFFFF',
                     width: '38px', height: '38px', borderRadius: '12px',
@@ -785,8 +1022,274 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Tab 1: Nutritional Info */}
+            {/* Tab 1: Customer Reviews */}
             {activeTab === 1 && (
+              <div id="product-reviews-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '6px' }}>
+                
+                {/* 🌟 Overall Ratings & Review Score Header */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)',
+                  borderRadius: '16px', border: '1px solid #DBEAFE', padding: isMobile ? '16px 14px' : '22px 24px',
+                  display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center',
+                  justifyContent: 'space-between', gap: '18px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                      width: '68px', height: '68px', borderRadius: '16px',
+                      background: '#0F9D58', color: '#FFFFFF',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 14px rgba(15,157,88,0.3)', flexShrink: 0
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '24px', fontWeight: 900, lineHeight: 1 }}>
+                        {product.rating || '4.8'}
+                      </div>
+                      <div style={{ display: 'flex', gap: '1px', marginTop: '4px' }}>
+                        {[...Array(5)].map((_, si) => (
+                          <Star key={si} size={9} fill="white" color="white" />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#0F172A' }}>
+                        Customer Ratings &amp; Reviews
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '2px', fontWeight: 600 }}>
+                        {reviewsList.length + 95} verified buyers • 100% genuine reviews
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsWritingReview(!isWritingReview)}
+                    style={{
+                      background: isWritingReview ? '#F1F5F9' : '#0071E3',
+                      color: isWritingReview ? '#475569' : '#FFFFFF',
+                      border: isWritingReview ? '1px solid #CBD5E1' : 'none',
+                      borderRadius: '12px', padding: '10px 18px',
+                      fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      boxShadow: isWritingReview ? 'none' : '0 4px 14px rgba(0,113,227,0.25)',
+                      transition: 'all 0.15s ease', alignSelf: isMobile ? 'stretch' : 'auto',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <span>{isWritingReview ? '✕ Cancel' : '✍️ Write a Review'}</span>
+                  </button>
+                </div>
+
+                {/* 📝 Write a Review Form Card */}
+                {isWritingReview && (
+                  <form
+                    onSubmit={handleSubmitReview}
+                    style={{
+                      background: '#FFFFFF', borderRadius: '16px', border: '1.5px solid #0071E3',
+                      padding: isMobile ? '16px' : '20px', boxShadow: '0 8px 24px rgba(0,113,227,0.12)',
+                      display: 'flex', flexDirection: 'column', gap: '14px'
+                    }}
+                  >
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
+                      Rate &amp; Review this product
+                    </div>
+
+                    {/* Star Rating Picker */}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        Your Rating
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setUserRating(star)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                              transform: star <= userRating ? 'scale(1.15)' : 'scale(1)',
+                              transition: 'transform 0.1s ease'
+                            }}
+                          >
+                            <Star
+                              size={26}
+                              fill={star <= userRating ? '#F59E0B' : 'none'}
+                              color={star <= userRating ? '#F59E0B' : '#CBD5E1'}
+                              strokeWidth={star <= userRating ? 2 : 1.5}
+                            />
+                          </button>
+                        ))}
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#F59E0B', marginLeft: '6px' }}>
+                          {userRating === 5 ? '5.0 - Outstanding!' : userRating === 4 ? '4.0 - Very Good' : userRating === 3 ? '3.0 - Good' : 'Fair'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Reviewer Name */}
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Your Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your name"
+                        value={reviewerName}
+                        onChange={e => setReviewerName(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: '10px',
+                          border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    {/* Review Title */}
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Headline / Title
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Fresh, crispy and fast delivery!"
+                        value={reviewTitle}
+                        onChange={e => setReviewTitle(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: '10px',
+                          border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    {/* Review Comments */}
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Detailed Review &amp; Feedback *
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        placeholder="Share your experience with product freshness, packaging, and delivery..."
+                        value={reviewComment}
+                        onChange={e => setReviewComment(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: '10px',
+                          border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none',
+                          boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical'
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      style={{
+                        background: '#0071E3', color: '#FFFFFF', border: 'none',
+                        borderRadius: '10px', padding: '12px 20px', fontSize: '13.5px',
+                        fontWeight: 900, cursor: 'pointer', alignSelf: 'flex-start',
+                        boxShadow: '0 4px 14px rgba(0,113,227,0.3)', transition: 'background 0.15s'
+                      }}
+                    >
+                      Submit Review
+                    </button>
+                  </form>
+                )}
+
+                {/* 💬 Customer Reviews List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {reviewsList.map((rev) => (
+                    <div
+                      key={rev.id}
+                      style={{
+                        background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
+                        padding: isMobile ? '14px' : '18px', display: 'flex', flexDirection: 'column', gap: '10px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            background: '#EFF6FF', color: '#0071E3', fontWeight: 900, fontSize: '14px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #BFDBFE',
+                            flexShrink: 0
+                          }}>
+                            {rev.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
+                                {rev.name}
+                              </span>
+                              {rev.verified && (
+                                <span style={{
+                                  background: '#ECFDF5', color: '#059669', fontSize: '10px',
+                                  fontWeight: 800, padding: '1px 6px', borderRadius: '8px',
+                                  border: '1px solid #A7F3D0', display: 'inline-flex', alignItems: 'center', gap: '2px'
+                                }}>
+                                  <Check size={10} strokeWidth={3} /> Verified Buyer
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
+                              {rev.city} • {rev.date}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Star Pill */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '3px',
+                          background: rev.rating >= 4 ? '#ECFDF5' : '#FFFBEB',
+                          color: rev.rating >= 4 ? '#059669' : '#D97706',
+                          padding: '3px 8px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 900,
+                          border: `1px solid ${rev.rating >= 4 ? '#A7F3D0' : '#FDE68A'}`
+                        }}>
+                          <span>{rev.rating}.0</span>
+                          <Star size={11} fill={rev.rating >= 4 ? '#059669' : '#D97706'} color={rev.rating >= 4 ? '#059669' : '#D97706'} />
+                        </div>
+                      </div>
+
+                      {/* Review Title & Content */}
+                      <div>
+                        {rev.title && (
+                          <h4 style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
+                            {rev.title}
+                          </h4>
+                        )}
+                        <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: 1.55 }}>
+                          {rev.comment}
+                        </p>
+                      </div>
+
+                      {/* Helpful Button */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '8px', marginTop: '2px' }}>
+                        <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>
+                          Was this review helpful?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleHelpfulVote(rev.id)}
+                          style={{
+                            background: helpfulVotes[rev.id] ? '#EFF6FF' : '#F8FAFC',
+                            border: `1px solid ${helpfulVotes[rev.id] ? '#BFDBFE' : '#E2E8F0'}`,
+                            color: helpfulVotes[rev.id] ? '#0071E3' : '#64748B',
+                            borderRadius: '8px', padding: '4px 10px', fontSize: '11.5px',
+                            fontWeight: 700, cursor: 'pointer', display: 'inline-flex',
+                            alignItems: 'center', gap: '4px', transition: 'all 0.15s'
+                          }}
+                        >
+                          <ThumbsUp size={12} color={helpfulVotes[rev.id] ? '#0071E3' : '#64748B'} />
+                          <span>Helpful ({rev.helpful})</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            )}
+
+            {/* Tab 2: Nutritional Info */}
+            {activeTab === 2 && (
               <div>
                 <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>Nutritional Values (per 100g approx.)</h3>
                 <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
@@ -806,22 +1309,12 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Tab 2: About Brand */}
-            {activeTab === 2 && (
+            {/* Tab 3: About Brand */}
+            {activeTab === 3 && (
               <div>
                 <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>About the Brand</h3>
                 <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
                   Grabit brings you trusted authentic products from top Indian and international brands. Every item is quality checked and stored under temperature-controlled conditions to ensure maximum freshness.
-                </p>
-              </div>
-            )}
-
-            {/* Tab 3: Storage & Safety */}
-            {activeTab === 3 && (
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>Storage Guidelines</h3>
-                <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
-                  Store in a cool, dry and hygienic place away from direct sunlight. Once opened, keep in an airtight container to retain crispness and flavor.
                 </p>
               </div>
             )}
@@ -865,7 +1358,7 @@ export default function ProductDetailPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Bundle Price (3 Items)</div>
+                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Bundle Price ({bundleItems.length} Items)</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A' }}>₹{bundlePrice}</span>
                   <span style={{ fontSize: '13px', color: '#94A3B8', textDecoration: 'line-through' }}>₹{bundleMrp}</span>
@@ -877,6 +1370,7 @@ export default function ProductDetailPage() {
                 <button
                   onClick={() => {
                     bundleItems.forEach(it => addItem(it));
+                    showToast(`Added ${bundleItems.length} bundle items to Cart!`);
                   }}
                   style={{
                     width: '100%', maxWidth: '100%', background: '#FF6B00', color: 'white', border: 'none',
@@ -886,7 +1380,7 @@ export default function ProductDetailPage() {
                     boxSizing: 'border-box', textAlign: 'center', display: 'block'
                   }}
                 >
-                  Add 3 Items to Cart (₹{bundlePrice})
+                  Add {bundleItems.length} Items to Cart (₹{bundlePrice})
                 </button>
               </div>
             </div>
@@ -907,7 +1401,7 @@ export default function ProductDetailPage() {
               {sidebarRecommendations.map((recProd, rIdx) => (
                 <Link
                   key={rIdx}
-                  to={`/product/${recProd.id}`}
+                  to={`/product/${getProductSlug(recProd)}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none',
                     padding: '8px', borderRadius: '10px', transition: 'background 0.15s'

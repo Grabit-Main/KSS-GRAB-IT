@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingBag, Trash2, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
@@ -7,23 +7,84 @@ import ProductCard from '../components/common/ProductCard';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function WishlistPage() {
+  const navigate = useNavigate();
   const { wishlistItems, toggleWishlist } = useWishlist();
-  const { addItem } = useCart();
+  const { addItem, getItemQty } = useCart();
   const { showToast } = useToast();
   const w = useWindowWidth();
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
 
   const handleAddAllToCart = () => {
-    wishlistItems.forEach(item => addItem(item));
-    showToast(`Added all ${wishlistItems.length} saved items to Cart!`);
+    if (!wishlistItems || wishlistItems.length === 0) return;
+
+    let addedCount = 0;
+    let outOfStockCount = 0;
+    let alreadyInCartCount = 0;
+
+    wishlistItems.forEach(item => {
+      // 1. Stock / availability validation
+      const isOutOfStock = item.inStock === false || item.stock_quantity === 0 || item.isOutOfStock === true;
+      if (isOutOfStock) {
+        outOfStockCount++;
+        return;
+      }
+
+      // 2. Deduplication check against cart
+      const currentQty = getItemQty(item.id);
+      if (currentQty > 0) {
+        alreadyInCartCount++;
+        return;
+      }
+
+      addItem(item);
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      let msg = `Added ${addedCount} saved ${addedCount === 1 ? 'item' : 'items'} to Cart!`;
+      if (alreadyInCartCount > 0) msg += ` (${alreadyInCartCount} already in cart)`;
+      if (outOfStockCount > 0) msg += ` (${outOfStockCount} out of stock)`;
+      showToast(msg);
+    } else if (alreadyInCartCount > 0 && outOfStockCount === 0) {
+      showToast('All available items are already in your cart.');
+    } else if (outOfStockCount > 0) {
+      showToast('Saved items could not be added because they are out of stock.');
+    }
   };
 
   return (
     <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: isMobile ? '16px 12px 90px' : '32px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        
 
+        {/* Back Navigation Button */}
+        <div style={{ marginBottom: isMobile ? '12px' : '16px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              borderRadius: '12px',
+              padding: isMobile ? '8px 14px' : '10px 18px',
+              fontSize: isMobile ? '12px' : '13px',
+              fontWeight: 800,
+              color: '#0F172A',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#94A3B8'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+            aria-label="Back to Previous Page"
+          >
+            <ArrowLeft size={16} color="#0F172A" />
+            <span>Back to Shopping</span>
+          </button>
+        </div>
 
         {/* Header Title */}
         <div style={{

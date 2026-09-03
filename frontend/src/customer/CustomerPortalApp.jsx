@@ -19,6 +19,12 @@ import HelpPage from './pages/HelpPage';
 import CategoriesOverviewPage from './pages/CategoriesOverviewPage';
 import WishlistPage from './pages/WishlistPage';
 import FestivalPage from './pages/FestivalPage';
+import FreshProducePage from '../pages/FreshProducePage';
+import PharmacyPage from '../pages/PharmacyPage';
+import ChickenMeatPage from '../pages/ChickenMeatPage';
+import DiwaliBannerPage from '../pages/DiwaliBannerPage';
+import ExclusiveDealsPage from '../pages/ExclusiveDealsPage';
+import NotificationsPage from '../pages/NotificationsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
 import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import './styles/global.css';
@@ -45,6 +51,13 @@ function CustomerAnimatedRoutes() {
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
         <Route path="/festival/:festivalId" element={<FestivalPage />} />
+        <Route path="/fresh-produce" element={<FreshProducePage />} />
+        <Route path="/pharmacy" element={<PharmacyPage />} />
+        <Route path="/chicken-meat" element={<ChickenMeatPage />} />
+        <Route path="/diwali-banner" element={<DiwaliBannerPage />} />
+        <Route path="/exclusive-deals" element={<ExclusiveDealsPage />} />
+        <Route path="/deals" element={<ExclusiveDealsPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route
           path="/checkout"

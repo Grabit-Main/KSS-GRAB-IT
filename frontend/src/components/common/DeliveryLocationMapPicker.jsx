@@ -19,11 +19,11 @@ export default function DeliveryLocationMapPicker({
   const [coords, setCoords] = useState({ lat: initialLat, lng: initialLng });
   const [locationDetails, setLocationDetails] = useState({
     title: initialTitle,
-    address: 'Near 9th Main Road, HRBR Layout 1st Block, Banaswadi',
-    area: 'Banaswadi',
-    city: 'Bengaluru 560043',
-    state: 'Karnataka',
-    pincode: '560043'
+    address: 'Detecting live delivery location...',
+    area: '',
+    city: '',
+    state: '',
+    pincode: ''
   });
   const [isLocating, setIsLocating] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -151,7 +151,7 @@ export default function DeliveryLocationMapPicker({
     // Invalidate map size after initial render to avoid gray tile issues
     const timer = setTimeout(() => {
       map.invalidateSize();
-      if (autoLocate && navigator.geolocation) {
+      if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const lat = pos.coords.latitude;
@@ -164,9 +164,13 @@ export default function DeliveryLocationMapPicker({
             }
             reverseGeocode(lat, lng);
           },
-          () => {},
+          () => {
+            reverseGeocode(initialLat, initialLng);
+          },
           { enableHighAccuracy: true, timeout: 6000 }
         );
+      } else {
+        reverseGeocode(initialLat, initialLng);
       }
     }, 250);
 

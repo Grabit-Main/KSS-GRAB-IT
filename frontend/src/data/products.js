@@ -1,4 +1,5 @@
 import { get } from '../api';
+import { inferProductCategory, getCanonicalSlug } from './categories';
 
 // Official Catalog: 14 Categories × 5 Curated Products with Clean Background-less Media (70 Products)
 export const baseProducts = [
@@ -127,23 +128,321 @@ export const baseProducts = [
   { id: 68, name: "Titan Karishma Analog Dial Leather Men's Watch", weight: "1 Unit", price: 1895, mrp: 2295, discount: 17, rating: 4.8, reviews: 670, image: "sneakers.jpg", category: "fashion", brand: "Titan", inStock: true, stock_quantity: 20 },
   { id: 69, name: "Puma Mens Comet 2 Alt Running Shoes", weight: "1 Pair", price: 1999, mrp: 3999, discount: 50, rating: 4.7, reviews: 1120, image: "sneakers.jpg", category: "fashion", brand: "Puma", inStock: true, stock_quantity: 30 },
   { id: 70, name: "Wildhorn Genuine Leather Men's RFID Wallet", weight: "1 Unit", price: 449, mrp: 1499, discount: 70, rating: 4.8, reviews: 2340, image: "sneakers.jpg", category: "fashion", brand: "Wildhorn", inStock: true, stock_quantity: 40 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 15. BABY CARE & INFANT NEEDS (catKey: 'baby-care')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 71, name: "Pampers All Round Protection Baby Diaper Pants (Medium, 54 Pcs)", weight: "54 Pcs", price: 649, mrp: 899, discount: 28, rating: 4.8, reviews: 3200, image: "category-baby-care.jpg", category: "baby-care", brand: "Pampers", inStock: true, stock_quantity: 40 },
+  { id: 72, name: "Johnson's Baby Gentle No Tears Shampoo (500ml)", weight: "500 ml", price: 320, mrp: 395, discount: 19, rating: 4.9, reviews: 1840, image: "category-baby-care.jpg", category: "baby-care", brand: "Johnson's", inStock: true, stock_quantity: 35 },
+  { id: 73, name: "Himalaya Gentle Baby Wipes with Aloe Vera & Indian Lotus (72 Wipes)", weight: "72 Wipes", price: 145, mrp: 190, discount: 24, rating: 4.8, reviews: 4500, image: "category-baby-care.jpg", category: "baby-care", brand: "Himalaya", inStock: true, stock_quantity: 60 },
+  { id: 74, name: "Nestle Cerelac Baby Cereal with Milk Wheat Apple (300g)", weight: "300 g", price: 290, mrp: 330, discount: 12, rating: 4.7, reviews: 1200, image: "category-baby-care.jpg", category: "baby-care", brand: "Nestle", inStock: true, stock_quantity: 30 },
+  { id: 75, name: "Johnson's Baby Nourishing Moisture Lotion (500ml)", weight: "500 ml", price: 335, mrp: 425, discount: 21, rating: 4.9, reviews: 2100, image: "category-baby-care.jpg", category: "baby-care", brand: "Johnson's", inStock: true, stock_quantity: 45 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 16. PET CARE & SUPPLIES (catKey: 'pet-care')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 76, name: "Pedigree Adult Dry Dog Food Real Chicken & Meat (3kg)", weight: "3 kg", price: 675, mrp: 810, discount: 17, rating: 4.8, reviews: 2900, image: "category-pet-care.jpg", category: "pet-care", brand: "Pedigree", inStock: true, stock_quantity: 30 },
+  { id: 77, name: "Whiskas Adult Wet Cat Food Ocean Fish in Jelly (12 x 85g)", weight: "1.02 kg", price: 480, mrp: 600, discount: 20, rating: 4.9, reviews: 1450, image: "category-pet-care.jpg", category: "pet-care", brand: "Whiskas", inStock: true, stock_quantity: 25 },
+  { id: 78, name: "Pedigree Dentastix Daily Oral Care Chews Dog Treats (7 Sticks)", weight: "180 g", price: 180, mrp: 220, discount: 18, rating: 4.8, reviews: 3600, image: "category-pet-care.jpg", category: "pet-care", brand: "Pedigree", inStock: true, stock_quantity: 50 },
+  { id: 79, name: "Captain Zack Barking Up The Tea Tree Relieving Dog Shampoo (200ml)", weight: "200 ml", price: 265, mrp: 350, discount: 24, rating: 4.7, reviews: 820, image: "category-pet-care.jpg", category: "pet-care", brand: "Captain Zack", inStock: true, stock_quantity: 30 },
+  { id: 80, name: "Drools Absolute Calcium Bone Supplement Treats for Dogs (50 Pcs)", weight: "50 Pcs", price: 299, mrp: 399, discount: 25, rating: 4.8, reviews: 1980, image: "category-pet-care.jpg", category: "pet-care", brand: "Drools", inStock: true, stock_quantity: 40 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 17. BEAUTY, SKINCARE & COSMETICS (catKey: 'beauty-cosmetics')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 81, name: "Minimalist 10% Niacinamide Face Serum with Zinc (30ml)", weight: "30 ml", price: 569, mrp: 599, discount: 5, rating: 4.9, reviews: 6200, image: "category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Minimalist", inStock: true, stock_quantity: 35 },
+  { id: 82, name: "Maybelline New York Colossal Bold Black Kajal (0.35g)", weight: "0.35 g", price: 155, mrp: 199, discount: 22, rating: 4.8, reviews: 9400, image: "category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Maybelline", inStock: true, stock_quantity: 80 },
+  { id: 83, name: "Lakme Sun Expert SPF 50 Ultra Matte Sunscreen Lotion (100ml)", weight: "100 ml", price: 375, mrp: 499, discount: 25, rating: 4.7, reviews: 3100, image: "category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Lakme", inStock: true, stock_quantity: 40 },
+  { id: 84, name: "Garnier Skin Naturals Micellar Cleansing Water (125ml)", weight: "125 ml", price: 185, mrp: 249, discount: 26, rating: 4.8, reviews: 4800, image: "category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Garnier", inStock: true, stock_quantity: 50 },
+  { id: 85, name: "Nivea Soft Light Moisturizing Cream with Vitamin E (200ml)", weight: "200 ml", price: 240, mrp: 320, discount: 25, rating: 4.9, reviews: 5400, image: "category-beauty-cosmetics.jpg", category: "beauty-cosmetics", brand: "Nivea", inStock: true, stock_quantity: 60 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 18. HEALTH, WELLNESS & PHARMACY (catKey: 'health-wellness')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 86, name: "Dabur Chyawanprash 2X Immunity Booster (1kg)", weight: "1 kg", price: 375, mrp: 450, discount: 17, rating: 4.9, reviews: 7800, image: "category-health-wellness.jpg", category: "health-wellness", brand: "Dabur", inStock: true, stock_quantity: 45 },
+  { id: 87, name: "Revital H Daily Health Supplement Multivitamins (30 Capsules)", weight: "30 Capsules", price: 280, mrp: 340, discount: 18, rating: 4.8, reviews: 4200, image: "category-health-wellness.jpg", category: "health-wellness", brand: "Revital", inStock: true, stock_quantity: 50 },
+  { id: 88, name: "Volini Instant Pain Relief Spray (100g)", weight: "100 g", price: 195, mrp: 245, discount: 20, rating: 4.9, reviews: 3600, image: "category-health-wellness.jpg", category: "health-wellness", brand: "Volini", inStock: true, stock_quantity: 60 },
+  { id: 89, name: "Fast&Up Charge Natural Vitamin C & Zinc Effervescent (20 Tablets)", weight: "20 Tabs", price: 299, mrp: 390, discount: 23, rating: 4.8, reviews: 2900, image: "category-health-wellness.jpg", category: "health-wellness", brand: "Fast&Up", inStock: true, stock_quantity: 40 },
+  { id: 90, name: "Dr. Morepen Digital Rigid Tip Medical Thermometer (1 Unit)", weight: "1 Unit", price: 149, mrp: 225, discount: 34, rating: 4.7, reviews: 1800, image: "category-health-wellness.jpg", category: "health-wellness", brand: "Dr. Morepen", inStock: true, stock_quantity: 35 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 19. FRESH MEAT, SEAFOOD & EGGS (catKey: 'meat-seafood')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 91, name: "Fresh Farm Tender Chicken Breast Boneless (500g)", weight: "500 g", price: 199, mrp: 260, discount: 23, rating: 4.9, reviews: 3400, image: "category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true, stock_quantity: 40 },
+  { id: 92, name: "Farm Fresh Country Brown Eggs Pack (12 Pcs)", weight: "12 Pcs", price: 119, mrp: 150, discount: 21, rating: 4.8, reviews: 5200, image: "category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true, stock_quantity: 80 },
+  { id: 93, name: "Fresh Atlantic Pink Salmon Steaks Cut (500g)", weight: "500 g", price: 699, mrp: 899, discount: 22, rating: 4.9, reviews: 1100, image: "category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true, stock_quantity: 20 },
+  { id: 94, name: "Fresh Premium Chicken Curry Cut Skinless (1kg)", weight: "1 kg", price: 249, mrp: 320, discount: 22, rating: 4.8, reviews: 4100, image: "category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true, stock_quantity: 50 },
+  { id: 95, name: "Fresh River Prawns Cleaned & Deveined (250g)", weight: "250 g", price: 289, mrp: 380, discount: 24, rating: 4.7, reviews: 980, image: "category-meat-seafood.jpg", category: "meat-seafood", brand: "Grabit Fresh", inStock: true, stock_quantity: 25 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 20. HOME & KITCHEN (catKey: 'home-kitchen')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 96, name: "Prestige Deluxe Alpha Stainless Steel Pressure Cooker (3L)", weight: "3 L", price: 1499, mrp: 2150, discount: 30, rating: 4.8, reviews: 2900, image: "category-home-kitchen.jpg", category: "home-kitchen", brand: "Prestige", inStock: true, stock_quantity: 30 },
+  { id: 97, name: "Milton Thermosteel Flip Lid Vacuum Flask Bottle (1000ml)", weight: "1000 ml", price: 799, mrp: 1099, discount: 27, rating: 4.9, reviews: 4600, image: "category-home-kitchen.jpg", category: "home-kitchen", brand: "Milton", inStock: true, stock_quantity: 45 },
+  { id: 98, name: "Hawkins Futura Hard Anodised Non-Stick Frying Pan (22cm)", weight: "22 cm", price: 890, mrp: 1175, discount: 24, rating: 4.8, reviews: 3100, image: "category-home-kitchen.jpg", category: "home-kitchen", brand: "Hawkins", inStock: true, stock_quantity: 35 },
+  { id: 99, name: "Borosil Glass Lunch Box Meal Container Set with Bag (3 Pcs)", weight: "3 Pcs", price: 945, mrp: 1290, discount: 27, rating: 4.9, reviews: 2400, image: "category-home-kitchen.jpg", category: "home-kitchen", brand: "Borosil", inStock: true, stock_quantity: 25 },
+  { id: 100, name: "Pigeon Stainless Steel Kitchen Knife Set with Wooden Block (5 Pcs)", weight: "5 Pcs", price: 449, mrp: 795, discount: 44, rating: 4.7, reviews: 1850, image: "category-home-kitchen.jpg", category: "home-kitchen", brand: "Pigeon", inStock: true, stock_quantity: 40 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 21. STATIONERY & OFFICE SUPPLIES (catKey: 'stationery-office')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 101, name: "Classmate Pulse 6-Subject Spiral Notebook (300 Pages)", weight: "300 Pages", price: 180, mrp: 220, discount: 18, rating: 4.8, reviews: 3800, image: "category-stationery-office.jpg", category: "stationery-office", brand: "Classmate", inStock: true, stock_quantity: 60 },
+  { id: 102, name: "Parker Jotter Stainless Steel CT Ballpoint Pen (Blue Ink)", weight: "1 Pen", price: 299, mrp: 375, discount: 20, rating: 4.9, reviews: 5100, image: "category-stationery-office.jpg", category: "stationery-office", brand: "Parker", inStock: true, stock_quantity: 50 },
+  { id: 103, name: "Faber-Castell Connector Sketch Pen & Marker Set (25 Colors)", weight: "25 Colors", price: 195, mrp: 250, discount: 22, rating: 4.8, reviews: 2900, image: "category-stationery-office.jpg", category: "stationery-office", brand: "Faber-Castell", inStock: true, stock_quantity: 40 },
+  { id: 104, name: "Scotch Magic Tape with Dispenser + Precision Scissors Combo", weight: "1 Combo", price: 165, mrp: 225, discount: 27, rating: 4.8, reviews: 1950, image: "category-stationery-office.jpg", category: "stationery-office", brand: "Scotch", inStock: true, stock_quantity: 45 },
+  { id: 105, name: "Casio FX-991CW Scientific ClassWiz Calculator (540 Functions)", weight: "1 Unit", price: 1295, mrp: 1495, discount: 13, rating: 4.9, reviews: 6300, image: "category-stationery-office.jpg", category: "stationery-office", brand: "Casio", inStock: true, stock_quantity: 30 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 22. SPORTS & FITNESS (catKey: 'sports-fitness')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 106, name: "Yonex Nanoray Carbon Light Badminton Racket with Cover", weight: "1 Racket", price: 1699, mrp: 2490, discount: 32, rating: 4.9, reviews: 4100, image: "category-sports-fitness.jpg", category: "sports-fitness", brand: "Yonex", inStock: true, stock_quantity: 25 },
+  { id: 107, name: "MuscleBlaze 100% Raw Whey Protein Concentrate (1kg)", weight: "1 kg", price: 1799, mrp: 2399, discount: 25, rating: 4.8, reviews: 8200, image: "category-sports-fitness.jpg", category: "sports-fitness", brand: "MuscleBlaze", inStock: true, stock_quantity: 35 },
+  { id: 108, name: "Boldfit Gym Shaker Bottle with Protein Mixer Whisk Ball (700ml)", weight: "700 ml", price: 249, mrp: 499, discount: 50, rating: 4.8, reviews: 3400, image: "category-sports-fitness.jpg", category: "sports-fitness", brand: "Boldfit", inStock: true, stock_quantity: 50 },
+  { id: 109, name: "Nivia Storm Rubber Moulded Tournament Football (Size 5)", weight: "Size 5", price: 475, mrp: 650, discount: 27, rating: 4.7, reviews: 2900, image: "category-sports-fitness.jpg", category: "sports-fitness", brand: "Nivia", inStock: true, stock_quantity: 40 },
+  { id: 110, name: "Strava Anti-Slip High Density Eco Yoga Mat with Strap (6mm)", weight: "6 mm", price: 699, mrp: 1299, discount: 46, rating: 4.8, reviews: 2200, image: "category-sports-fitness.jpg", category: "sports-fitness", brand: "Strava", inStock: true, stock_quantity: 30 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 23. TOYS & GAMES (catKey: 'toys-games')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 111, name: "LEGO Classic Creative Brick Box Building Toy Set (484 Pcs)", weight: "484 Pcs", price: 1799, mrp: 2299, discount: 22, rating: 4.9, reviews: 3700, image: "category-toys-games.jpg", category: "toys-games", brand: "LEGO", inStock: true, stock_quantity: 20 },
+  { id: 112, name: "Monopoly Classic Family Board Game Edition", weight: "1 Box", price: 799, mrp: 999, discount: 20, rating: 4.8, reviews: 5400, image: "category-toys-games.jpg", category: "toys-games", brand: "Hasbro", inStock: true, stock_quantity: 35 },
+  { id: 113, name: "Hot Wheels 5-Car Diecast Vehicle Gift Pack Assortment", weight: "5 Cars", price: 599, mrp: 749, discount: 20, rating: 4.9, reviews: 6800, image: "category-toys-games.jpg", category: "toys-games", brand: "Hot Wheels", inStock: true, stock_quantity: 50 },
+  { id: 114, name: "Rubik's Original 3x3 Speed Cube Puzzle", weight: "1 Cube", price: 399, mrp: 599, discount: 33, rating: 4.8, reviews: 4200, image: "category-toys-games.jpg", category: "toys-games", brand: "Rubik's", inStock: true, stock_quantity: 45 },
+  { id: 115, name: "Barbie Fashionistas Doll with Trendy Outfit & Accessories", weight: "1 Doll", price: 549, mrp: 699, discount: 21, rating: 4.8, reviews: 3100, image: "category-toys-games.jpg", category: "toys-games", brand: "Barbie", inStock: true, stock_quantity: 30 },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 24. POOJA & SPIRITUAL NEEDS (catKey: 'pooja-needs')
+  // ──────────────────────────────────────────────────────────────────────────
+  { id: 116, name: "Cycle Pure Agarbatti Lia Fragrance Incense Sticks (120 Sticks)", weight: "120 Sticks", price: 140, mrp: 175, discount: 20, rating: 4.9, reviews: 8100, image: "category-pooja-needs.jpg", category: "pooja-needs", brand: "Cycle Pure", inStock: true, stock_quantity: 90 },
+  { id: 117, name: "Mangaldeep Pure Brass Puja Diya Oil Lamp (Medium)", weight: "1 Unit", price: 249, mrp: 350, discount: 29, rating: 4.8, reviews: 2900, image: "category-pooja-needs.jpg", category: "pooja-needs", brand: "Mangaldeep", inStock: true, stock_quantity: 40 },
+  { id: 118, name: "Bhimseni Pure Camphor Kapoor Crystals for Pooja (100g)", weight: "100 g", price: 199, mrp: 260, discount: 23, rating: 4.9, reviews: 5700, image: "category-pooja-needs.jpg", category: "pooja-needs", brand: "Bhimseni", inStock: true, stock_quantity: 65 },
+  { id: 119, name: "Pooja Pure Ghee Diya Wicks Readymade Batti (50 Pcs)", weight: "50 Pcs", price: 120, mrp: 160, discount: 25, rating: 4.8, reviews: 3600, image: "category-pooja-needs.jpg", category: "pooja-needs", brand: "Shubhkart", inStock: true, stock_quantity: 80 },
+  { id: 120, name: "Patanjali Pure Haldi Kumkum & Roli Chawal Festive Set", weight: "1 Set", price: 99, mrp: 130, discount: 24, rating: 4.8, reviews: 2400, image: "category-pooja-needs.jpg", category: "pooja-needs", brand: "Patanjali", inStock: true, stock_quantity: 75 },
 ];
 
 export let products = [...baseProducts];
 
-export function getProductById(id) {
-  return products.find((p) => String(p.id) === String(id));
+export function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/'/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
+
+export function getProductSlug(product) {
+  if (!product) return '';
+  if (product.slug) return product.slug;
+  return slugify(product.name || '');
+}
+
+export function getProductById(idOrSlug) {
+  if (idOrSlug === undefined || idOrSlug === null) return null;
+  const target = String(idOrSlug).toLowerCase().trim();
+  return products.find(p => {
+    if (String(p.id).toLowerCase() === target) return true;
+    if (p.slug && p.slug.toLowerCase() === target) return true;
+    if (slugify(p.name) === target) return true;
+    return false;
+  });
+}
+
+export const getProductByIdOrSlug = getProductById;
+
+export const SEARCH_SYNONYMS = {
+  coke: ['coca-cola', 'coca cola', 'soft drink', 'beverages', 'cold drinks', 'drink', 'soda'],
+  pepsi: ['cold drinks', 'soft drink', 'beverages', 'soda'],
+  chips: ['lays', 'potato chips', 'namkeen', 'bingo', 'doritos', 'kurkure', 'snacks', 'munchies'],
+  wafer: ['wafers', 'chips', 'snacks'],
+  milk: ['amul', 'nandini', 'dairy', 'taaza', 'toned', 'cow milk'],
+  doodh: ['milk', 'dairy', 'amul'],
+  curd: ['dahi', 'yogurt', 'dairy', 'amul'],
+  cheese: ['amul', 'slices', 'paneer', 'dairy'],
+  butter: ['amul', 'dairy', 'table butter'],
+  bread: ['bakery', 'loaf', 'pav', 'dairy-bakery'],
+  apple: ['apples', 'fresh', 'fruits', 'produce', 'royal gala'],
+  fruits: ['produce', 'fruit', 'apple', 'banana', 'orange', 'fresh', 'fruits-vegetables'],
+  fruit: ['produce', 'fruits', 'apple', 'banana', 'fresh', 'fruits-vegetables'],
+  vegetables: ['veggies', 'produce', 'fresh', 'tomato', 'potato', 'onion', 'capsicum', 'fruits-vegetables'],
+  veggies: ['vegetables', 'produce', 'fresh', 'tomato', 'onion', 'capsicum', 'fruits-vegetables'],
+  sabzi: ['vegetables', 'veggies', 'produce'],
+  tomato: ['tomatoes', 'produce', 'vegetables'],
+  onion: ['onions', 'produce', 'vegetables'],
+  banana: ['bananas', 'produce', 'fruits'],
+  atta: ['wheat', 'flour', 'aashirvaad', 'chakki', 'staples'],
+  rice: ['basmati', 'chawal', 'daawat', 'india gate', 'staples', 'grains'],
+  dal: ['dals', 'pulses', 'toor', 'moong', 'chana', 'staples'],
+  oil: ['edible oil', 'sunflower', 'mustard', 'fortune', 'ghee'],
+  tel: ['oil', 'edible oil', 'ghee'],
+  ghee: ['amul', 'pure ghee', 'desi ghee', 'oil', 'dairy'],
+  biscuit: ['biscuits', 'cookies', 'parle', 'oreo', 'good day', 'britannia'],
+  biscuits: ['biscuit', 'cookies', 'parle', 'oreo', 'good day', 'britannia'],
+  cookies: ['biscuits', 'biscuit', 'cookies'],
+  chocolate: ['chocolates', 'cadbury', 'silk', 'dairy milk', 'kitkat', 'nestle', 'sweets'],
+  chocolates: ['chocolate', 'cadbury', 'silk', 'dairy milk', 'kitkat', 'sweets'],
+  sweet: ['sweets', 'mithai', 'chocolate', 'chocolates'],
+  icecream: ['ice cream', 'ice-cream', 'amul', 'kwality walls'],
+  diaper: ['diapers', 'pampers', 'baby-care', 'huggies', 'pants'],
+  diapers: ['diaper', 'pampers', 'baby-care', 'huggies'],
+  baby: ['baby-care', 'pampers', 'himalaya', 'johnson', 'cerelac', 'diaper', 'wipes'],
+  wipes: ['baby-care', 'himalaya', 'wet wipes'],
+  dog: ['pet-care', 'pedigree', 'dog food', 'dentastix', 'drools'],
+  cat: ['pet-care', 'whiskas', 'cat food'],
+  pet: ['pet-care', 'dog food', 'cat food', 'pedigree', 'whiskas'],
+  shampoo: ['personal-care', 'hair', 'head & shoulders', 'pantene', 'dove', 'baby shampoo'],
+  soap: ['personal-care', 'bath', 'dettol', 'dove', 'lifebuoy', 'pears', 'lux'],
+  toothpaste: ['personal-care', 'colgate', 'pepsodent', 'sensodyne', 'brush'],
+  cream: ['beauty-cosmetics', 'personal-care', 'lotion', 'nivea', 'ponds', 'skin'],
+  lotion: ['beauty-cosmetics', 'personal-care', 'nivea', 'vaseline', 'moisturizer'],
+  lipstick: ['beauty-cosmetics', 'makeup', 'maybelline', 'lakme'],
+  makeup: ['beauty-cosmetics', 'lipstick', 'kajal', 'foundation', 'eyeliner'],
+  medicine: ['health-wellness', 'pharmacy', 'dettol', 'bandage', 'vicks', 'crocin'],
+  health: ['health-wellness', 'wellness', 'vitamins', 'protein', 'dettol'],
+  chicken: ['meat-seafood', 'fresh chicken', 'meat', 'poultry'],
+  meat: ['meat-seafood', 'chicken', 'mutton', 'fish', 'eggs'],
+  egg: ['eggs', 'meat-seafood', 'farm fresh eggs'],
+  eggs: ['egg', 'meat-seafood', 'farm fresh eggs'],
+  fish: ['meat-seafood', 'seafood', 'prawns'],
+  pan: ['home-kitchen', 'cookware', 'kitchen', 'tawa', 'kadhai'],
+  kitchen: ['home-kitchen', 'bottle', 'container', 'knife', 'cooker'],
+  pen: ['stationery-office', 'pencil', 'notebook', 'parker', 'classmate'],
+  notebook: ['stationery-office', 'book', 'paper', 'classmate', 'register'],
+  cricket: ['sports-fitness', 'bat', 'ball', 'sports'],
+  badminton: ['sports-fitness', 'racket', 'shuttlecock', 'sports'],
+  yoga: ['sports-fitness', 'mat', 'fitness'],
+  gym: ['sports-fitness', 'fitness', 'protein', 'dumbbell'],
+  toy: ['toys-games', 'game', 'puzzle', 'board game', 'car'],
+  toys: ['toys-games', 'games', 'puzzle', 'lego'],
+  puzzle: ['toys-games', 'puzzles', 'board games'],
+  game: ['toys-games', 'games', 'board game'],
+  pooja: ['pooja-needs', 'agarbatti', 'diya', 'camphor', 'incense', 'dhoop'],
+  agarbatti: ['pooja-needs', 'incense sticks', 'cycle', 'zed black'],
+  diya: ['pooja-needs', 'batti', 'wicks', 'oil lamp'],
+  tea: ['tea-coffee', 'chai', 'red label', 'tata tea', 'taj mahal'],
+  coffee: ['tea-coffee', 'nescafe', 'bru'],
+  maggi: ['instant-food', 'noodles', 'instant noodles', 'nestle'],
+  noodles: ['instant-food', 'maggi', 'yippee', 'ramen', 'instant noodles']
+};
 
 export function searchProducts(query) {
   if (!query || typeof query !== 'string') return [];
-  const q = query.toLowerCase().trim();
-  return products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(q) ||
-      (p.category && p.category.toLowerCase().includes(q)) ||
-      (p.brand && p.brand.toLowerCase().includes(q))
-  );
+  const rawQ = query.trim();
+  if (!rawQ) return [];
+
+  const normalize = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/'/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const normalizeNoSpace = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+
+  const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const containsWord = (text, word) => new RegExp('\\b' + escapeRe(word) + '\\b', 'i').test(text);
+  const startsWithWord = (text, word) => new RegExp('\\b' + escapeRe(word), 'i').test(text);
+
+  const qNorm = normalize(rawQ);
+  const qNoSpace = normalizeNoSpace(rawQ);
+  if (!qNorm) return [];
+
+  // Special predefined queries
+  if (qNorm === 'trending' || qNorm === 'popular' || qNorm === 'top' || qNorm === 'best') {
+    return products.filter(p => ['snacks', 'dairy', 'beverages', 'staples', 'household'].includes(p.category || p.category_slug));
+  }
+  if (qNorm === 'deals' || qNorm === 'offers' || qNorm === 'discount') {
+    return products.filter(p => (p.discount || 0) >= 15);
+  }
+  if (qNorm === 'all') {
+    return [...products];
+  }
+
+  const queryWords = qNorm.split(' ').filter(Boolean);
+
+  // Synonyms / aliases expansion
+  const querySynonyms = new Set();
+  queryWords.forEach(w => {
+    if (SEARCH_SYNONYMS[w]) {
+      SEARCH_SYNONYMS[w].forEach(s => {
+        const sNorm = normalize(s);
+        if (sNorm && sNorm !== qNorm) querySynonyms.add(sNorm);
+      });
+    }
+  });
+
+  const scored = [];
+
+  for (const p of products) {
+    const pNameNorm = normalize(p.name);
+    const pBrandNorm = normalize(p.brand);
+    const pCatNorm = normalize(p.category + ' ' + (p.category_name || ''));
+    const pSubNorm = normalize(p.subCategory || '');
+    const pNameNoSpace = normalizeNoSpace(p.name);
+    const pBrandNoSpace = normalizeNoSpace(p.brand);
+
+    let score = 0;
+
+    // 1. Exact phrase matches in Name
+    if (pNameNorm === qNorm || pNameNoSpace === qNoSpace) {
+      score += 500;
+    } else if (pNameNorm.startsWith(qNorm) || pNameNoSpace.startsWith(qNoSpace)) {
+      score += 350;
+    } else if (pNameNorm.includes(qNorm) || pNameNoSpace.includes(qNoSpace)) {
+      score += 250;
+    }
+
+    // 2. Brand phrase match
+    if (pBrandNorm === qNorm || pBrandNoSpace === qNoSpace) {
+      score += 300;
+    } else if (pBrandNorm.includes(qNorm) || pBrandNoSpace.includes(qNoSpace)) {
+      score += 180;
+    }
+
+    // 3. Query words matching with word boundary
+    for (const qw of queryWords) {
+      if (containsWord(pNameNorm, qw)) {
+        score += 120;
+      } else if (startsWithWord(pNameNorm, qw)) {
+        score += 80;
+      } else if (containsWord(pBrandNorm, qw)) {
+        score += 90;
+      } else if (containsWord(pCatNorm, qw) || containsWord(pSubNorm, qw)) {
+        score += 50;
+      }
+    }
+
+    // 4. Synonym / alias matches (only if whole word or exact phrase)
+    for (const syn of querySynonyms) {
+      if (syn.includes(' ')) {
+        if (pNameNorm.includes(syn) || pBrandNorm.includes(syn)) {
+          score += 140;
+        }
+      } else {
+        if (containsWord(pNameNorm, syn)) {
+          score += 100;
+        } else if (containsWord(pBrandNorm, syn)) {
+          score += 80;
+        } else if (containsWord(pCatNorm, syn)) {
+          score += 40;
+        }
+      }
+    }
+
+    // Boost if in stock and high rating
+    if (score > 0) {
+      if (p.inStock) score += 5;
+      score += (p.rating || 0) * 0.5;
+      scored.push({ product: p, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map(s => s.product);
 }
 
 export function getProductsByCategory(categorySlug) {
@@ -185,8 +484,7 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
       seenIds.add(idStr);
 
-      const catVal = String(cp.category || cp.category_slug || cp.category_id || cp.category_name || '').toLowerCase();
-      const catNameVal = String(cp.category_name || cp.category || '').toLowerCase();
+      const resolvedCategory = inferProductCategory(cp);
 
       merged.push({
         id: cp.id,
@@ -195,10 +493,10 @@ export async function syncProductsFromBackend() {
         mrp: Number(cp.mrp || cp.discount_price || cp.price) || 0,
         discount: cp.mrp ? Math.round(((cp.mrp - cp.price) / cp.mrp) * 100) : 10,
         image: cp.image || cp.image_url || '/grabit-logo.png',
-        category: cp.category || cp.category_slug || cp.category_id || 'produce',
-        category_slug: cp.category_slug || cp.category || (cp.category_name ? cp.category_name.toLowerCase().replace(/\s+/g, '-') : ''),
-        category_name: cp.category_name || cp.category || '',
-        category_id: cp.category_id || cp.category || '',
+        category: resolvedCategory,
+        category_slug: resolvedCategory,
+        category_name: cp.category_name || resolvedCategory,
+        category_id: cp.category_id || '',
         brand: cp.brand || 'Grabit Seller',
         weight: cp.unit || '1 unit',
         delivery_time: cp.delivery_time || '8 mins',
@@ -215,8 +513,7 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
 
       const ov = overrides[idStr] || {};
-      const catVal = String(ov.category || apiProd.category_slug || apiProd.category_id || apiProd.category || '').toLowerCase();
-      const catNameVal = String(ov.category_name || apiProd.category_name || apiProd.category || apiProd.categories?.name || '').toLowerCase();
+      const resolvedCategory = inferProductCategory({ ...apiProd, ...ov });
 
       const prodObj = {
         id: apiProd.id,
@@ -225,10 +522,10 @@ export async function syncProductsFromBackend() {
         mrp: Number(ov.mrp ?? apiProd.mrp ?? apiProd.price) || 0,
         discount: 10,
         image: ov.image || apiProd.image_url || apiProd.image || 'default-product.png',
-        category: catVal || 'produce',
-        category_slug: apiProd.category_slug || (catNameVal ? catNameVal.replace(/\s+/g, '-') : ''),
-        category_name: catNameVal,
-        category_id: apiProd.category_id || apiProd.category || '',
+        category: resolvedCategory,
+        category_slug: resolvedCategory,
+        category_name: ov.category_name || apiProd.category_name || resolvedCategory,
+        category_id: apiProd.category_id || '',
         brand: ov.brand || apiProd.brand || 'Grabit Fresh',
         weight: '1 unit',
         rating: 5.0,
@@ -252,11 +549,13 @@ export async function syncProductsFromBackend() {
       if (deletedIds.has(idStr)) continue;
       if (!seenIds.has(idStr)) {
         const ov = overrides[idStr] || {};
+        const resolvedCategory = inferProductCategory({ ...bp, ...ov });
         merged.push({
           ...bp,
           ...ov,
-          category_slug: bp.category_slug || bp.category,
-          category_name: bp.category_name || bp.category,
+          category: resolvedCategory,
+          category_slug: resolvedCategory,
+          category_name: bp.category_name || resolvedCategory,
         });
         seenIds.add(idStr);
       }
