@@ -1025,57 +1025,116 @@ export default function CategoryPage() {
         )}
       </div>
 
-      {/* 🚀 TOUCHABLE SUBCATEGORIES BAR (Directly below category image banner) */}
+      {/* 🚀 COMPACT SUBCATEGORY CARDS BAR */}
       {subCats.length > 1 && (
         <div style={{
-          marginBottom: '20px',
+          marginBottom: '22px',
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: '4px'
+          padding: '4px 2px 8px 2px'
         }}>
           <div style={{
             display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
+            gap: isMobile ? '10px' : '14px',
+            alignItems: 'stretch',
             width: 'max-content'
           }}>
             {subCats.map(s => {
               const isSelected = activeSubCat === s.name;
+              const sampleProd = s.name === 'All'
+                ? categoryProducts[0]
+                : categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug));
+              const imgUrl = sampleProd?.image || 'default-product.png';
+
               return (
                 <button
                   key={s.name}
                   type="button"
                   onClick={() => setActiveSubCat(s.name)}
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
-                    background: isSelected ? '#0071E3' : '#FFFFFF',
-                    color: isSelected ? '#FFFFFF' : '#334155',
-                    border: isSelected ? '1.5px solid #0071E3' : '1px solid #CBD5E1',
-                    borderRadius: '24px',
-                    padding: isMobile ? '8px 14px' : '9px 18px',
-                    fontSize: isMobile ? '12.5px' : '13px',
-                    fontWeight: 800,
+                    justifyContent: 'space-between',
+                    width: isMobile ? '86px' : '105px',
+                    minWidth: isMobile ? '86px' : '105px',
+                    background: isSelected ? 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)' : '#FFFFFF',
+                    border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    padding: isMobile ? '10px 8px 8px' : '12px 10px 10px',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: isSelected ? '0 4px 12px rgba(0,113,227,0.3)' : '0 1px 4px rgba(0,0,0,0.03)',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0
+                    boxShadow: isSelected
+                      ? '0 6px 20px rgba(0,113,227,0.18)'
+                      : '0 2px 8px rgba(0,0,0,0.04)',
+                    transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    flexShrink: 0,
+                    outline: 'none'
                   }}
                 >
-                  <span>{s.name}</span>
+                  {/* Small Count Badge */}
                   <span style={{
-                    fontSize: '11px',
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    fontSize: '10px',
                     fontWeight: 900,
+                    background: isSelected ? '#0071E3' : '#F1F5F9',
+                    color: isSelected ? '#FFFFFF' : '#64748B',
                     padding: '1px 6px',
                     borderRadius: '10px',
-                    background: isSelected ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
-                    color: isSelected ? '#FFFFFF' : '#64748B'
+                    zIndex: 2
                   }}>
                     {s.count}
+                  </span>
+
+                  {/* Thumbnail Image Container */}
+                  <div style={{
+                    width: isMobile ? '52px' : '64px',
+                    height: isMobile ? '52px' : '64px',
+                    borderRadius: '12px',
+                    background: '#F8FAFC',
+                    border: '1px solid #F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '8px',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {imgUrl && (imgUrl.startsWith('http') || imgUrl.endsWith('.jpg') || imgUrl.endsWith('.png') || imgUrl.endsWith('.webp')) ? (
+                      <img
+                        src={imgUrl}
+                        alt={s.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          padding: '4px'
+                        }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 32 : 40} />
+                    )}
+                  </div>
+
+                  {/* Subcategory Name */}
+                  <span style={{
+                    fontSize: isMobile ? '11px' : '12px',
+                    fontWeight: isSelected ? 900 : 700,
+                    color: isSelected ? '#0071E3' : '#0F172A',
+                    textAlign: 'center',
+                    lineHeight: 1.25,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    wordBreak: 'break-word'
+                  }}>
+                    {s.name}
                   </span>
                 </button>
               );
