@@ -53,11 +53,12 @@ export default function WishlistPage() {
   };
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: isMobile ? '16px 12px 90px' : '32px 24px 60px' }}>
+    <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: isMobile ? '28px 12px 90px' : '40px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Header Title */}
         <div style={{
+          marginTop: isMobile ? '12px' : '16px',
           background: '#FFFFFF', borderRadius: isMobile ? '16px' : '20px',
           border: '1px solid #E2E8F0', padding: isMobile ? '18px 16px' : '28px 36px',
           marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)',

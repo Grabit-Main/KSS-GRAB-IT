@@ -128,12 +128,13 @@ export default function HelpPage() {
   return (
     <div style={{
       background: '#F8FAFC', minHeight: '100vh',
-      padding: isMobile ? '12px 10px 90px' : '32px 24px 60px'
+      padding: isMobile ? '28px 12px 90px' : '40px 24px 60px'
     }}>
       <div className="container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
         
         {/* 👑 NATIVE APP HERO BANNER */}
         <div style={{
+          marginTop: isMobile ? '12px' : '16px',
           background: `linear-gradient(135deg, ${activePolicy.color} 0%, #0F172A 100%)`,
           borderRadius: isMobile ? '16px' : '20px',
           padding: isMobile ? '16px 18px' : '32px 40px',
