@@ -2343,7 +2343,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const isDelivered = Array.isArray(deliveredList) && deliveredList.some((dId: any) => isSameOrderId(dId, mappedOffer.id) || isSameOrderId(dId, mappedOffer.orderNumber));
           const isRejected = rejectedSet.has(String(mappedOffer.id).toLowerCase()) || rejectedSet.has(String(mappedOffer.orderNumber).toLowerCase());
 
-          if (!isDelivered && !isRejected) {
+          if (!isDelivered && !isRejected && isStoreOpen && state.agentStatus === 'AVAILABLE' && !state.isLeaveToday) {
             const isSamePending = state.pendingOffer && (isSameOrderId(state.pendingOffer.id, mappedOffer.id) || isSameOrderId(state.pendingOffer.orderNumber, mappedOffer.orderNumber));
             if (!isSamePending && !state.pendingOffer) {
               dispatch({
@@ -2357,7 +2357,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               try { soundEngine.playIncomingOrderAlert(); } catch {}
             }
           }
-        } else if (state.pendingOffer && (state.currentOrder || state.agentStatus === 'ON_DELIVERY')) {
+        } else if (state.pendingOffer && (state.currentOrder || state.agentStatus === 'ON_DELIVERY' || state.agentStatus === 'UNAVAILABLE' || !isStoreOpen || state.isLeaveToday)) {
           dispatch({ type: 'CLEAR_PENDING_OFFER' });
         }
 
@@ -2590,7 +2590,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             isSameOrderId(dId, firstAssigned.id) || isSameOrderId(dId, firstAssigned.orderNumber)
           );
 
-          if (!isRejected && !isDelivered) {
+          if (!isRejected && !isDelivered && isStoreOpen && state.agentStatus === 'AVAILABLE' && !state.isLeaveToday) {
             const isSameAsCurrentPending = state.pendingOffer &&
               (isSameOrderId(state.pendingOffer.id, firstAssigned.id) || isSameOrderId(state.pendingOffer.orderNumber, firstAssigned.orderNumber));
 
@@ -2606,6 +2606,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               });
               try { soundEngine.playIncomingOrderAlert(); } catch {}
             }
+          } else if (state.pendingOffer && (!isStoreOpen || state.agentStatus === 'UNAVAILABLE' || state.isLeaveToday)) {
+            dispatch({ type: 'CLEAR_PENDING_OFFER' });
           }
         }
 
@@ -2674,9 +2676,10 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let ws: WebSocket | null = null;
     try {
       const isDev = window.location.port === '5173' || window.location.hostname === 'localhost';
+      const apiHost = (import.meta.env.VITE_API_URL || 'https://grabit-api.vercel.app').replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
       const wsUrl = isDev
         ? 'ws://localhost:8000/api/delivery/ws'
-        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/delivery/ws`;
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiHost}/api/delivery/ws`;
 
       ws = new WebSocket(wsUrl);
 
