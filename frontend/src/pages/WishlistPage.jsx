@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Heart, ShoppingBag, Trash2, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
