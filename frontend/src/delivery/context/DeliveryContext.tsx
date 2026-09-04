@@ -2477,6 +2477,10 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
         // Standard aliases for active delivery partners
+        myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b');
+        myRiderKeys.add('+919080841727');
+        myRiderKeys.add('9080841727');
+        myRiderKeys.add('thabee');
         myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a');
         myRiderKeys.add('700b1d05-e6f5-4be0-9e57-1d05137b5487');
         myRiderKeys.add('+919999900003');

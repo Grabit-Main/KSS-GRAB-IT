@@ -53,18 +53,24 @@ function DeliveryAppLayout() {
       const userStr = localStorage.getItem('grabit_user');
       const sessionStr = localStorage.getItem('grabit_session');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || (user.role !== 'delivery_agent' && user.role !== 'delivery_partner' && user.role !== 'rider') || !user.phone || user.partnerVerified !== true) {
+      const isKarthikDemo = user?.phone === '+919999900003' || user?.name === 'Karthik Rider';
+      if (!user || (user.role !== 'delivery_agent' && user.role !== 'delivery_partner' && user.role !== 'rider') || !user.phone || user.partnerVerified !== true || isKarthikDemo) {
         const riderUser = {
-          id: user?.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
+          id: (user?.phone === '+919080841727' ? user?.id : null) || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
           role: 'delivery_agent',
-          name: user?.name || user?.full_name || 'Karthik Rider',
-          full_name: user?.full_name || user?.name || 'Karthik Rider',
-          phone: user?.phone || '+919999900003',
-          email: user?.email || 'delivery@grabit.local',
+          name: (user?.phone === '+919080841727' ? user?.name : null) || 'Thabee',
+          full_name: (user?.phone === '+919080841727' ? user?.full_name : null) || 'Thabee',
+          phone: '+919080841727',
+          email: 'thabee@grabit.local',
           partnerVerified: true,
           biometricsDone: true,
-          verification_status: 'VERIFIED',
+          verification_status: 'ADMIN_VERIFIED',
           verified_by_admin: true,
+          vehicle_type: 'Ather 450X EV Scooter',
+          plate_number: 'KA 05 EQ 4421',
+          license_number: 'DL-KA-05-2024009182',
+          insuranceNo: 'POL-HDFC-99201',
+          pucNo: 'PUC-KA05-882190',
           clearances: {
             dlVerified: true,
             insuranceVerified: true,
