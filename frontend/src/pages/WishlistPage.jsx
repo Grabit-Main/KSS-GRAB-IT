@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Trash2, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
@@ -7,7 +7,6 @@ import ProductCard from '../components/common/ProductCard';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function WishlistPage() {
-  const navigate = useNavigate();
   const { wishlistItems, toggleWishlist } = useWishlist();
   const { addItem, getItemQty } = useCart();
   const { showToast } = useToast();
@@ -54,40 +53,12 @@ export default function WishlistPage() {
   };
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: isMobile ? '16px 12px 90px' : '32px 24px 60px' }}>
+    <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: isMobile ? '28px 12px 90px' : '40px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-
-        {/* Back Navigation Button */}
-        <div style={{ marginBottom: isMobile ? '12px' : '16px' }}>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#FFFFFF',
-              border: '1px solid #CBD5E1',
-              borderRadius: '12px',
-              padding: isMobile ? '8px 14px' : '10px 18px',
-              fontSize: isMobile ? '12px' : '13px',
-              fontWeight: 800,
-              color: '#0F172A',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#94A3B8'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-            aria-label="Back to Previous Page"
-          >
-            <ArrowLeft size={16} color="#0F172A" />
-            <span>Back to Shopping</span>
-          </button>
-        </div>
 
         {/* Header Title */}
         <div style={{
+          marginTop: isMobile ? '12px' : '16px',
           background: '#FFFFFF', borderRadius: isMobile ? '16px' : '20px',
           border: '1px solid #E2E8F0', padding: isMobile ? '18px 16px' : '28px 36px',
           marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)',

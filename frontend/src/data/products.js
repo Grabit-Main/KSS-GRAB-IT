@@ -578,8 +578,17 @@ if (typeof window !== 'undefined') {
   }, 0);
 
   setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
     syncProductsFromBackend();
   }, 3000);
+
+  window.addEventListener('visibilitychange', () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      syncProductsFromBackend();
+    }
+  });
 
   window.addEventListener('grabit_products_updated', syncProductsFromBackend);
   window.addEventListener('storage', syncProductsFromBackend);

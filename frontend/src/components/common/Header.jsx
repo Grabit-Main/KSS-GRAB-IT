@@ -342,8 +342,7 @@ export default function Header() {
   };
 
   const openLogin = () => {
-    setAuthMode('login');
-    setIsAuthModalOpen(true);
+    navigate('/login');
     setMenuOpen(false);
     setIsProfileMenuOpen(false);
   };

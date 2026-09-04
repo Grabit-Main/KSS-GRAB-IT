@@ -27,6 +27,7 @@ import ExclusiveDealsPage from '../pages/ExclusiveDealsPage';
 import FloatingCartBar from './components/common/FloatingCartBar';
 import DeliveryRiderAnimation from './components/common/DeliveryRiderAnimation';
 import MobileBottomNav from './components/common/MobileBottomNav';
+import SplashScreen from '../components/SplashScreen';
 import './styles/global.css';
 import './styles/components.css';
 
@@ -91,6 +92,7 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SplashScreen />
       <ScrollToTop />
       <ToastProvider>
         <LocationProvider>

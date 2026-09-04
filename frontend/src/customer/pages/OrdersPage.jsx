@@ -362,7 +362,11 @@ export default function OrdersPage() {
       address: o.delivery_address || o.address || 'Delivery Address',
       paymentMethod: o.payment_method || 'UPI',
       deliverySlot: o.estimated_time || '10-15 min express delivery',
-      discount: Number(o.discount) || 0
+      discount: Number(o.discount) || 0,
+      mrp_total: Number(o.mrp_total) || 0,
+      subtotal: Number(o.subtotal) || 0,
+      coupon_discount: Number(o.coupon_discount) || 0,
+      delivery_fee: Number(o.delivery_fee) || 0
     };
   }, []);
 
@@ -487,12 +491,13 @@ export default function OrdersPage() {
   };
 
   return (
-    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '12px 12px 90px' : '24px 24px 60px' }}>
+    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '24px 12px 90px' : '36px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
         {/* ── 1. PAGE HEADER ── */}
         <div style={{
-          marginBottom: isMobile ? '14px' : '20px'
+          marginTop: isMobile ? '8px' : '12px',
+          marginBottom: isMobile ? '16px' : '24px'
         }}>
           <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
             My Orders
@@ -863,6 +868,38 @@ export default function OrdersPage() {
                   <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#0F172A' }}>₹{item.price * item.qty}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Total Summary */}
+            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginBottom: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#64748B' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Item Total</span>
+                <span style={{ fontWeight: 800, color: '#0F172A' }}>
+                  ₹{selectedOrderModal.mrp_total || (Number(selectedOrderModal.total || 0) + Number(selectedOrderModal.discount || 0) + Number(selectedOrderModal.coupon_discount || 0) - Number(selectedOrderModal.delivery_fee || 0))}
+                </span>
+              </div>
+              {Number(selectedOrderModal.discount) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Product Discount</span>
+                  <span style={{ color: '#10B981', fontWeight: 800 }}>-₹{selectedOrderModal.discount}</span>
+                </div>
+              )}
+              {Number(selectedOrderModal.coupon_discount) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Coupon Discount</span>
+                  <span style={{ color: '#10B981', fontWeight: 800 }}>-₹{selectedOrderModal.coupon_discount}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Delivery Fee</span>
+                <span style={{ color: (Number(selectedOrderModal.delivery_fee) || 0) === 0 ? '#10B981' : '#0F172A', fontWeight: 800 }}>
+                  {(Number(selectedOrderModal.delivery_fee) || 0) === 0 ? 'FREE' : `₹${selectedOrderModal.delivery_fee}`}
+                </span>
+              </div>
+              <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>Total Paid</span>
+                <span style={{ fontSize: '18px', fontWeight: 900, color: '#0071E3' }}>₹{selectedOrderModal.total}</span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>

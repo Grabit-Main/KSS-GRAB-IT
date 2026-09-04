@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { get, post } from '../api';
 
 const CartContext = createContext();
 
 const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://grabit-api.vercel.app')).replace(/\/api\/?$/, '');
+
 
 export const AVAILABLE_COUPONS = [
   {
@@ -24,6 +26,15 @@ export const AVAILABLE_COUPONS = [
     badge: 'NEW USER'
   },
   {
+    code: 'SAVEMORE',
+    title: '₹20 Promo Discount',
+    description: 'Flat ₹20 OFF on orders above ₹99',
+    minOrder: 99,
+    discountType: 'fixed',
+    discountValue: 20,
+    badge: 'PROMO'
+  },
+  {
     code: 'FREESHIP',
     title: 'Free Express Delivery',
     description: 'Waive ₹30 express delivery fee on your order',
@@ -33,6 +44,31 @@ export const AVAILABLE_COUPONS = [
     badge: 'FREE DELIVERY'
   }
 ];
+
+const mergeCarts = (localItems = [], cloudItems = []) => {
+  const mergedMap = new Map();
+  (cloudItems || []).forEach(item => {
+    if (item && item.id) {
+      mergedMap.set(String(item.id), { ...item });
+    }
+  });
+  (localItems || []).forEach(item => {
+    if (item && item.id) {
+      const key = String(item.id);
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        const maxStock = item.stock_quantity || existing.stock_quantity || 50;
+        const currentLocalQty = Number(item.quantity || item.qty) || 1;
+        const currentCloudQty = Number(existing.quantity || existing.qty) || 1;
+        const combinedQty = Math.min(maxStock, currentCloudQty + currentLocalQty);
+        mergedMap.set(key, { ...existing, ...item, quantity: combinedQty, qty: combinedQty });
+      } else {
+        mergedMap.set(key, { ...item });
+      }
+    }
+  });
+  return Array.from(mergedMap.values());
+};
 
 const getUserPhone = () => {
   try {
@@ -82,13 +118,9 @@ export function CartProvider({ children }) {
       localStorage.setItem(storageKey, JSON.stringify(items));
     } catch {}
 
-    // Cloud DB & Redis sync
+    // Cloud DB & Redis sync via shared API helper
     if (currentPhone) {
-      fetch(`${API_BASE}/cart/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: currentPhone, items })
-      }).catch(() => {});
+      post('/cart/sync', { phone: currentPhone, items }).catch(() => {});
     }
   }, [items]);
 
@@ -101,15 +133,13 @@ export function CartProvider({ children }) {
       // If local cart is explicitly empty, do not re-populate from stale cloud cart
       if (Array.isArray(local) && local.length === 0) return;
       try {
-        const res = await fetch(`${API_BASE}/cart/user/${currentPhone}`);
-        if (res.ok) {
-          const data = await res.json();
+        const data = await get(`/cart/user/${currentPhone}`);
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
           const localCheck = loadStoredCart(currentPhone);
           if (localCheck.length === 0) return; // Cart was cleared while request was in flight
-          if (Array.isArray(data.items) && data.items.length > 0) {
-            setItems(data.items);
-            localStorage.setItem(getCartKey(currentPhone), JSON.stringify(data.items));
-          }
+          const merged = mergeCarts(localCheck, data.items);
+          setItems(merged);
+          localStorage.setItem(getCartKey(currentPhone), JSON.stringify(merged));
         }
       } catch {}
     };
@@ -125,18 +155,16 @@ export function CartProvider({ children }) {
 
       if (newPhone && (!local || local.length > 0)) {
         try {
-          const res = await fetch(`${API_BASE}/cart/user/${newPhone}`);
-          if (res.ok) {
-            const data = await res.json();
+          const data = await get(`/cart/user/${newPhone}`);
+          if (data && Array.isArray(data.items)) {
             const localCheck = loadStoredCart(newPhone);
             if (localCheck.length === 0) {
               setItems([]);
               return;
             }
-            if (Array.isArray(data.items)) {
-              setItems(data.items);
-              localStorage.setItem(getCartKey(newPhone), JSON.stringify(data.items));
-            }
+            const merged = mergeCarts(localCheck, data.items);
+            setItems(merged);
+            localStorage.setItem(getCartKey(newPhone), JSON.stringify(merged));
           }
         } catch {}
       }
@@ -207,11 +235,7 @@ export function CartProvider({ children }) {
       localStorage.removeItem('grabit_cart_guest');
     } catch {}
     if (currentPhone) {
-      fetch(`${API_BASE}/cart/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: currentPhone, items: [] })
-      }).catch(() => {});
+      post('/cart/sync', { phone: currentPhone, items: [] }).catch(() => {});
     }
     try {
       window.dispatchEvent(new CustomEvent('grabit_cart_updated', { detail: [] }));
@@ -230,14 +254,21 @@ export function CartProvider({ children }) {
   const deliveryFee = itemTotal >= 100 || itemTotal === 0 ? 0 : 30;
 
   // Auto-remove free_delivery coupon if cart qualifies for free delivery on its own
+  // OR if coupon minOrder requirement is no longer met
   useEffect(() => {
-    if (appliedCoupon?.discountType === 'free_delivery' && (itemTotal >= 100 || deliveryFee === 0)) {
+    if (!appliedCoupon) return;
+    if (appliedCoupon.discountType === 'free_delivery' && (itemTotal >= 100 || deliveryFee === 0)) {
+      setAppliedCoupon(null);
+      try {
+        localStorage.removeItem('grabit_applied_coupon');
+      } catch {}
+    } else if (appliedCoupon.minOrder && itemTotal < appliedCoupon.minOrder && items.length > 0) {
       setAppliedCoupon(null);
       try {
         localStorage.removeItem('grabit_applied_coupon');
       } catch {}
     }
-  }, [appliedCoupon, itemTotal, deliveryFee]);
+  }, [appliedCoupon, itemTotal, deliveryFee, items.length]);
 
   const applyCoupon = useCallback((codeToApply) => {
     if (!codeToApply || !codeToApply.trim()) {

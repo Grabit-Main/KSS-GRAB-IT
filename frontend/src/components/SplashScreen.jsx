@@ -4,14 +4,27 @@ const DOODLE_BG = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787653733/
 const FAVICON_3D = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787646563/grabit_media/ckpo0cpaoydv5zt8yyj0.png';
 const LOGO_PNG = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png';
 
-export function SplashScreen({ minDuration = 2200, onFinish }) {
+export function SplashScreen({ minDuration = 1800, onFinish }) {
+  const [show] = useState(() => {
+    try {
+      return !sessionStorage.getItem('grabit_splash_displayed');
+    } catch {
+      return true;
+    }
+  });
   const [stage, setStage] = useState('animate'); // 'animate', 'exit', 'hidden'
 
   useEffect(() => {
-    // Deliberate, smooth Apple pacing
+    if (!show) {
+      if (onFinish) onFinish();
+      return;
+    }
     const tExit = setTimeout(() => setStage('exit'), minDuration);
     const tHidden = setTimeout(() => {
       setStage('hidden');
+      try {
+        sessionStorage.setItem('grabit_splash_displayed', 'true');
+      } catch {}
       if (onFinish) onFinish();
     }, minDuration + 500);
 
@@ -19,9 +32,9 @@ export function SplashScreen({ minDuration = 2200, onFinish }) {
       clearTimeout(tExit);
       clearTimeout(tHidden);
     };
-  }, [minDuration, onFinish]);
+  }, [minDuration, onFinish, show]);
 
-  if (stage === 'hidden') return null;
+  if (!show || stage === 'hidden') return null;
 
   return (
     <div

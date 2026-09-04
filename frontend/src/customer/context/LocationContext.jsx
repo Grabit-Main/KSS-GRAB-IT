@@ -122,14 +122,22 @@ export function LocationProvider({ children }) {
     setIsAddingNew(true);
   };
 
+  const [locToDelete, setLocToDelete] = useState(null);
+
   const handleDeleteLocation = (e, locId) => {
     e.stopPropagation();
-    const updated = locations.filter(l => l.id !== locId);
+    setLocToDelete(locId);
+  };
+
+  const confirmDeleteLocation = () => {
+    if (!locToDelete) return;
+    const updated = locations.filter(l => l.id !== locToDelete);
     setLocations(updated);
-    if (selectedId === locId) {
+    if (selectedId === locToDelete) {
       setSelectedId(updated[0]?.id || null);
     }
     saveCustomerAddresses(updated);
+    setLocToDelete(null);
   };
 
   const handleSaveLocation = (e) => {
@@ -234,7 +242,10 @@ export function LocationProvider({ children }) {
             radius: '5 km'
           };
 
-          const updated = [newGpsLocation, ...locations.filter(l => l.tag !== 'Current Location')];
+          const updated = [
+            newGpsLocation,
+            ...locations.filter(l => l.tag !== 'Current Location').map(l => ({ ...l, isDefault: false }))
+          ];
           setLocations(updated);
           setSelectedId(newGpsLocation.id);
           saveCustomerAddresses(updated);
@@ -259,7 +270,10 @@ export function LocationProvider({ children }) {
             time: '15-25 min delivery',
             radius: '5 km'
           };
-          const updated = [fallbackLoc, ...locations.filter(l => l.tag !== 'Current Location')];
+          const updated = [
+            fallbackLoc,
+            ...locations.filter(l => l.tag !== 'Current Location').map(l => ({ ...l, isDefault: false }))
+          ];
           setLocations(updated);
           setSelectedId(fallbackLoc.id);
           saveCustomerAddresses(updated);
@@ -314,6 +328,59 @@ export function LocationProvider({ children }) {
           marginTop: '10px'
         }}
       >
+        {/* IN-APP MOBILE RESPONSIVE DELETE CONFIRMATION OVERLAY */}
+        {locToDelete && (
+          <div style={{
+            position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', zIndex: 200, borderRadius: '18px'
+          }}>
+            <div style={{
+              background: '#FFFFFF', borderRadius: '16px', padding: '20px 16px',
+              maxWidth: '260px', width: '100%', textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0'
+            }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%', background: '#FEE2E2',
+                color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 10px', fontSize: '18px'
+              }}>
+                🗑️
+              </div>
+              <h4 style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                Delete Saved Address?
+              </h4>
+              <p style={{ fontSize: '11.5px', color: '#64748B', margin: '0 0 16px', lineHeight: 1.35 }}>
+                Are you sure you want to delete this saved address from your account?
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setLocToDelete(null)}
+                  style={{
+                    flex: 1, padding: '9px 10px', borderRadius: '10px',
+                    border: '1px solid #CBD5E1', background: '#FFFFFF',
+                    fontSize: '12px', fontWeight: 700, color: '#475569', cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteLocation}
+                  style={{
+                    flex: 1, padding: '9px 10px', borderRadius: '10px',
+                    border: 'none', background: '#DC2626',
+                    fontSize: '12px', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer'
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Close Button - Only shown when a delivery location has already been confirmed */}
         {hasConfirmedLocation && (
           <button
