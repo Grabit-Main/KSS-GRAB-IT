@@ -322,8 +322,8 @@ export const ProfileScreen: React.FC = () => {
 
   const fetchPartnerDocuments = async () => {
     try {
-      const uId = userState?.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
-      const uPhone = userState?.phone || '+919999900003';
+      const uId = userState?.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b';
+      const uPhone = userState?.phone || '+919080841727';
       const query = `?partner_id=${encodeURIComponent(uId)}&phone=${encodeURIComponent(uPhone)}`;
       const res = await get(`/delivery/partner-documents${query}`);
       if (res && res.documents_map) {
@@ -365,7 +365,7 @@ export const ProfileScreen: React.FC = () => {
   const dlDoc = partnerDocs.driving_license || {
     status: 'VERIFIED',
     fields: {
-      license_number: userState.drivingLicense || userState.driving_license || userState.license_number || 'DL-2024-88712',
+      license_number: userState.drivingLicense || userState.driving_license || userState.license_number || 'DL-KA-05-2024009182',
       issuing_authority: 'Govt. Transport Authority (KA RTO)'
     }
   };
@@ -373,7 +373,7 @@ export const ProfileScreen: React.FC = () => {
   const insuranceDoc = partnerDocs.insurance || {
     status: 'VERIFIED',
     fields: {
-      policy_number: userState.insuranceNo || userState.insurance_number || 'POL-HDFC-88912',
+      policy_number: userState.insuranceNo || userState.insurance_number || 'POL-HDFC-99201',
       insurance_company: 'HDFC ERGO General Insurance'
     }
   };
@@ -381,7 +381,7 @@ export const ProfileScreen: React.FC = () => {
   const pucDoc = partnerDocs.puc || {
     status: 'VERIFIED',
     fields: {
-      certificate_number: userState.pucNo || userState.puc_no || 'PUC-KA05-77192',
+      certificate_number: userState.pucNo || userState.puc_no || 'PUC-KA05-882190',
       expiry_date: '2027-01-09'
     }
   };
@@ -389,7 +389,7 @@ export const ProfileScreen: React.FC = () => {
   const bgDoc = partnerDocs.background_check || {
     status: 'VERIFIED',
     fields: {
-      full_name: userState.full_name || userState.name || 'Karthik Rider',
+      full_name: userState.full_name || userState.name || 'Thabee',
       current_address: userState.address || 'GrabIt Hub East, Banaswadi, Bengaluru 560043',
       consent: true
     }
@@ -532,8 +532,8 @@ export const ProfileScreen: React.FC = () => {
         }
       }
 
-      const pId = userState?.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a';
-      const pPhone = userState?.phone || '+919999900003';
+      const pId = userState?.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b';
+      const pPhone = userState?.phone || '+919080841727';
 
       const payload = {
         partner_id: pId,

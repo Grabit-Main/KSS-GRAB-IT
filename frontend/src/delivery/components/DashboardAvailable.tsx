@@ -41,7 +41,7 @@ export const DashboardAvailable: React.FC = () => {
       return {};
     }
   })();
-  const agentName = (loggedInUser ? (loggedInUser.full_name || loggedInUser.name) : null) || state.riderProfile?.name || 'Karthik Rider';
+  const agentName = (loggedInUser ? (loggedInUser.full_name || loggedInUser.name) : null) || state.riderProfile?.name || 'Thabee';
 
   const isVerifiedRider = (() => {
     try {
