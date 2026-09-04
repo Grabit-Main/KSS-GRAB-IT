@@ -172,7 +172,14 @@ export function AdminPortalApp() {
 
   // ── Data State ──
   const [orders, setOrders] = useState([]);
-  const [partners, setPartners] = useState([]);
+  const [partners, setPartners] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('grabit_partners') || localStorage.getItem('grabit_users') || '[]');
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
   const [products, setProducts] = useState(baseProducts);
   const [suggestionsList, setSuggestionsList] = useState([]);
   const [ticketsList, setTicketsList] = useState([]);
@@ -517,7 +524,13 @@ export function AdminPortalApp() {
       }
       setOrders(uniqueOrders);
 
-      const activePartners = Array.isArray(partnersRes) ? partnersRes : [];
+      let activePartners = Array.isArray(partnersRes) && partnersRes.length > 0 ? partnersRes : [];
+      if (activePartners.length === 0) {
+        try {
+          const localPart = JSON.parse(localStorage.getItem('grabit_partners') || localStorage.getItem('grabit_users') || '[]');
+          if (Array.isArray(localPart)) activePartners = localPart;
+        } catch {}
+      }
 
       setPartners(activePartners);
       const riders = activePartners.filter(p => p && (p.role === 'delivery_agent' || p.role === 'rider'));

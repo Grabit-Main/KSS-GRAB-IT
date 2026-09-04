@@ -18,15 +18,17 @@ import {
  * Dismisses when the user taps "View Order" (navigates to /active-delivery) or the X button.
  */
 export const NewOrderPopup: React.FC = () => {
-  const { state, acceptOrder, rejectOffer } = useDelivery();
-  const { pendingOffer, offerSecondsRemaining } = state;
+  const { state, acceptOrder, rejectOffer, isStoreOpen } = useDelivery();
+  const { pendingOffer, offerSecondsRemaining, agentStatus, isLeaveToday } = state;
   const navigate = useNavigate();
 
   const [visible, setVisible] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
 
+  const shouldSuppressOffer = !isStoreOpen || agentStatus === 'UNAVAILABLE' || isLeaveToday;
+
   useEffect(() => {
-    if (pendingOffer) {
+    if (pendingOffer && !shouldSuppressOffer) {
       setVisible(true);
       requestAnimationFrame(() => setAnimateIn(true));
     } else {
@@ -34,9 +36,9 @@ export const NewOrderPopup: React.FC = () => {
       const timer = setTimeout(() => setVisible(false), 340);
       return () => clearTimeout(timer);
     }
-  }, [pendingOffer]);
+  }, [pendingOffer, shouldSuppressOffer]);
 
-  if (!visible || !pendingOffer) {
+  if (!visible || !pendingOffer || shouldSuppressOffer) {
     return null;
   }
 
