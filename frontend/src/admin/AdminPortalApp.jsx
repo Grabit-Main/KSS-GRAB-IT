@@ -134,6 +134,53 @@ const CHART_PERIODS_DATA = {
   }
 };
 
+const DEFAULT_PARTNERS = [
+  {
+    id: 'seller-101',
+    name: 'John Seller',
+    full_name: 'John Seller',
+    store_name: 'John Seller Store',
+    phone: '+919999900002',
+    email: 'john.seller@grabit.local',
+    role: 'seller',
+    status: 'ACTIVE',
+    is_online: true,
+    location: 'Banaswadi 2nd Block, Bengaluru'
+  },
+  {
+    id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+    name: 'Thabee',
+    full_name: 'Thabee',
+    phone: '+919080841727',
+    role: 'delivery_agent',
+    is_online: false,
+    agent_status: 'UNAVAILABLE',
+    vehicle_type: 'Ather 450X EV Scooter',
+    plate_number: 'KA 05 EQ 4421',
+    license_number: 'DL-KA-05-2024009182',
+    partnerVerified: true,
+    verification_status: 'ADMIN_VERIFIED',
+    presence_status: 'ABSENT',
+    status: 'ABSENT'
+  },
+  {
+    id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
+    name: 'Karthik Rider',
+    full_name: 'Karthik Rider',
+    phone: '+919999900003',
+    role: 'delivery_agent',
+    is_online: false,
+    agent_status: 'UNAVAILABLE',
+    vehicle_type: 'TVS iQube Electric Scooter',
+    plate_number: 'KA-05-EX-9921',
+    license_number: 'DL-2024-88712',
+    partnerVerified: true,
+    verification_status: 'ADMIN_VERIFIED',
+    presence_status: 'ABSENT',
+    status: 'ABSENT'
+  }
+];
+
 export function AdminPortalApp() {
   const navigate = useNavigate();
   const width = useWindowWidth();
@@ -154,7 +201,7 @@ export function AdminPortalApp() {
           phone: '+919999900001',
           email: 'admin@grabit.local'
         };
-        localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
+        localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-admin-token');
         localStorage.setItem('grabit_user', JSON.stringify(adminUser));
       }
     } catch { }
@@ -175,9 +222,10 @@ export function AdminPortalApp() {
   const [partners, setPartners] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('grabit_partners') || localStorage.getItem('grabit_users') || '[]');
-      return Array.isArray(saved) ? saved : [];
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+      return DEFAULT_PARTNERS;
     } catch {
-      return [];
+      return DEFAULT_PARTNERS;
     }
   });
   const [products, setProducts] = useState(baseProducts);
@@ -528,7 +576,14 @@ export function AdminPortalApp() {
       if (activePartners.length === 0) {
         try {
           const localPart = JSON.parse(localStorage.getItem('grabit_partners') || localStorage.getItem('grabit_users') || '[]');
-          if (Array.isArray(localPart)) activePartners = localPart;
+          if (Array.isArray(localPart) && localPart.length > 0) activePartners = localPart;
+          else activePartners = DEFAULT_PARTNERS;
+        } catch {
+          activePartners = DEFAULT_PARTNERS;
+        }
+      } else {
+        try {
+          localStorage.setItem('grabit_partners', JSON.stringify(activePartners));
         } catch {}
       }
 
@@ -2873,7 +2928,7 @@ export function AdminPortalApp() {
                     const filteredSellers = sellersList.filter(p => {
                       if (!partnerSearchQuery) return true;
                       const q = partnerSearchQuery.toLowerCase();
-                      return (p.name || p.full_name || '').toLowerCase().includes(q) || (p.phone || '').includes(q) || String(p.id || '').includes(q);
+                      return (p.name || p.full_name || p.store_name || '').toLowerCase().includes(q) || (p.phone || '').includes(q) || String(p.id || '').includes(q);
                     });
 
                     return (
@@ -2902,7 +2957,7 @@ export function AdminPortalApp() {
                     const filteredRiders = ridersList.filter(p => {
                       if (partnerSearchQuery) {
                         const q = partnerSearchQuery.toLowerCase();
-                        const matchesQuery = (p.name || p.full_name || '').toLowerCase().includes(q) || (p.phone || '').includes(q) || String(p.id || '').includes(q);
+                        const matchesQuery = (p.name || p.full_name || p.store_name || '').toLowerCase().includes(q) || (p.phone || '').includes(q) || String(p.id || '').includes(q);
                         if (!matchesQuery) return false;
                       }
                       if (partnerPresenceFilter !== 'ALL') {
