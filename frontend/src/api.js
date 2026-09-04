@@ -1,44 +1,36 @@
-const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://grabit-api.vercel.app/api');
+const API = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8000/api'
+    : (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://grabit-api.vercel.app/api')
+);
 
-// Resolve the best available auth token from all known storage keys
+// Resolve the best available auth token from all known storage keys safely
 function getAuthToken() {
-  const token = (
-    localStorage.getItem('grabit_session') ||
-    localStorage.getItem('grabit_seller_access') ||
-    localStorage.getItem('grabit_jwt') ||
-    localStorage.getItem('grabit_auth_token')
-  );
-  if (token) return token;
-
   try {
-    const userStr = localStorage.getItem('grabit_user');
-    if (userStr) {
-      const u = JSON.parse(userStr);
-      if (u.role === 'admin') return 'demo-admin-token';
-      if (u.role === 'seller') return 'demo-seller-token';
-      if (u.role === 'delivery_agent' || u.role === 'delivery_partner') return 'demo-delivery-token';
-      if (u.role === 'customer') return 'demo-customer-token';
-    }
-  } catch {}
-
-  // Contextual fallback by URL path
-  if (typeof window !== 'undefined') {
-    const p = window.location.pathname;
-    if (p.startsWith('/delivery')) return 'demo-delivery-token';
-    if (p.startsWith('/admin')) return 'demo-admin-token';
-    if (p.startsWith('/seller')) return 'demo-seller-token';
+    return (
+      localStorage.getItem('grabit_session') ||
+      localStorage.getItem('grabit_seller_access') ||
+      localStorage.getItem('grabit_jwt') ||
+      localStorage.getItem('grabit_auth_token') ||
+      null
+    );
+  } catch {
+    return null;
   }
-
-  return 'demo-token';
 }
 
 export async function api(path, options = {}) {
   const token = getAuthToken();
   const isGet = !options.method || options.method === 'GET';
 
-  // Abort hung requests after 3.5 seconds
+  // For public endpoints (orders, products, categories), allow GET requests even without auth token
+  const isPublicGet = isGet && (path.startsWith('/orders') || path.startsWith('/products') || path.startsWith('/categories'));
+  if (isGet && !token && !isPublicGet) return null;
+
+  // Abort hung GET requests after 4s; allow 15s for mutations/auth calls
+  const timeoutMs = isGet ? 4000 : 15000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -60,10 +52,9 @@ export async function api(path, options = {}) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') return null;
-    if (isGet) {
-      // For GET requests, return null so UI gracefully relies on cache/localStorage instead of throwing console errors
-      return null;
+    if (err.name === 'AbortError') {
+      if (isGet) return null; // Timed out GET — treat as no data, caller uses localStorage
+      throw new Error('Server request timed out. Please check your network and try again.');
     }
     throw err;
   }
@@ -100,6 +91,10 @@ export function logoutUser() {
   localStorage.removeItem('grabit_seller_profile');
   localStorage.removeItem('grabit_jwt');
   localStorage.removeItem('grabit_auth_token');
+  localStorage.removeItem('grabit_addresses_default');
+  localStorage.removeItem('grabit_addresses_guest');
+  localStorage.removeItem('grabit_delivery_location');
+  localStorage.removeItem('grabit_location_confirmed');
   
   // Preserve splashscreen seen flag so it only runs once per app opening
   const splashSeen = sessionStorage.getItem('grabit_splash_displayed');

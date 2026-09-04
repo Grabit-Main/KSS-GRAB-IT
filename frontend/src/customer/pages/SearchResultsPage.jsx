@@ -5,6 +5,7 @@ import { Check, Search, SlidersHorizontal, X, ArrowUpDown, Filter, ChevronDown }
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import { searchProducts, products } from '../data/products';
+import { subCategoryImages } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 const SORT_OPTIONS = [
@@ -17,33 +18,63 @@ const SORT_OPTIONS = [
 
 const ALL_CATEGORIES_LIST = [
   { name: 'All Categories', val: 'All', icon: '🛍️' },
-  { name: 'Snacks & Munchies', val: 'Snacks & Munchies', icon: '🍿' },
+  { name: 'Fresh Fruits & Veggies', val: 'Fresh Fruits & Veggies', icon: '🍎' },
   { name: 'Dairy & Bakery', val: 'Dairy & Bakery', icon: '🥛' },
   { name: 'Cold Drinks & Juices', val: 'Cold Drinks & Juices', icon: '🥤' },
+  { name: 'Snacks & Munchies', val: 'Snacks & Munchies', icon: '🍿' },
   { name: 'Atta, Rice & Dal', val: 'Atta, Rice & Dal', icon: '🌾' },
   { name: 'Chocolates & Sweets', val: 'Chocolates & Sweets', icon: '🍫' },
-  { name: 'Personal Care', val: 'Personal Care', icon: '🧴' },
-  { name: 'Household Essentials', val: 'Household Essentials', icon: '🧼' },
-  { name: 'Fresh Fruits & Veggies', val: 'Fresh Fruits & Veggies', icon: '🍎' },
   { name: 'Biscuits & Cookies', val: 'Biscuits & Cookies', icon: '🍪' },
   { name: 'Edible Oils & Ghee', val: 'Edible Oils & Ghee', icon: '🛢️' },
+  { name: 'Instant & Packaged Food', val: 'Instant & Packaged Food', icon: '🍜' },
+  { name: 'Tea, Coffee & More', val: 'Tea, Coffee & More', icon: '☕' },
+  { name: 'Personal Care', val: 'Personal Care', icon: '🧴' },
+  { name: 'Baby Care', val: 'Baby Care', icon: '👶' },
+  { name: 'Pet Care & Food', val: 'Pet Care & Food', icon: '🐾' },
+  { name: 'Beauty & Cosmetics', val: 'Beauty & Cosmetics', icon: '💄' },
+  { name: 'Health & Wellness', val: 'Health & Wellness', icon: '💊' },
+  { name: 'Meat & Seafood', val: 'Meat & Seafood', icon: '🥩' },
+  { name: 'Home & Kitchen', val: 'Home & Kitchen', icon: '🍳' },
+  { name: 'Stationery & Office', val: 'Stationery & Office', icon: '📚' },
+  { name: 'Sports & Fitness', val: 'Sports & Fitness', icon: '🏸' },
+  { name: 'Toys & Games', val: 'Toys & Games', icon: '🧩' },
+  { name: 'Pooja Needs', val: 'Pooja Needs', icon: '🪔' },
+  { name: 'Household Essentials', val: 'Household Essentials', icon: '🧼' },
   { name: 'Electronics & Gadgets', val: 'Electronics & Gadgets', icon: '⚡' },
   { name: 'Fashion & Accessories', val: 'Fashion & Accessories', icon: '👟' }
 ];
 
-const CATEGORY_NAMES = {
-  'snacks': 'Snacks & Munchies',
+export const CATEGORY_NAMES = {
+  'fruits-vegetables': 'Fresh Fruits & Veggies',
+  'produce': 'Fresh Fruits & Veggies',
+  'dairy-bakery': 'Dairy & Bakery',
   'dairy': 'Dairy & Bakery',
+  'snacks-munchies': 'Snacks & Munchies',
+  'snacks': 'Snacks & Munchies',
   'beverages': 'Cold Drinks & Juices',
   'staples': 'Atta, Rice & Dal',
+  'sweet-tooth': 'Sweet Tooth & Confectionery',
   'chocolates': 'Chocolates & Sweets',
-  'personal-care': 'Personal Care',
-  'household': 'Household Essentials',
-  'produce': 'Fresh Fruits & Veggies',
+  'ice-creams': 'Ice Creams & More',
   'biscuits': 'Biscuits & Cookies',
   'oil': 'Edible Oils & Ghee',
-  'electronics': 'Electronics & Gadgets',
-  'fashion': 'Fashion & Accessories'
+  'instant-food': 'Instant & Packaged Food',
+  'tea-coffee': 'Tea, Coffee & More',
+  'personal-care': 'Personal Care',
+  'baby-care': 'Baby Care',
+  'health-wellness': 'Health & Wellness',
+  'household': 'Household Essentials',
+  'cleaning': 'Cleaning & Household',
+  'home-kitchen': 'Home & Kitchen',
+  'stationery-office': 'Stationery & Office',
+  'pet-care': 'Pet Care & Food',
+  'beauty-cosmetics': 'Beauty & Cosmetics',
+  'meat-seafood': 'Meat & Seafood',
+  'sports-fitness': 'Sports & Fitness',
+  'toys-games': 'Toys & Games',
+  'pooja-needs': 'Pooja Needs',
+  'fashion': 'Fashion & Accessories',
+  'electronics': 'Electronics & Gadgets'
 };
 
 export default function SearchResultsPage() {
@@ -79,8 +110,11 @@ export default function SearchResultsPage() {
   // Calculate dynamic category counts
   const categoryCounts = { 'All': initialResults.length };
   initialResults.forEach(p => {
-    const name = CATEGORY_NAMES[p.category] || p.category;
-    categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+    const catSlug = p.category || p.category_slug || '';
+    const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+    if (name) {
+      categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+    }
   });
 
   // Calculate dynamic brand counts
@@ -100,11 +134,10 @@ export default function SearchResultsPage() {
     { name: 'All', count: initialResults.length, icon: null },
     ...Object.entries(categoryCounts)
       .filter(([cat]) => cat !== 'All')
-      .slice(0, 5)
       .map(([catName, count]) => ({
         name: catName,
         count,
-        icon: 'lays-classic-salted'
+        icon: null
       }))
   ];
 
@@ -112,11 +145,19 @@ export default function SearchResultsPage() {
   let filtered = [...initialResults];
 
   if (activeCat !== 'All') {
-    filtered = filtered.filter(p => (CATEGORY_NAMES[p.category] || p.category) === activeCat);
+    filtered = filtered.filter(p => {
+      const catSlug = p.category || p.category_slug || '';
+      const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+      return name === activeCat || catSlug === activeCat;
+    });
   }
 
   if (activeSubCat !== 'All') {
-    filtered = filtered.filter(p => (CATEGORY_NAMES[p.category] || p.category) === activeSubCat);
+    filtered = filtered.filter(p => {
+      const catSlug = p.category || p.category_slug || '';
+      const name = CATEGORY_NAMES[catSlug] || p.category_name || catSlug;
+      return name === activeSubCat || catSlug === activeSubCat;
+    });
   }
 
   if (activeBrands.length > 0) {
@@ -176,11 +217,19 @@ export default function SearchResultsPage() {
         <div style={{ marginBottom: '20px', marginTop: '8px' }}>
           <div style={{ marginBottom: '6px' }}>
             <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.4px' }}>
-              {isTrendingQuery ? 'Trending Products' : `Results for "${query}"`}
+              {isTrendingQuery
+                ? 'Trending Products'
+                : initialResults.length === 0
+                  ? `No results for "${query}"`
+                  : `Results for "${query}"`}
             </h1>
           </div>
           <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-            {isTrendingQuery ? 'Handpicked top-rated products delivered fast to your doorstep' : `Showing catalog matches for "${query}"`}
+            {isTrendingQuery
+              ? 'Handpicked top-rated products delivered fast to your doorstep'
+              : initialResults.length === 0
+                ? `0 products found matching your search term. Check spelling or browse popular categories below.`
+                : `Showing ${filtered.length} catalog matches for "${query}"`}
           </p>
         </div>
 
@@ -280,6 +329,121 @@ export default function SearchResultsPage() {
               )}
             </div>
           </div>
+
+          {/* Row 2: Category Filter Pills / Cards */}
+          {subCatPills.length > 1 && (
+            <div style={{
+              display: 'flex', gap: isMobile ? '8px' : '10px',
+              overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none',
+              marginBottom: '14px', alignItems: 'stretch'
+            }}>
+              {subCatPills.map(pill => {
+                const isSelected = activeCat === pill.name || (pill.name === 'All' && activeCat === 'All');
+                const isAll = pill.name === 'All';
+                const dedicatedImg = subCategoryImages && subCategoryImages[pill.name];
+                const sampleProd = !isAll
+                  ? filtered.find(p => p.category?.toLowerCase() === pill.name.toLowerCase() || p.subCategory === pill.name)
+                  : null;
+                const candidateUrl = !isAll
+                  ? (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null))
+                  : null;
+
+                return (
+                  <button
+                    key={pill.name}
+                    type="button"
+                    onClick={() => {
+                      setActiveCat(pill.name);
+                      setActiveSubCat(pill.name);
+                    }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: isMobile ? '68px' : '82px',
+                      minWidth: isMobile ? '68px' : '82px',
+                      background: isSelected ? 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)' : '#FFFFFF',
+                      border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                      borderRadius: '13px',
+                      padding: isMobile ? '6px 4px 6px' : '8px 6px 6px',
+                      cursor: 'pointer',
+                      boxShadow: isSelected
+                        ? '0 4px 14px rgba(0,113,227,0.18)'
+                        : '0 1px 4px rgba(0,0,0,0.03)',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
+                      flexShrink: 0,
+                      outline: 'none'
+                    }}
+                  >
+                  {/* Thumbnail Image Container */}
+                    <div style={{
+                      width: isMobile ? '38px' : '46px',
+                      height: isMobile ? '38px' : '46px',
+                      borderRadius: '9px',
+                      background: '#F8FAFC',
+                      border: '1px solid #F1F5F9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '4px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      position: 'relative'
+                    }}>
+                      {isAll ? (
+                        <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke={isSelected ? '#0071E3' : '#475569'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                        </svg>
+                      ) : candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
+                        <>
+                          <img
+                            src={candidateUrl.startsWith('http') || candidateUrl.startsWith('/') ? candidateUrl : `/${candidateUrl}`}
+                            alt={pill.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              padding: '2px'
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                            <ProductSvg name={sampleProd?.name || pill.name} size={isMobile ? 24 : 30} />
+                          </div>
+                        </>
+                      ) : (
+                        <ProductSvg name={sampleProd?.name || pill.name} size={isMobile ? 24 : 30} />
+                      )}
+                    </div>
+
+                    {/* Subcategory Name */}
+                    <span style={{
+                      fontSize: isMobile ? '10px' : '11px',
+                      fontWeight: isSelected ? 900 : 700,
+                      color: isSelected ? '#0071E3' : '#0F172A',
+                      textAlign: 'center',
+                      lineHeight: 1.15,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      {pill.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* 🌟 ULTRA-EXECUTIVE ACTIVE FILTER BADGES STRIP */}
           {activeFilterCount > 0 && (
@@ -484,28 +648,56 @@ export default function SearchResultsPage() {
               </div>
             ) : (
               /* Empty State */
-              <div style={{
-                background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
-                padding: '48px 24px', textAlign: 'center', marginBottom: '32px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  No matching products found
-                </h3>
-                <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
-                  We couldn't find any products matching your selected filter criteria.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    background: '#0071E3', color: '#FFFFFF', border: 'none',
-                    borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
-                    fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
-                  }}
-                >
-                  Reset All Filters
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+                <div style={{
+                  background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                  padding: '48px 24px', textAlign: 'center',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ fontSize: '42px', marginBottom: '14px' }}>🔍</div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+                    No matching products found {query ? `for "${query}"` : ''}
+                  </h3>
+                  <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px 0', maxWidth: '340px', marginInline: 'auto' }}>
+                    We couldn't find any products matching your search criteria.
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    style={{
+                      background: '#0071E3', color: '#FFFFFF', border: 'none',
+                      borderRadius: '12px', padding: '12px 24px', fontSize: '13px',
+                      fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,113,227,0.25)'
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+
+                {/* Popular alternatives section clearly labeled */}
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
+                      Popular Essentials You Might Like Instead
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                      Top-rated items currently trending on GrabIt
+                    </p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: isMobile ? '12px' : '16px'
+                  }}>
+                    {products.slice(0, 8).map(product => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        badgeText="Trending"
+                        badgeColor="#0071E3"
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

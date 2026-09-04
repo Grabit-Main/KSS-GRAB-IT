@@ -1,6 +1,34 @@
 import { Link } from 'react-router-dom';
 import useWindowWidth from '../../hooks/useWindowWidth';
 
+const SOCIAL_LINKS = [
+  {
+    label: 'Facebook',
+    url: 'https://www.facebook.com/grabitquick',
+    path: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z'
+  },
+  {
+    label: 'Instagram',
+    url: 'https://www.instagram.com/grabitquick',
+    path: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 7.5 22v-9A5.5 5.5 0 0 1 7.5 22'
+  },
+  {
+    label: 'Twitter',
+    url: 'https://twitter.com/grabitquick',
+    path: 'M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z'
+  },
+  {
+    label: 'LinkedIn',
+    url: 'https://www.linkedin.com/company/grabitquick',
+    path: 'M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z M4 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z'
+  }
+];
+
+const APP_STORE_LINKS = {
+  playStore: 'https://play.google.com/store/apps/details?id=com.grabit.quickcommerce',
+  appStore: 'https://apps.apple.com/app/grabit-quick-grocery/id6475892301'
+};
+
 export default function Footer() {
   const w = useWindowWidth();
   const isMobile = w <= 768;
@@ -33,12 +61,8 @@ export default function Footer() {
               
               {/* Social Icons Centered */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                {[
-                  { label: 'Facebook', path: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z' },
-                  { label: 'Instagram', path: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 7.5 22v-9A5.5 5.5 0 0 1 7.5 22' },
-                  { label: 'Twitter', path: 'M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z' },
-                ].map(({ label, path }) => (
-                  <a key={label} href="#" aria-label={label} className="footer-social-icon">
+                {SOCIAL_LINKS.map(({ label, url, path }) => (
+                  <a key={label} href={url} target="_blank" rel="noopener noreferrer" aria-label={label} className="footer-social-icon">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d={path} />
                     </svg>
@@ -117,12 +141,8 @@ export default function Footer() {
                   Your one-stop shop for everything you need, delivered fast within 5 km radius.
                 </p>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
-                  {[
-                    { label: 'Facebook', path: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z' },
-                    { label: 'Instagram', path: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 7.5 22v-9A5.5 5.5 0 0 1 7.5 22' },
-                    { label: 'Twitter', path: 'M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z' },
-                  ].map(({ label, path }) => (
-                    <a key={label} href="#" aria-label={label} className="footer-social-icon">
+                  {SOCIAL_LINKS.map(({ label, url, path }) => (
+                    <a key={label} href={url} target="_blank" rel="noopener noreferrer" aria-label={label} className="footer-social-icon">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d={path} />
                       </svg>
@@ -179,7 +199,7 @@ export default function Footer() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {/* Google Play Button */}
                   <a
-                    href="https://play.google.com/store"
+                    href={APP_STORE_LINKS.playStore}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
@@ -206,7 +226,7 @@ export default function Footer() {
 
                   {/* App Store Button */}
                   <a
-                    href="https://apps.apple.com"
+                    href={APP_STORE_LINKS.appStore}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

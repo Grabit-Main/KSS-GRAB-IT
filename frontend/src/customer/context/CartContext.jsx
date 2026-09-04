@@ -159,12 +159,13 @@ export function CartProvider({ children }) {
     };
   }, []);
 
-  const addItem = useCallback((product) => {
+  const addItem = useCallback((product, quantity = 1) => {
     if (!product || !product.id) return;
+    const addCount = Number(quantity) > 0 ? Number(quantity) : 1;
     setItems(prev => {
-      const existing = prev.find(i => i.id === product.id);
+      const existing = prev.find(i => String(i.id) === String(product.id));
       if (existing) {
-        return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return prev.map(i => String(i.id) === String(product.id) ? { ...i, qty: i.qty + addCount } : i);
       }
       const safePrice = Number(product.price) || 0;
       const safeMrp = Number(product.mrp) || safePrice;
@@ -174,19 +175,19 @@ export function CartProvider({ children }) {
         weight: product.weight || '',
         price: safePrice,
         mrp: safeMrp,
-        qty: 1,
+        qty: addCount,
         image: product.image || 'lays-classic-salted'
       }];
     });
   }, []);
 
   const removeItem = useCallback((id) => {
-    setItems(prev => prev.filter(i => i.id !== id));
+    setItems(prev => prev.filter(i => String(i.id) !== String(id)));
   }, []);
 
   const updateQty = useCallback((id, qty) => {
     if (qty <= 0) { removeItem(id); return; }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, qty: Number(qty) || 1 } : i));
+    setItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, qty: Number(qty) || 1 } : i));
   }, [removeItem]);
 
   const clearCart = useCallback(() => {
@@ -218,7 +219,7 @@ export function CartProvider({ children }) {
   }, []);
 
   const getItemQty = useCallback((id) => {
-    return items.find(i => i.id === id)?.qty || 0;
+    return items.find(i => String(i.id) === String(id))?.qty || 0;
   }, [items]);
 
   const totalItems = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
@@ -226,6 +227,16 @@ export function CartProvider({ children }) {
   const mrpTotal = items.reduce((s, i) => s + (Number(i.mrp) || Number(i.price) || 0) * (Number(i.qty) || 0), 0);
   const discount = Math.max(0, mrpTotal - itemTotal);
   const deliveryFee = itemTotal >= 100 || itemTotal === 0 ? 0 : 30;
+
+  // Auto-remove free_delivery coupon if cart qualifies for free delivery on its own
+  useEffect(() => {
+    if (appliedCoupon?.discountType === 'free_delivery' && (itemTotal >= 100 || deliveryFee === 0)) {
+      setAppliedCoupon(null);
+      try {
+        localStorage.removeItem('grabit_applied_coupon');
+      } catch {}
+    }
+  }, [appliedCoupon, itemTotal, deliveryFee]);
 
   const applyCoupon = useCallback((codeToApply) => {
     if (!codeToApply || !codeToApply.trim()) {
@@ -255,12 +266,19 @@ export function CartProvider({ children }) {
       return { success: false, message: `Add ₹${diff} more items to apply code ${cleanCode}` };
     }
 
+    if (coupon.discountType === 'free_delivery' && (deliveryFee === 0 || itemTotal >= 100)) {
+      return {
+        success: false,
+        message: 'Your order already qualifies for FREE delivery! No coupon needed.'
+      };
+    }
+
     setAppliedCoupon(coupon);
     try {
       localStorage.setItem('grabit_applied_coupon', JSON.stringify(coupon));
     } catch {}
     return { success: true, message: `Coupon "${coupon.code}" applied successfully!` };
-  }, [itemTotal]);
+  }, [itemTotal, deliveryFee]);
 
   const removeCoupon = useCallback(() => {
     setAppliedCoupon(null);

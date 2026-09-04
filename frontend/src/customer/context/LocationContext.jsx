@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin, Edit2, Plus, X, Trash2, Check, Navigation, LocateFixed } from 'lucide-react';
 import DeliveryLocationMapPicker from '../../components/common/DeliveryLocationMapPicker';
 import {
@@ -10,14 +11,14 @@ import {
 
 const LocationContext = createContext();
 
-export const defaultLocationsList = DEFAULT_CUSTOMER_ADDRESSES;
+export const defaultLocationsList = [];
 
 export function LocationProvider({ children }) {
   const [locations, setLocations] = useState(() => loadCustomerAddresses());
   const [selectedId, setSelectedId] = useState(() => {
     const list = loadCustomerAddresses();
     const def = list.find(l => l.isDefault) || list[0];
-    return def ? def.id : 1;
+    return def ? def.id : null;
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('list'); // 'list' | 'map'
@@ -32,6 +33,19 @@ export function LocationProvider({ children }) {
   const [formAddress, setFormAddress] = useState('');
   const [formArea, setFormArea] = useState('');
   const [formPincode, setFormPincode] = useState('');
+
+  // 🚀 AUTOMATIC FIRST-VISIT LOCATION PROMPT
+  useEffect(() => {
+    try {
+      const isConfirmed = localStorage.getItem('grabit_location_confirmed');
+      const isDismissed = sessionStorage.getItem('grabit_location_prompt_dismissed');
+      if (!isConfirmed && !isDismissed) {
+        setIsModalOpen(true);
+      }
+    } catch (e) {
+      console.warn('Auto location prompt check error:', e);
+    }
+  }, []);
 
   // Sync addresses across windows, login/logout, or custom events
   useEffect(() => {
@@ -59,11 +73,34 @@ export function LocationProvider({ children }) {
     };
   }, []);
 
-  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || DEFAULT_CUSTOMER_ADDRESSES[0];
+  const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || (() => {
+    try {
+      const saved = localStorage.getItem('grabit_delivery_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.address && !parsed.address.toLowerCase().includes('sunshine heights')) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return { area: 'Select Location', city: '', pincode: '', address: '', tag: 'Location' };
+  })();
 
   const selectLocation = (loc) => {
     setSelectedId(loc.id);
+    try {
+      localStorage.setItem('grabit_location_confirmed', 'true');
+    } catch (e) {}
     setIsModalOpen(false);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setIsAddingNew(false);
+    setModalTab('list');
+    try {
+      sessionStorage.setItem('grabit_location_prompt_dismissed', 'true');
+    } catch (e) {}
   };
 
   const handleOpenAddForm = () => {
@@ -129,14 +166,521 @@ export function LocationProvider({ children }) {
     }
     setLocations(updated);
     saveCustomerAddresses(updated);
+    try {
+      localStorage.setItem('grabit_location_confirmed', 'true');
+    } catch (err) {}
+    setIsAddingNew(false);
+    setIsModalOpen(false);
+  };
+
+  // 🧭 OPTION 1: USE CURRENT LOCATION (GPS + OpenStreetMap Nominatim Reverse Geocoding)
+  const handleUseCurrentGpsLocation = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser. Please use "Set Address" to choose your location manually.');
+      setModalTab('map');
+      return;
+    }
+
+    setIsLocating(true);
+    setLocateStatus('Detecting GPS location...');
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLocateStatus('Fetching address details...');
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+
+          let fullAddress = 'Current Delivery Location';
+          let area = 'Bengaluru';
+          let city = 'Bengaluru';
+          let state = 'Karnataka';
+          let postcode = '560001';
+          let title = 'Current Location';
+
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const road = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
+            const house = addr.house_number ? `${addr.house_number}, ` : '';
+            area = addr.suburb || addr.neighbourhood || addr.city_district || addr.residential || 'Bengaluru';
+            city = addr.city || addr.town || addr.municipality || 'Bengaluru';
+            state = addr.state || 'Karnataka';
+            postcode = addr.postcode || '560001';
+            title = data.name || (road ? `${road}, ${area}` : `${area}, ${city}`);
+            fullAddress = `${house}${road ? road + ', ' : ''}${area}`;
+          }
+
+          const newGpsLocation = {
+            id: Date.now(),
+            title: title.length > 35 ? title.slice(0, 35) + '...' : title,
+            tag: 'Current Location',
+            isDefault: true,
+            address: fullAddress,
+            area: area,
+            city: `${city} ${postcode}`,
+            state: state,
+            pincode: postcode,
+            lat: lat,
+            lng: lng,
+            time: '15-25 min delivery',
+            radius: '5 km'
+          };
+
+          const updated = [newGpsLocation, ...locations.filter(l => l.tag !== 'Current Location')];
+          setLocations(updated);
+          setSelectedId(newGpsLocation.id);
+          saveCustomerAddresses(updated);
+          localStorage.setItem('grabit_location_confirmed', 'true');
+          setIsModalOpen(false);
+          setIsAddingNew(false);
+          setModalTab('list');
+        } catch (err) {
+          console.warn('Reverse geocoding error:', err);
+          const fallbackLoc = {
+            id: Date.now(),
+            title: 'Current Location',
+            tag: 'Current Location',
+            isDefault: true,
+            address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+            area: 'Bengaluru',
+            city: 'Bengaluru 560001',
+            state: 'Karnataka',
+            pincode: '560001',
+            lat: lat,
+            lng: lng,
+            time: '15-25 min delivery',
+            radius: '5 km'
+          };
+          const updated = [fallbackLoc, ...locations.filter(l => l.tag !== 'Current Location')];
+          setLocations(updated);
+          setSelectedId(fallbackLoc.id);
+          saveCustomerAddresses(updated);
+          localStorage.setItem('grabit_location_confirmed', 'true');
+          setIsModalOpen(false);
+        } finally {
+          setIsLocating(false);
+          setLocateStatus('');
+        }
+      },
+      (error) => {
+        console.warn('Geolocation error:', error);
+        setIsLocating(false);
+        setLocateStatus('');
+        alert('GPS location permission was denied or unavailable. Please click "Set Address" to enter your address or pick on map.');
+        setModalTab('map');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  };
+
+  // 📍 OPTION 2: SET ADDRESS (Open Map Picker or Manual Entry)
+  const handleOpenSetAddress = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setModalTab('map');
+    setAutoLocateMap(false);
     setIsAddingNew(false);
   };
 
-  const handleFetchCurrentLocation = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setModalTab('map');
-    setAutoLocateMap(true);
-  };
+  const handleFetchCurrentLocation = handleUseCurrentGpsLocation;
+
+  const hasConfirmedLocation = typeof window !== 'undefined' && !!localStorage.getItem('grabit_location_confirmed');
+
+  const modalContent = isModalOpen && (
+    <div
+      onClick={hasConfirmedLocation ? handleCloseModal : undefined}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+        padding: '16px 20px'
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFFFFF', borderRadius: '18px', padding: modalTab === 'map' ? '16px' : '16px',
+          maxWidth: modalTab === 'map' ? '440px' : '310px', width: '100%',
+          boxShadow: '0 16px 40px -10px rgba(15, 23, 42, 0.3)',
+          position: 'relative', border: '1px solid #E2E8F0',
+          maxHeight: '90vh', overflowY: 'auto',
+          marginTop: '10px'
+        }}
+      >
+        {/* Modal Close Button - Only shown when a delivery location has already been confirmed */}
+        {hasConfirmedLocation && (
+          <button
+            onClick={handleCloseModal}
+            aria-label="Close location modal"
+            style={{
+              position: 'absolute', top: '12px', right: '12px',
+              width: '26px', height: '26px', borderRadius: '50%',
+              background: '#F1F5F9', border: 'none', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              color: '#64748B', transition: 'all 0.15s ease', zIndex: 50
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+          >
+            <X size={14} strokeWidth={2.4} />
+          </button>
+        )}
+
+        {/* WELCOMING LOCATION PROMPT HEADER */}
+        {!isAddingNew && modalTab === 'list' && (
+          <div style={{ textAlign: 'center', marginBottom: '14px', paddingTop: '2px' }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)',
+              color: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 8px', boxShadow: '0 4px 12px -2px rgba(0, 113, 227, 0.25)'
+            }}>
+              <MapPin size={18} strokeWidth={2.4} />
+            </div>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: '0 0 3px', letterSpacing: '-0.02em' }}>
+              Select Delivery Location
+            </h3>
+            <p style={{ fontSize: '11.5px', color: '#64748B', margin: 0, lineHeight: 1.35, maxWidth: '260px', marginLeft: 'auto', marginRight: 'auto' }}>
+              Add your delivery address to see live stock availability and 10-minute delivery in your area.
+            </p>
+          </div>
+        )}
+
+        {/* HEADER FOR MAP OR ADD FORM */}
+        {(isAddingNew || modalTab === 'map') && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              {isAddingNew ? (editingLoc ? 'Edit Address' : 'Add New Address') : 'Pin Delivery Location on Map'}
+            </h3>
+          </div>
+        )}
+
+        {/* 2 PROMINENT ACTION BUTTONS */}
+        {!isAddingNew && modalTab === 'list' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+            {/* OPTION 1: USE CURRENT LOCATION */}
+            <button
+              type="button"
+              id="btn-use-current-location"
+              onClick={handleUseCurrentGpsLocation}
+              disabled={isLocating}
+              style={{
+                width: '100%',
+                padding: '9px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: isLocating ? '#EFF6FF' : 'linear-gradient(135deg, #0071E3 0%, #0056B3 100%)',
+                color: isLocating ? '#0071E3' : '#FFFFFF',
+                fontSize: '12.5px',
+                fontWeight: 900,
+                cursor: isLocating ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: isLocating ? 'none' : '0 4px 12px rgba(0, 113, 227, 0.25)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Navigation size={15} fill={isLocating ? 'none' : '#FFFFFF'} />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 900, lineHeight: 1.2 }}>
+                  {isLocating ? (locateStatus || 'Locating GPS...') : 'Use Current Location'}
+                </div>
+                <div style={{ fontSize: '10px', opacity: isLocating ? 0.7 : 0.9, fontWeight: 600 }}>
+                  Detect device GPS & fetch street address
+                </div>
+              </div>
+            </button>
+
+            {/* OPTION 2: SET ADDRESS */}
+            <button
+              type="button"
+              id="btn-set-address"
+              onClick={handleOpenSetAddress}
+              style={{
+                width: '100%',
+                padding: '8px 14px',
+                borderRadius: '12px',
+                border: '1.5px solid #0071E3',
+                background: '#FFFFFF',
+                color: '#0071E3',
+                fontSize: '12.5px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F0F7FF'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; }}
+            >
+              <MapPin size={15} strokeWidth={2.4} color="#0071E3" />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 900, lineHeight: 1.2 }}>Set Address / Pin on Map</div>
+                <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Interactive map picker & address search</div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {isAddingNew ? (
+          /* ADD / EDIT ADDRESS FORM */
+          <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <button
+              type="button"
+              onClick={handleUseCurrentGpsLocation}
+              disabled={isLocating}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                width: '100%',
+                padding: '10px 14px',
+                background: '#EFF6FF',
+                border: '1px solid #BFDBFE',
+                borderRadius: '12px',
+                color: '#0071E3',
+                fontSize: '12.5px',
+                fontWeight: 800,
+                cursor: isLocating ? 'wait' : 'pointer'
+              }}
+            >
+              <LocateFixed size={15} color="#0071E3" />
+              <span>{isLocating ? (locateStatus || 'Locating GPS...') : 'Fetch Address from Current GPS'}</span>
+            </button>
+
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Address Tag (e.g. Home, Work)</label>
+              <input
+                type="text"
+                placeholder="e.g. Home, Work, Friend's Flat"
+                value={formTag}
+                onChange={e => setFormTag(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Street Address</label>
+              <input
+                type="text"
+                placeholder="e.g. Flat 301, Sunshine Heights, 1st Main Rd"
+                value={formAddress}
+                onChange={e => setFormAddress(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Locality / Area</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Indiranagar / Koramangala"
+                  value={formArea}
+                  onChange={e => setFormArea(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pincode</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 560043"
+                  value={formPincode}
+                  onChange={e => setFormPincode(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddingNew(false)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 800, color: '#64748B', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#0071E3', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.3)' }}
+              >
+                Save &amp; Select
+              </button>
+            </div>
+          </form>
+        ) : modalTab === 'map' ? (
+          /* 🗺️ INTERACTIVE LEAFLET MAP VIEW */
+          <div>
+            <DeliveryLocationMapPicker
+              initialLat={activeLoc?.lat || 13.014333}
+              initialLng={activeLoc?.lng || 77.646000}
+              initialTitle={activeLoc?.title || 'Selected Delivery Location'}
+              autoLocate={autoLocateMap}
+              onSelectLocation={(newLocation) => {
+                const updated = [newLocation, ...locations.filter(l => l.tag !== 'Pinned Location' && l.tag !== 'Current Location')];
+                setLocations(updated);
+                setSelectedId(newLocation.id);
+                saveCustomerAddresses(updated);
+                try {
+                  localStorage.setItem('grabit_location_confirmed', 'true');
+                } catch (e) {}
+                setIsModalOpen(false);
+                setModalTab('list');
+                setAutoLocateMap(false);
+              }}
+              onClose={() => { setModalTab('list'); setAutoLocateMap(false); }}
+            />
+          </div>
+        ) : (
+          /* SAVED ADDRESS CARDS LIST */
+          <div>
+            {locations.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', margin: '14px 0 12px', gap: '10px' }}>
+                <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Or Choose From Saved Addresses
+                </span>
+                <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+              {locations.map((loc) => {
+                const isSelected = loc.id === selectedId;
+                return (
+                  <div
+                    key={loc.id}
+                    onClick={() => selectLocation(loc)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '14px',
+                      border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                      background: isSelected ? '#F0F7FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isSelected ? '0 4px 14px rgba(0,113,227,0.1)' : '0 1px 4px rgba(0,0,0,0.02)',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Top Row: Icon + Tag Name + Badges + Action Buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={15} color={isSelected ? '#0071E3' : '#334155'} strokeWidth={2.2} />
+                        <span style={{ fontSize: '13.5px', fontWeight: 900, color: isSelected ? '#0071E3' : '#0F172A' }}>
+                          {loc.tag || loc.title}
+                        </span>
+                        {loc.isDefault && (
+                          <span style={{
+                            fontSize: '9px', fontWeight: 900, color: '#FFFFFF',
+                            background: '#0071E3', padding: '2px 7px', borderRadius: '10px',
+                            letterSpacing: '0.4px', textTransform: 'uppercase'
+                          }}>
+                            DEFAULT
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={(e) => handleOpenEditForm(e, loc)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: '#FFFFFF', border: '1px solid #CBD5E1',
+                            padding: '3px 7px', borderRadius: '8px',
+                            fontSize: '11px', fontWeight: 800, color: '#0071E3',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Edit2 size={11} color="#0071E3" /> Edit
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteLocation(e, loc.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: '#FFFFFF', border: '1px solid #FCA5A5',
+                            padding: '3px 7px', borderRadius: '8px',
+                            fontSize: '11px', fontWeight: 800, color: '#EF4444',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Middle Row: Street Address */}
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', paddingLeft: '23px', lineHeight: 1.35 }}>
+                      {loc.address}
+                    </div>
+
+                    {/* Delivery Time / ETA Row */}
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#0071E3', paddingLeft: '23px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>{loc.time || '15-25 min delivery'}</span>
+                    </div>
+
+                    {/* Bottom Row: City, State, Pincode */}
+                    {loc.city && (
+                      <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#64748B', paddingLeft: '23px' }}>
+                        {loc.city}{loc.state ? `, ${loc.state}` : ''} {loc.pincode}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Dotted Action Button: Add New Delivery Address Manually */}
+            <button
+              type="button"
+              id="btn-add-manual-address"
+              onClick={handleOpenAddForm}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '14px',
+                border: '1.5px dashed #CBD5E1',
+                background: '#F8FAFC',
+                color: '#0071E3',
+                fontSize: '13px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#0071E3'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+            >
+              <Plus size={15} color="#0071E3" strokeWidth={2.5} /> Enter Address Details Manually
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <LocationContext.Provider value={{
@@ -144,375 +688,12 @@ export function LocationProvider({ children }) {
       locations,
       changeLocation: selectLocation,
       isModalOpen,
-      setIsModalOpen
+      setIsModalOpen,
+      handleUseCurrentGpsLocation,
+      handleOpenSetAddress
     }}>
       {children}
-
-      {/* 📍 SAVED DELIVERY LOCATIONS MODAL (MATCHING IMAGE 2 EXACTLY) */}
-      {isModalOpen && (
-        <div
-          onClick={() => { setIsModalOpen(false); setIsAddingNew(false); }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: '#FFFFFF', borderRadius: '24px', padding: modalTab === 'map' ? '20px' : '24px',
-              maxWidth: modalTab === 'map' ? '480px' : '440px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              position: 'relative', border: '1px solid #E2E8F0',
-              maxHeight: '90vh', overflowY: 'auto'
-            }}
-          >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                {isAddingNew ? (editingLoc ? 'Edit Address' : 'Add New Address') : (modalTab === 'map' ? 'Choose Delivery Location' : 'Saved Delivery Locations')}
-              </h3>
-              <button
-                onClick={() => { setIsModalOpen(false); setIsAddingNew(false); setModalTab('list'); }}
-                style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  background: '#F1F5F9', border: 'none', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  color: '#64748B', transition: 'background 0.15s'
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* View Switcher Tabs: Saved Addresses vs Interactive Map */}
-            {!isAddingNew && (
-              <div style={{
-                display: 'flex',
-                background: '#F1F5F9',
-                borderRadius: '14px',
-                padding: '3px',
-                marginBottom: '16px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setModalTab('list')}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '11px',
-                    border: 'none',
-                    background: modalTab === 'list' ? '#FFFFFF' : 'transparent',
-                    color: modalTab === 'list' ? '#0071E3' : '#64748B',
-                    fontSize: '12.5px',
-                    fontWeight: modalTab === 'list' ? 900 : 700,
-                    boxShadow: modalTab === 'list' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <MapPin size={14} /> Saved ({locations.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalTab('map')}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '11px',
-                    border: 'none',
-                    background: modalTab === 'map' ? '#FFFFFF' : 'transparent',
-                    color: modalTab === 'map' ? '#0071E3' : '#64748B',
-                    fontSize: '12.5px',
-                    fontWeight: modalTab === 'map' ? 900 : 700,
-                    boxShadow: modalTab === 'map' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Navigation size={14} /> Interactive Map
-                </button>
-              </div>
-            )}
-
-            {isAddingNew ? (
-              /* ADD / EDIT ADDRESS FORM */
-              <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-
-                <button
-                  type="button"
-                  onClick={handleFetchCurrentLocation}
-                  disabled={isLocating}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    width: '100%',
-                    padding: '10px 14px',
-                    background: '#EFF6FF',
-                    border: '1px solid #BFDBFE',
-                    borderRadius: '12px',
-                    color: '#0071E3',
-                    fontSize: '12.5px',
-                    fontWeight: 800,
-                    cursor: isLocating ? 'wait' : 'pointer'
-                  }}
-                >
-                  <LocateFixed size={15} color="#0071E3" />
-                  <span>{isLocating ? (locateStatus || 'Locating GPS...') : 'Use Current GPS Location'}</span>
-                </button>
-
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Address Tag (e.g. Home, Work)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Home, Work, Friend's Flat"
-                    value={formTag}
-                    onChange={e => setFormTag(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Street Address</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Flat 301, Sunshine Heights, 1st Main Rd"
-                    value={formAddress}
-                    onChange={e => setFormAddress(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Locality / Area</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Indiranagar / Koramangala"
-                      value={formArea}
-                      onChange={e => setFormArea(e.target.value)}
-                      required
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pincode</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 560043"
-                      value={formPincode}
-                      onChange={e => setFormPincode(e.target.value)}
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingNew(false)}
-                    style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 800, color: '#64748B', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#0071E3', fontWeight: 900, color: '#FFFFFF', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.3)' }}
-                  >
-                    Save &amp; Select
-                  </button>
-                </div>
-              </form>
-            ) : modalTab === 'map' ? (
-              /* 🗺️ INTERACTIVE LEAFLET MAP VIEW (MATCHING SCREENSHOT 2) */
-              <div>
-                <DeliveryLocationMapPicker
-                  initialLat={activeLoc?.lat || 13.014333}
-                  initialLng={activeLoc?.lng || 77.646000}
-                  initialTitle={activeLoc?.title || 'Kalpanaaa Software Solutions — Main Office'}
-                  autoLocate={autoLocateMap}
-                  onSelectLocation={(newLocation) => {
-                    const updated = [newLocation, ...locations.filter(l => l.tag !== 'Pinned Location' && l.tag !== 'Current Location')];
-                    setLocations(updated);
-                    setSelectedId(newLocation.id);
-                    saveCustomerAddresses(updated);
-                    setIsModalOpen(false);
-                    setModalTab('list');
-                    setAutoLocateMap(false);
-                  }}
-                  onClose={() => { setModalTab('list'); setAutoLocateMap(false); }}
-                />
-              </div>
-            ) : (
-              /* SAVED ADDRESS CARDS LIST */
-              <div>
-                {locations.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '28px 16px', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', marginBottom: '16px' }}>
-                    <MapPin size={32} color="#94A3B8" style={{ margin: '0 auto 8px', display: 'block' }} />
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>No saved addresses</div>
-                    <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Add your real delivery address to receive quick 10-minute grocery delivery.</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
-                    {locations.map((loc) => {
-                      const isSelected = loc.id === selectedId;
-                      return (
-                        <div
-                          key={loc.id}
-                          onClick={() => selectLocation(loc)}
-                          style={{
-                            padding: '14px 16px',
-                            borderRadius: '16px',
-                            border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
-                            background: isSelected ? '#F0F7FF' : '#FFFFFF',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '4px',
-                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                            boxShadow: isSelected ? '0 4px 16px rgba(0,113,227,0.12)' : '0 2px 6px rgba(0,0,0,0.02)',
-                            position: 'relative'
-                          }}
-                        >
-                          {/* Top Row: Icon + Tag Name + Badges + Action Buttons */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <MapPin size={16} color={isSelected ? '#0071E3' : '#334155'} strokeWidth={2.2} />
-                              <span style={{ fontSize: '14px', fontWeight: 900, color: isSelected ? '#0071E3' : '#0F172A' }}>
-                                {loc.tag}
-                              </span>
-                              {loc.isDefault && (
-                                <span style={{
-                                  fontSize: '9px', fontWeight: 900, color: '#FFFFFF',
-                                  background: '#0071E3', padding: '2px 7px', borderRadius: '10px',
-                                  letterSpacing: '0.4px', textTransform: 'uppercase'
-                                }}>
-                                  DEFAULT
-                                </span>
-                              )}
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <button
-                                onClick={(e) => handleOpenEditForm(e, loc)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: '4px',
-                                  background: '#FFFFFF', border: '1px solid #CBD5E1',
-                                  padding: '3px 8px', borderRadius: '10px',
-                                  fontSize: '11px', fontWeight: 800, color: '#0071E3',
-                                  cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                                }}
-                              >
-                                <Edit2 size={11} color="#0071E3" /> Edit
-                              </button>
-                              <button
-                                onClick={(e) => handleDeleteLocation(e, loc.id)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: '4px',
-                                  background: '#FFFFFF', border: '1px solid #FCA5A5',
-                                  padding: '3px 8px', borderRadius: '10px',
-                                  fontSize: '11px', fontWeight: 800, color: '#EF4444',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Middle Row: Street Address */}
-                          <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1E293B', paddingLeft: '24px', lineHeight: 1.4 }}>
-                            {loc.address}
-                          </div>
-
-                          {/* Delivery Time / ETA Row matching Image 2 */}
-                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#0071E3', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span>{loc.time || '15-25 min delivery'}</span>
-                          </div>
-
-                          {/* Bottom Row: City, State, Pincode */}
-                          {loc.city && (
-                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', paddingLeft: '24px' }}>
-                              {loc.city}{loc.state ? `, ${loc.state}` : ''} {loc.pincode}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Primary Action Button: Use Current Location (GPS) */}
-                <button
-                  type="button"
-                  onClick={handleFetchCurrentLocation}
-                  disabled={isLocating}
-                  style={{
-                    width: '100%',
-                    padding: '13px 16px',
-                    borderRadius: '16px',
-                    border: '1.5px solid #0071E3',
-                    background: isLocating ? '#EFF6FF' : '#0071E3',
-                    color: isLocating ? '#0071E3' : '#FFFFFF',
-                    fontSize: '13.5px',
-                    fontWeight: 900,
-                    cursor: isLocating ? 'wait' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.15s ease',
-                    marginBottom: '10px',
-                    boxShadow: isLocating ? 'none' : '0 4px 14px rgba(0, 113, 227, 0.25)'
-                  }}
-                >
-                  <Navigation size={16} color={isLocating ? '#0071E3' : '#FFFFFF'} fill={isLocating ? 'none' : '#FFFFFF'} />
-                  <span>{isLocating ? (locateStatus || 'Fetching Current Location...') : 'Use Current Location'}</span>
-                </button>
-
-                {/* Dotted Action Button: Add New Delivery Address */}
-                <button
-                  type="button"
-                  onClick={handleOpenAddForm}
-                  style={{
-                    width: '100%',
-                    padding: '13px',
-                    borderRadius: '16px',
-                    border: '1.5px dashed #CBD5E1',
-                    background: '#F8FAFC',
-                    color: '#0071E3',
-                    fontSize: '13.5px',
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#0071E3'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-                >
-                  <Plus size={16} color="#0071E3" strokeWidth={2.5} /> Add New Delivery Address
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {isModalOpen && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
     </LocationContext.Provider>
   );
 }

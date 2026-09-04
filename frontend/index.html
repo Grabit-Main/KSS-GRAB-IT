@@ -32,6 +32,153 @@
       }, true);
     </script>
     <title>Grabit - Delivered in 30-45 Min</title>
+    <script>
+      (function() {
+        function shouldSuppress(msg) {
+          if (!msg) return false;
+          var str = typeof msg === 'string' ? msg : (msg.message || String(msg));
+          return str.indexOf('startTime') !== -1 || str.indexOf('reportAllChanges') !== -1;
+        }
+
+        // 1. Intercept window.onerror
+        var origOnError = window.onerror;
+        window.onerror = function(msg, url, line, col, error) {
+          if (shouldSuppress(msg) || shouldSuppress(error)) {
+            return true;
+          }
+          if (typeof origOnError === 'function') {
+            return origOnError.apply(this, arguments);
+          }
+          return false;
+        };
+
+        // 2. Intercept error event listener
+        window.addEventListener('error', function(e) {
+          if (shouldSuppress(e && e.message) || shouldSuppress(e && e.error)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            return true;
+          }
+        }, true);
+
+        // 3. Intercept unhandledrejection
+        window.addEventListener('unhandledrejection', function(e) {
+          if (shouldSuppress(e && e.reason)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            return true;
+          }
+        }, true);
+
+        // 4. Filter console.error
+        if (typeof console !== 'undefined' && console.error) {
+          var origConsoleError = console.error;
+          console.error = function() {
+            for (var i = 0; i < arguments.length; i++) {
+              if (shouldSuppress(arguments[i])) return;
+            }
+            return origConsoleError.apply(console, arguments);
+          };
+        }
+
+        // 5. Wrap setTimeout to catch and silence errors in DevTools timer callbacks (e.g. n.timeout in VM scripts)
+        var origSetTimeout = window.setTimeout;
+        window.setTimeout = function(fn, delay) {
+          if (typeof fn === 'function') {
+            var wrapped = function() {
+              try {
+                return fn.apply(this, arguments);
+              } catch(err) {
+                if (shouldSuppress(err)) return;
+                throw err;
+              }
+            };
+            return origSetTimeout.call(this, wrapped, delay);
+          }
+          return origSetTimeout.apply(this, arguments);
+        };
+
+        // 6. Wrap requestIdleCallback
+        if (typeof window.requestIdleCallback === 'function') {
+          var origIdle = window.requestIdleCallback;
+          window.requestIdleCallback = function(fn, opts) {
+            if (typeof fn === 'function') {
+              var wrapped = function() {
+                try {
+                  return fn.apply(this, arguments);
+                } catch(err) {
+                  if (shouldSuppress(err)) return;
+                  throw err;
+                }
+              };
+              return origIdle.call(this, wrapped, opts);
+            }
+            return origIdle.apply(this, arguments);
+          };
+        }
+
+        // 7. Wrap requestAnimationFrame
+        if (typeof window.requestAnimationFrame === 'function') {
+          var origRaf = window.requestAnimationFrame;
+          window.requestAnimationFrame = function(fn) {
+            if (typeof fn === 'function') {
+              var wrapped = function() {
+                try {
+                  return fn.apply(this, arguments);
+                } catch(err) {
+                  if (shouldSuppress(err)) return;
+                  throw err;
+                }
+              };
+              return origRaf.call(this, wrapped);
+            }
+            return origRaf.apply(this, arguments);
+          };
+        }
+
+        // 8. PerformanceObserver shim
+        if (typeof PerformanceObserver !== 'undefined') {
+          var OrigPO = window.PerformanceObserver;
+          window.PerformanceObserver = function(cb) {
+            var wrappedCb = function(list, obs) {
+              try {
+                return cb.apply(this, arguments);
+              } catch(err) {
+                if (shouldSuppress(err)) return;
+                throw err;
+              }
+            };
+            return new OrigPO(wrappedCb);
+          };
+          window.PerformanceObserver.prototype = OrigPO.prototype;
+          window.PerformanceObserver.supportedEntryTypes = OrigPO.supportedEntryTypes;
+        }
+
+        // 9. Performance entries defensive shim
+        if (typeof window !== 'undefined' && window.performance) {
+          ['getEntries', 'getEntriesByType', 'getEntriesByName'].forEach(function(method) {
+            var orig = window.performance[method];
+            if (typeof orig === 'function') {
+              window.performance[method] = function() {
+                try {
+                  var list = orig.apply(window.performance, arguments) || [];
+                  if (Array.isArray(list)) {
+                    for (var i = 0; i < list.length; i++) {
+                      if (list[i] && typeof list[i].startTime === 'undefined') {
+                        list[i].startTime = 0;
+                      }
+                    }
+                  }
+                  return list;
+                } catch(e) {
+                  return [];
+                }
+              };
+            }
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

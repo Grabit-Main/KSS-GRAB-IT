@@ -73,7 +73,8 @@ function Img({ src, alt, size: s }) {
         maxHeight: s + 'px',
         maxWidth: s + 'px',
         objectFit: 'contain',
-        filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.08))',
+        mixBlendMode: 'multiply',
+        filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.06))',
         transition: 'transform 0.2s ease'
       }}
     />
@@ -375,7 +376,321 @@ export default function ProductSvg({ name, size = 100 }) {
         <circle cx="58" cy="58" r="2.5" fill="#FFFFFF"/>
       </svg>
     ),
+
+    // 🪔 AUTHENTIC FESTIVAL PRODUCTS SVGS
+    'pooja-thali-brass': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Brass Plate Outer Rim */}
+        <circle cx="60" cy="60" r="48" fill="#F59E0B" stroke="#B45309" strokeWidth="3"/>
+        <circle cx="60" cy="60" r="40" fill="#FBBF24" stroke="#D97706" strokeWidth="1.5"/>
+        {/* Engraved Floral Border */}
+        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
+          <circle key={i} cx={60 + 35 * Math.cos((deg * Math.PI) / 180)} cy={60 + 35 * Math.sin((deg * Math.PI) / 180)} r="2.5" fill="#B45309"/>
+        ))}
+        {/* Center Diya with Flame */}
+        <ellipse cx="60" cy="65" rx="16" ry="9" fill="#B45309" stroke="#78350F" strokeWidth="1.5"/>
+        <ellipse cx="60" cy="64" rx="12" ry="6" fill="#F59E0B"/>
+        <path d="M57 58 Q60 40 63 58 Z" fill="#EF4444"/>
+        <path d="M58 57 Q60 45 62 57 Z" fill="#FDE047"/>
+        {/* Kumkum Roli & Haldi Cups */}
+        <circle cx="42" cy="48" r="8" fill="#DC2626" stroke="#B91C1C" strokeWidth="1.5"/>
+        <circle cx="42" cy="48" r="4" fill="#EF4444"/>
+        <circle cx="78" cy="48" r="8" fill="#FACC15" stroke="#CA8A04" strokeWidth="1.5"/>
+        <circle cx="78" cy="48" r="4" fill="#FEF08A"/>
+        {/* Bell / Camphor Spot */}
+        <circle cx="60" cy="82" r="5" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1"/>
+      </svg>
+    ),
+
+    'mens-grooming-kit': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Luxury Gift Box Base */}
+        <rect x="16" y="24" width="88" height="72" rx="8" fill="#0F172A" stroke="#334155" strokeWidth="2"/>
+        {/* Golden Cross Ribbon */}
+        <rect x="56" y="24" width="8" height="72" fill="#F59E0B"/>
+        <rect x="16" y="56" width="88" height="8" fill="#F59E0B"/>
+        {/* Ribbon Bow */}
+        <circle cx="60" cy="60" r="8" fill="#D97706"/>
+        <circle cx="55" cy="56" r="5" fill="#FBBF24"/>
+        <circle cx="65" cy="56" r="5" fill="#FBBF24"/>
+        {/* Bottle Illustration */}
+        <rect x="24" y="32" width="18" height="30" rx="3" fill="#1E293B" stroke="#64748B" strokeWidth="1"/>
+        <rect x="29" y="28" width="8" height="4" fill="#94A3B8"/>
+        <text x="60" y="86" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#38BDF8" fontFamily="sans-serif">GROOMING KIT</text>
+      </svg>
+    ),
+
+    'banana-chips-kerala': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Green Pouch Packaging */}
+        <rect x="22" y="16" width="76" height="88" rx="8" fill="#15803D" stroke="#166534" strokeWidth="2"/>
+        <rect x="22" y="16" width="76" height="18" rx="4" fill="#166534"/>
+        <text x="60" y="28" textAnchor="middle" fontSize="6" fontWeight="900" fill="#FEF08A" fontFamily="sans-serif">KERALA SPECIAL</text>
+        {/* Transparent Window */}
+        <ellipse cx="60" cy="58" rx="26" ry="18" fill="#FEF9C3" stroke="#CA8A04" strokeWidth="1.5"/>
+        {/* Crispy Round Banana Chips */}
+        <circle cx="48" cy="56" r="7" fill="#FACC15" stroke="#A16207" strokeWidth="1"/>
+        <circle cx="68" cy="54" r="8" fill="#EAB308" stroke="#854D0E" strokeWidth="1"/>
+        <circle cx="58" cy="64" r="7" fill="#FDE047" stroke="#CA8A04" strokeWidth="1"/>
+        <text x="60" y="90" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#FFFFFF" fontFamily="sans-serif">BANANA CHIPS</text>
+      </svg>
+    ),
+
+    'mtr-payasam-mix': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Dessert Pouch */}
+        <rect x="22" y="16" width="76" height="88" rx="8" fill="#991B1B" stroke="#7F1D1D" strokeWidth="2"/>
+        {/* Golden Ribbon Banner */}
+        <rect x="22" y="28" width="76" height="22" fill="#F59E0B"/>
+        <text x="60" y="42" textAnchor="middle" fontSize="9" fontWeight="900" fill="#450A0A" fontFamily="sans-serif">MTR PALADA</text>
+        {/* Payasam Bowl Illustration */}
+        <path d="M40 66 Q60 90 80 66 Z" fill="#FFFBEB" stroke="#D97706" strokeWidth="2"/>
+        <ellipse cx="60" cy="66" rx="20" ry="6" fill="#FEF3C7"/>
+        <circle cx="56" cy="66" r="2" fill="#78350F"/>
+        <circle cx="64" cy="67" r="2" fill="#78350F"/>
+        <text x="60" y="92" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#FEF08A" fontFamily="sans-serif">PAYASAM MIX</text>
+      </svg>
+    ),
+
+    'kerala-kasavu-saree': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Folded Kasavu Cream Cotton Attire */}
+        <rect x="20" y="24" width="80" height="72" rx="6" fill="#FFFBEB" stroke="#D4AF37" strokeWidth="2.5"/>
+        {/* Golden Zari Borders Top and Bottom */}
+        <rect x="20" y="24" width="80" height="14" fill="#D4AF37"/>
+        <rect x="20" y="82" width="80" height="14" fill="#D4AF37"/>
+        {/* Zari Motifs */}
+        <polygon points="32,34 38,26 44,34" fill="#B45309"/>
+        <polygon points="56,34 62,26 68,34" fill="#B45309"/>
+        <polygon points="80,34 86,26 92,34" fill="#B45309"/>
+        <text x="60" y="58" textAnchor="middle" fontSize="7.5" fontWeight="900" fill="#854D0E" fontFamily="sans-serif">KASAVU SAREE</text>
+        <text x="60" y="70" textAnchor="middle" fontSize="6" fontWeight="700" fill="#A16207" fontFamily="sans-serif">&amp; MUNDU</text>
+      </svg>
+    ),
+
+    'brass-nilavilakku-lamp': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Base Stand */}
+        <ellipse cx="60" cy="98" rx="26" ry="8" fill="#CA8A04" stroke="#854D0E" strokeWidth="2"/>
+        <ellipse cx="60" cy="94" rx="18" ry="5" fill="#EAB308"/>
+        {/* Tall Pillar Stem */}
+        <rect x="56" y="44" width="8" height="50" fill="#FACC15" stroke="#A16207" strokeWidth="1.5"/>
+        <circle cx="60" cy="68" r="7" fill="#EAB308"/>
+        {/* Oil Bowl Reservoir */}
+        <ellipse cx="60" cy="46" rx="24" ry="7" fill="#F59E0B" stroke="#B45309" strokeWidth="2"/>
+        {/* Top Crown Finial */}
+        <polygon points="60,22 55,36 65,36" fill="#CA8A04"/>
+        <circle cx="60" cy="22" r="3" fill="#EAB308"/>
+        {/* Golden Radiant Flames */}
+        <path d="M58 24 Q60 10 62 24 Z" fill="#EF4444"/>
+        <path d="M59 23 Q60 14 61 23 Z" fill="#FDE047"/>
+        <path d="M38 46 Q40 36 42 46 Z" fill="#F59E0B"/>
+        <path d="M78 46 Q80 36 82 46 Z" fill="#F59E0B"/>
+      </svg>
+    ),
+
+    'amul-ghee-tin': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Tin Body */}
+        <rect x="30" y="26" width="60" height="72" rx="8" fill="#15803D" stroke="#14532D" strokeWidth="2"/>
+        {/* Golden Lid */}
+        <rect x="36" y="18" width="48" height="10" rx="3" fill="#FACC15" stroke="#CA8A04" strokeWidth="1.5"/>
+        {/* Yellow Cow Ghee Label */}
+        <rect x="30" y="40" width="60" height="38" fill="#FEF08A"/>
+        <text x="60" y="55" textAnchor="middle" fontSize="9" fontWeight="900" fill="#15803D" fontFamily="sans-serif">Amul</text>
+        <text x="60" y="68" textAnchor="middle" fontSize="7.5" fontWeight="900" fill="#B45309" fontFamily="sans-serif">PURE GHEE</text>
+      </svg>
+    ),
+
+    'eastern-sambar-powder': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Spice Pouch */}
+        <rect x="24" y="16" width="72" height="88" rx="8" fill="#DC2626" stroke="#991B1B" strokeWidth="2"/>
+        {/* Center Yellow Spice Banner */}
+        <rect x="24" y="36" width="72" height="30" fill="#FBBF24"/>
+        <text x="60" y="50" textAnchor="middle" fontSize="8" fontWeight="900" fill="#7F1D1D" fontFamily="sans-serif">EASTERN</text>
+        <text x="60" y="61" textAnchor="middle" fontSize="7" fontWeight="900" fill="#991B1B" fontFamily="sans-serif">SAMBAR MIX</text>
+        {/* Small spice bowl icon */}
+        <path d="M48 80 Q60 92 72 80 Z" fill="#F59E0B"/>
+      </svg>
+    ),
+
+    'kerala-rice-pappadam': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        {/* Packet Body */}
+        <rect x="20" y="18" width="80" height="84" rx="8" fill="#FEF9C3" stroke="#CA8A04" strokeWidth="2"/>
+        <rect x="20" y="18" width="80" height="16" fill="#CA8A04"/>
+        <text x="60" y="29" textAnchor="middle" fontSize="6.5" fontWeight="900" fill="#FFFFFF" fontFamily="sans-serif">KERALA PAPPADAM</text>
+        {/* Stacked Crispy Pappadams */}
+        <ellipse cx="60" cy="55" rx="26" ry="18" fill="#FFFBEB" stroke="#EAB308" strokeWidth="2"/>
+        <ellipse cx="60" cy="64" rx="26" ry="18" fill="#FEF08A" stroke="#CA8A04" strokeWidth="2"/>
+        <ellipse cx="60" cy="73" rx="26" ry="18" fill="#FFFBEB" stroke="#D97706" strokeWidth="2"/>
+      </svg>
+    ),
+
+    'fresh-produce-hero-green': (
+      <svg width={s} height={s} viewBox="0 0 120 120" fill="none">
+        <path d="M15 95 Q50 15 95 20 Q75 75 25 105 Z" fill="#22C55E" stroke="#15803D" strokeWidth="2"/>
+        <path d="M22 100 Q55 50 90 22" stroke="#166534" strokeWidth="2.5"/>
+        <text x="60" y="80" textAnchor="middle" fontSize="6" fontWeight="900" fill="#14532D" fontFamily="sans-serif">BANANA LEAF</text>
+      </svg>
+    ),
+
+    // Subcategory Specialized Graphics
+    'agarbatti-&-incense': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M45 80 L52 20" stroke="#78350F" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M55 80 L62 25" stroke="#78350F" strokeWidth="3" strokeLinecap="round"/>
+        <circle cx="52" cy="20" r="3" fill="#EF4444"/>
+        <circle cx="62" cy="25" r="3" fill="#F59E0B"/>
+        <path d="M52 16 Q48 10 54 4" stroke="#94A3B8" strokeWidth="2" fill="none"/>
+        <rect x="35" y="78" width="30" height="12" rx="4" fill="#D97706"/>
+      </svg>
+    ),
+    'brass-diyas-&-lamps': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M20 55 C20 75 80 75 80 55 L70 55 C65 65 35 65 30 55 Z" fill="#F59E0B" stroke="#B45309" strokeWidth="2"/>
+        <ellipse cx="50" cy="55" rx="30" ry="8" fill="#D97706"/>
+        <path d="M50 48 Q44 32 50 20 Q56 32 50 48 Z" fill="#EF4444"/>
+        <path d="M50 45 Q46 35 50 26 Q54 35 50 45 Z" fill="#FBBF24"/>
+      </svg>
+    ),
+    'pure-camphor-&-wicks': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="25" y="45" width="22" height="22" rx="3" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2"/>
+        <rect x="53" y="45" width="22" height="22" rx="3" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2"/>
+        <rect x="39" y="30" width="22" height="22" rx="3" fill="#F1F5F9" stroke="#94A3B8" strokeWidth="2"/>
+        <path d="M50 25 Q46 15 50 8 Q54 15 50 25 Z" fill="#F59E0B"/>
+      </svg>
+    ),
+    'haldi-kumkum-&-roli': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <circle cx="35" cy="55" r="20" fill="#EAB308" stroke="#CA8A04" strokeWidth="2"/>
+        <circle cx="65" cy="55" r="20" fill="#DC2626" stroke="#991B1B" strokeWidth="2"/>
+        <circle cx="35" cy="55" r="14" fill="#FACC15"/>
+        <circle cx="65" cy="55" r="14" fill="#EF4444"/>
+      </svg>
+    ),
+    'building-blocks': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="20" y="45" width="60" height="35" rx="4" fill="#EF4444" stroke="#B91C1C" strokeWidth="2"/>
+        <rect x="30" y="35" width="12" height="10" rx="2" fill="#EF4444"/>
+        <rect x="58" y="35" width="12" height="10" rx="2" fill="#EF4444"/>
+        <rect x="35" y="20" width="30" height="15" rx="3" fill="#3B82F6"/>
+      </svg>
+    ),
+    'board-games-&-puzzles': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="20" y="20" width="60" height="60" rx="8" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="2"/>
+        <rect x="30" y="30" width="18" height="18" fill="#FFFFFF"/>
+        <rect x="52" y="52" width="18" height="18" fill="#FFFFFF"/>
+        <circle cx="39" cy="39" r="4" fill="#EF4444"/>
+        <circle cx="61" cy="61" r="4" fill="#F59E0B"/>
+      </svg>
+    ),
+    'diecast-cars-&-tracks': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M15 60 Q25 40 45 40 L65 40 Q80 40 90 60 L90 70 L15 70 Z" fill="#EF4444" stroke="#B91C1C" strokeWidth="2"/>
+        <circle cx="30" cy="70" r="10" fill="#1E293B" stroke="#64748B" strokeWidth="3"/>
+        <circle cx="75" cy="70" r="10" fill="#1E293B" stroke="#64748B" strokeWidth="3"/>
+      </svg>
+    ),
+    'dolls-&-figurines': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="35" r="20" fill="#FDE68A" stroke="#F59E0B" strokeWidth="2"/>
+        <circle cx="43" cy="32" r="3" fill="#1E293B"/>
+        <circle cx="57" cy="32" r="3" fill="#1E293B"/>
+        <path d="M45 42 Q50 47 55 42" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M30 60 C30 50 70 50 70 60 L65 85 L35 85 Z" fill="#EC4899"/>
+      </svg>
+    ),
+    'rackets-&-balls': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <ellipse cx="40" cy="40" rx="22" ry="28" stroke="#0071E3" strokeWidth="3" fill="#EFF6FF"/>
+        <line x1="40" y1="68" x2="40" y2="95" stroke="#1E293B" strokeWidth="4" strokeLinecap="round"/>
+        <circle cx="75" cy="65" r="10" fill="#84CC16" stroke="#4D7C0F" strokeWidth="2"/>
+      </svg>
+    ),
+    'fitness-supplements': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="25" y="25" width="50" height="65" rx="6" fill="#1E293B"/>
+        <rect x="25" y="15" width="50" height="12" rx="3" fill="#0071E3"/>
+        <text x="50" y="55" textAnchor="middle" fontSize="10" fontWeight="900" fill="#38BDF8" fontFamily="sans-serif">WHEY</text>
+        <text x="50" y="68" textAnchor="middle" fontSize="7" fontWeight="800" fill="#FFFFFF" fontFamily="sans-serif">PROTEIN</text>
+      </svg>
+    ),
+    'gym-shakers-&-bottles': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M30 25 L35 85 L65 85 L70 25 Z" fill="#10B981" stroke="#047857" strokeWidth="2"/>
+        <rect x="28" y="15" width="44" height="12" rx="3" fill="#1E293B"/>
+      </svg>
+    ),
+    'yoga-&-mats': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="15" y="40" width="70" height="25" rx="12" fill="#8B5CF6" stroke="#6D28D9" strokeWidth="2"/>
+        <ellipse cx="15" cy="52.5" rx="5" ry="12.5" fill="#A78BFA"/>
+      </svg>
+    ),
+    'notebooks-&-pads': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="25" y="15" width="55" height="70" rx="4" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="2"/>
+        <line x1="20" y1="25" x2="30" y2="25" stroke="#64748B" strokeWidth="3"/>
+        <line x1="20" y1="40" x2="30" y2="40" stroke="#64748B" strokeWidth="3"/>
+        <line x1="20" y1="55" x2="30" y2="55" stroke="#64748B" strokeWidth="3"/>
+        <line x1="20" y1="70" x2="30" y2="70" stroke="#64748B" strokeWidth="3"/>
+      </svg>
+    ),
+    'pens-&-markers': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M25 80 L75 25 L85 35 L35 90 Z" fill="#0071E3"/>
+        <path d="M15 90 L25 80 L35 90 Z" fill="#1E293B"/>
+      </svg>
+    ),
+    'desk-tools-&-tapes': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="30" stroke="#0284C7" strokeWidth="12" fill="none"/>
+        <circle cx="50" cy="50" r="18" fill="#F0F9FF"/>
+      </svg>
+    ),
+    'calculators': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="25" y="15" width="50" height="70" rx="6" fill="#1E293B"/>
+        <rect x="32" y="24" width="36" height="15" rx="2" fill="#A7F3D0"/>
+        <circle cx="36" cy="50" r="4" fill="#64748B"/>
+        <circle cx="50" cy="50" r="4" fill="#64748B"/>
+        <circle cx="64" cy="50" r="4" fill="#64748B"/>
+        <circle cx="36" cy="65" r="4" fill="#64748B"/>
+        <circle cx="50" cy="65" r="4" fill="#64748B"/>
+        <circle cx="64" cy="65" r="4" fill="#F59E0B"/>
+      </svg>
+    ),
+    'cookware-&-pans': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <ellipse cx="42" cy="55" rx="28" ry="18" fill="#1E293B" stroke="#475569" strokeWidth="2"/>
+        <path d="M68 55 L92 50" stroke="#78350F" strokeWidth="6" strokeLinecap="round"/>
+      </svg>
+    ),
+    'bottles-&-flasks': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="35" y="25" width="30" height="65" rx="8" fill="#94A3B8" stroke="#475569" strokeWidth="2"/>
+        <rect x="40" y="15" width="20" height="12" rx="3" fill="#1E293B"/>
+      </svg>
+    ),
+    'storage-&-containers': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <rect x="25" y="30" width="50" height="55" rx="6" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="2"/>
+        <rect x="22" y="22" width="56" height="10" rx="3" fill="#0071E3"/>
+      </svg>
+    ),
+    'kitchen-tools': (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <path d="M30 20 C30 45 45 50 45 60 L45 85 L35 85 L35 60 C35 50 20 45 20 20 Z" fill="#94A3B8"/>
+        <path d="M65 20 L75 20 L75 85 L65 85 Z" fill="#78350F"/>
+        <path d="M60 20 C75 20 85 30 85 45 L60 45 Z" fill="#CBD5E1"/>
+      </svg>
+    ),
   };
 
-  return svgs[nameStr] || <Img src={FALLBACK_IMG} alt="Product" size={s} />;
+  const normalizedKey = nameStr.toLowerCase().trim().replace(/[\s\-_]+/g, '-');
+  return svgs[nameStr] || svgs[normalizedKey] || <Img src={FALLBACK_IMG} alt="Product" size={s} />;
 }

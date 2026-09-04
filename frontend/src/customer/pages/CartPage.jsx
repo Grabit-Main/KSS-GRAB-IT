@@ -82,17 +82,20 @@ export default function CartPage() {
   };
 
   return (
-    <div className="container section" style={{ paddingTop: isMobile ? '24px' : '24px', paddingBottom: isMobile ? '90px' : '40px' }}>
+    <div className="container section" style={{ paddingTop: isMobile ? '80px' : '44px', paddingBottom: isMobile ? '90px' : '40px' }}>
 
-      <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, marginBottom: '6px', color: '#0F172A' }}>
-        My Cart ({totalItems} Items)
-      </h1>
+      <div style={{ marginTop: isMobile ? '24px' : '16px', marginBottom: '8px', paddingTop: '8px' }}>
+        <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+          My Cart ({totalItems} Items)
+        </h1>
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', flexWrap: 'wrap' }}>
         <MapPin size={14} color="#0071E3" />
         <span>Delivering to <strong style={{ color: '#0F172A' }}>{selectedAddress.address}</strong></span>
         <span style={{ color: '#0071E3', fontWeight: 800 }}>• {selectedAddress.tag}</span>
       </div>
+
 
       {items.length === 0 ? (
         <div className="empty-state card card-body" style={{ padding: isMobile ? '32px 16px' : '48px', textAlign: 'center' }}>

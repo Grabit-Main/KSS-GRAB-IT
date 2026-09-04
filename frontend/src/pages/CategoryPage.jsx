@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Zap, Star, TrendingUp, ArrowLeft, Sliders, X, ChevronDown, Check, Lightbulb } from 'lucide-react';
 // Clean Production Verified Build
 import ProductCard from '../components/common/ProductCard';
 import ProductSvg from '../components/common/ProductSvg';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
-import { products } from '../data/products';
-import { subCategories, brands, getCanonicalSlug } from '../data/categories';
+import { products, syncProductsFromBackend } from '../data/products';
+import { categories as defaultCategories, subCategories, subCategoryImages, brands, getCanonicalSlug, inferProductCategory } from '../data/categories';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { get } from '../api';
 const CATEGORY_MAP = {
   'snacks-munchies': {
     title: 'Snacks & Munchies',
@@ -151,6 +152,106 @@ const CATEGORY_MAP = {
     accentColor: '#FB7185',
     bannerIcons: ['p1.jpg', 'p2.jpg'],
   },
+  'baby-care': {
+    title: 'Baby Care',
+    sub: 'Pampers diapers, gentle wipes, baby shampoo & infant cereals.',
+    catKey: 'baby-care',
+    isDark: false,
+    heroImg: '/category-baby-care.jpg',
+    gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 40%, #BAE6FD 80%, #7DD3FC 100%)',
+    accentColor: '#0284C7',
+    bannerIcons: ['category-baby-care.jpg'],
+  },
+  'pet-care': {
+    title: 'Pet Care & Food',
+    sub: 'Pedigree dog food, Whiskas cat food, grooming shampoos & treats.',
+    catKey: 'pet-care',
+    isDark: false,
+    heroImg: '/category-pet-care.jpg',
+    gradient: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 40%, #FED7AA 80%, #FDBA74 100%)',
+    accentColor: '#EA580C',
+    bannerIcons: ['category-pet-care.jpg'],
+  },
+  'beauty-cosmetics': {
+    title: 'Beauty & Cosmetics',
+    sub: 'Niacinamide face serums, kajal, sunscreens & moisturizing creams.',
+    catKey: 'beauty-cosmetics',
+    isDark: false,
+    heroImg: '/category-beauty-cosmetics.jpg',
+    gradient: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 40%, #FECDD3 80%, #FDA4AF 100%)',
+    accentColor: '#E11D48',
+    bannerIcons: ['category-beauty-cosmetics.jpg'],
+  },
+  'health-wellness': {
+    title: 'Health & Wellness',
+    sub: 'Dabur chyawanprash, daily multivitamins, pain relief sprays & first aid.',
+    catKey: 'health-wellness',
+    isDark: false,
+    heroImg: '/category-health-wellness.jpg',
+    gradient: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 40%, #BBF7D0 80%, #86EFAC 100%)',
+    accentColor: '#16A34A',
+    bannerIcons: ['category-health-wellness.jpg'],
+  },
+  'meat-seafood': {
+    title: 'Meat, Fish & Eggs',
+    sub: 'Farm fresh chicken, pink salmon steaks & country brown eggs.',
+    catKey: 'meat-seafood',
+    isDark: false,
+    heroImg: '/category-meat-seafood.jpg',
+    gradient: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 40%, #FECACA 80%, #FCA5A5 100%)',
+    accentColor: '#DC2626',
+    bannerIcons: ['category-meat-seafood.jpg'],
+  },
+  'home-kitchen': {
+    title: 'Home & Kitchen',
+    sub: 'Pressure cookers, stainless steel flasks, non-stick pans & glass lunch containers.',
+    catKey: 'home-kitchen',
+    isDark: false,
+    heroImg: '/category-home-kitchen.jpg',
+    gradient: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 40%, #FED7AA 80%, #FDBA74 100%)',
+    accentColor: '#EA580C',
+    bannerIcons: ['category-home-kitchen.jpg'],
+  },
+  'stationery-office': {
+    title: 'Stationery & Office',
+    sub: 'Classmate spiral notebooks, Parker pens, artistic marker sets & scientific calculators.',
+    catKey: 'stationery-office',
+    isDark: false,
+    heroImg: '/category-stationery-office.jpg',
+    gradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 40%, #BFDBFE 80%, #93C5FD 100%)',
+    accentColor: '#2563EB',
+    bannerIcons: ['category-stationery-office.jpg'],
+  },
+  'sports-fitness': {
+    title: 'Sports & Fitness',
+    sub: 'Yonex carbon rackets, MuscleBlaze 100% whey, gym shaker bottles & yoga mats.',
+    catKey: 'sports-fitness',
+    isDark: false,
+    heroImg: '/category-sports-fitness.jpg',
+    gradient: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 40%, #BBF7D0 80%, #86EFAC 100%)',
+    accentColor: '#16A34A',
+    bannerIcons: ['category-sports-fitness.jpg'],
+  },
+  'toys-games': {
+    title: 'Toys & Games',
+    sub: 'LEGO creative bricks, classic Monopoly, Hot Wheels cars & speed Rubik cubes.',
+    catKey: 'toys-games',
+    isDark: false,
+    heroImg: '/category-toys-games.jpg',
+    gradient: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 40%, #E9D5FF 80%, #D8B4FE 100%)',
+    accentColor: '#9333EA',
+    bannerIcons: ['category-toys-games.jpg'],
+  },
+  'pooja-needs': {
+    title: 'Pooja & Spiritual Needs',
+    sub: 'Cycle pure agarbatti, traditional brass diyas, pure camphor crystals & ghee wicks.',
+    catKey: 'pooja-needs',
+    isDark: false,
+    heroImg: '/category-pooja-needs.jpg',
+    gradient: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 40%, #FDE68A 80%, #FCD34D 100%)',
+    accentColor: '#D97706',
+    bannerIcons: ['category-pooja-needs.jpg'],
+  },
 };
 
 // Aliases for all common slug variants
@@ -175,81 +276,353 @@ CATEGORY_MAP['oils-ghee'] = CATEGORY_MAP['oil'];
 CATEGORY_MAP['oils'] = CATEGORY_MAP['oil'];
 CATEGORY_MAP['electronics-gadgets'] = CATEGORY_MAP['electronics'];
 CATEGORY_MAP['fashion-accessories'] = CATEGORY_MAP['fashion'];
+CATEGORY_MAP['baby'] = CATEGORY_MAP['baby-care'];
+CATEGORY_MAP['pet'] = CATEGORY_MAP['pet-care'];
+CATEGORY_MAP['beauty'] = CATEGORY_MAP['beauty-cosmetics'];
+CATEGORY_MAP['cosmetics'] = CATEGORY_MAP['beauty-cosmetics'];
+CATEGORY_MAP['pharmacy'] = CATEGORY_MAP['health-wellness'];
+CATEGORY_MAP['health'] = CATEGORY_MAP['health-wellness'];
+CATEGORY_MAP['meat'] = CATEGORY_MAP['meat-seafood'];
+CATEGORY_MAP['seafood'] = CATEGORY_MAP['meat-seafood'];
+CATEGORY_MAP['chicken-meat'] = CATEGORY_MAP['meat-seafood'];
 
-const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'];
+const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low', 'Discount: High to Low'];
 
-const matchesSubCategory = (product, subCat) => {
+const matchesSubCategory = (product, subCat, categorySlug = '') => {
   if (!subCat || subCat === 'All') return true;
 
-  if (product.subCategory && product.subCategory.toLowerCase() === subCat.toLowerCase()) {
+  // 1. Direct explicit subCategory on the product
+  const directSub = product.subCategory || product.sub_category || product.subcategory || '';
+  if (directSub && directSub.toLowerCase().trim() === subCat.toLowerCase().trim()) {
     return true;
   }
 
-  const name = (product.name || '').toLowerCase();
-  const sub = subCat.toLowerCase();
+  const name = String(product.name || '').toLowerCase();
+  const sub = subCat.toLowerCase().trim();
+  const cat = String(categorySlug || '').toLowerCase().trim();
 
-  // Electronics & Gadgets
-  if (sub.includes('watch') || sub.includes('smartwatch')) {
-    return name.includes('watch') || name.includes('smartwatch') || name.includes('wave call') || name.includes('pulse') || name.includes('ninja');
-  }
-  if (sub.includes('speaker')) {
-    return name.includes('speaker') || name.includes('soundbar') || name.includes('go 3') || name.includes('flip') || name.includes('warrior') || name.includes('jbl') || name.includes('sony');
-  }
-  if (sub.includes('headphone') || sub.includes('tws') || sub.includes('earbud')) {
-    return name.includes('headphone') || name.includes('earbud') || name.includes('earphone') || name.includes('tws') || name.includes('airdrop') || name.includes('buds') || name.includes('basshead') || name.includes('sony wh');
-  }
-  if (sub.includes('computer') || sub.includes('accessories')) {
-    return name.includes('mouse') || name.includes('keyboard') || name.includes('power bank') || name.includes('usb') || name.includes('card') || name.includes('mic') || name.includes('sandisk') || name.includes('logitech') || name.includes('extender') || name.includes('bulb') || name.includes('receiver') || name.includes('rode');
-  }
+  // 2. Category-Specific Matching Rules
 
-  // Fashion & Accessories
-  if (sub.includes('shoe') || sub.includes('sneaker')) {
-    return name.includes('shoe') || name.includes('sneaker') || name.includes('boot') || name.includes('running') || name.includes('bata') || name.includes('nike') || name.includes('puma') || name.includes('adidas') || name.includes('woodland') || name.includes('campus') || name.includes('sparx');
-  }
-  if (sub.includes('watch') || sub.includes('sunglasses') || sub.includes('sunglass')) {
-    return name.includes('watch') || name.includes('sunglass') || name.includes('ray-ban') || name.includes('titan') || name.includes('fastrack') || name.includes('fossil') || name.includes('casio') || name.includes('sonata');
-  }
-  if (sub.includes('bag') || sub.includes('accessories')) {
-    return name.includes('bag') || name.includes('backpack') || name.includes('trolley') || name.includes('wallet') || name.includes('handbag') || name.includes('necklace') || name.includes('earring') || name.includes('belt') || name.includes('cap') || name.includes('tourister') || name.includes('skybags') || name.includes('safari') || name.includes('lavie') || name.includes('caprese') || name.includes('zaveri') || name.includes('youbella') || name.includes('tommy');
+  // (a) Beverages / Cold Drinks & Juices
+  if (cat.includes('beverage') || cat.includes('drink')) {
+    if (sub.includes('soft') || sub.includes('soda')) {
+      return name.includes('cola') || name.includes('coke') || name.includes('thums up') || name.includes('sprite') || name.includes('fanta') || name.includes('pepsi') || name.includes('limca') || name.includes('soda') || name.includes('kinley');
+    }
+    if (sub.includes('energy')) {
+      return name.includes('red bull') || name.includes('monster') || name.includes('energy');
+    }
+    if (sub.includes('juice') || sub.includes('fruit')) {
+      return name.includes('juice') || name.includes('real') || name.includes('tropicana') || name.includes('maaza') || name.includes('frooti') || name.includes('aamras') || name.includes('appy') || name.includes('paper boat') || name.includes('slice');
+    }
+    if (sub.includes('tea') || sub.includes('coffee')) {
+      return name.includes('coffee') || name.includes('nescafe') || name.includes('tea') || name.includes('chai');
+    }
   }
 
-  // Edible Oils & Ghee
-  if (sub.includes('sunflower')) return name.includes('sunflower') || name.includes('sunlite') || name.includes('saffola');
-  if (sub.includes('mustard')) return name.includes('mustard') || name.includes('kachi ghani') || name.includes('dhara');
-  if (sub.includes('ghee')) return name.includes('ghee') || name.includes('cow ghee') || name.includes('amul pure');
-  if (sub.includes('olive') || sub.includes('specialty')) return name.includes('olive') || name.includes('rice bran') || name.includes('groundnut') || name.includes('sesame') || name.includes('coconut');
-
-  // Personal Care
-  if (sub.includes('handwash') || sub.includes('soap')) return name.includes('handwash') || name.includes('soap') || name.includes('dettol') || name.includes('dove') || name.includes('pears') || name.includes('fiama');
-  if (sub.includes('hair')) return name.includes('shampoo') || name.includes('hair') || name.includes('head & shoulders') || name.includes('pantene') || name.includes('clinic') || name.includes('conditioner');
-  if (sub.includes('skin') || sub.includes('body')) return name.includes('lotion') || name.includes('cream') || name.includes('nivea') || name.includes('vaseline') || name.includes('ponds') || name.includes('toothpaste') || name.includes('colgate') || name.includes('sensodyne');
-  if (sub.includes('grooming') || sub.includes('perfume')) return name.includes('deodorant') || name.includes('perfume') || name.includes('spray') || name.includes('razor') || name.includes('gillette') || name.includes('fogg') || name.includes('axe') || name.includes('park avenue');
-
-  // Household Essentials
-  if (sub.includes('detergent')) return name.includes('surf') || name.includes('ariel') || name.includes('tide') || name.includes('detergent') || name.includes('mat') || name.includes('rin');
-  if (sub.includes('dishwash') || sub.includes('cleaner')) return name.includes('vim') || name.includes('gel') || name.includes('harpic') || name.includes('lysol') || name.includes('collin') || name.includes('dettol');
-  if (sub.includes('air') || sub.includes('freshener')) return name.includes('godrej') || name.includes('aer') || name.includes('odonil') || name.includes('spray') || name.includes('freshener');
-  if (sub.includes('pest') || sub.includes('mop')) return name.includes('hit') || name.includes('all out') || name.includes('goodknight') || name.includes('mop') || name.includes('wiper') || name.includes('scrub') || name.includes('scotch-brite');
-
-  // Biscuits & Cookies
-  if (sub.includes('cream')) {
-    return name.includes('cream') || name.includes('oreo') || name.includes('bourbon') || name.includes('choco fills') || name.includes('dark fantasy') || name.includes('treat');
-  }
-  if (sub.includes('butter') || sub.includes('cookies') || sub.includes('nut')) {
-    return name.includes('butter') || name.includes('cookie') || name.includes('good day') || name.includes('hide & seek') || name.includes('cashew') || name.includes('unibic') || name.includes('nutri');
-  }
-  if (sub.includes('digestive') || sub.includes('glucose')) {
-    return name.includes('glucose') || name.includes('parle-g') || name.includes('marie') || name.includes('digestive') || name.includes('sunfeast') || name.includes('gold');
+  // (b) Baby Care & Infant Needs
+  if (cat.includes('baby')) {
+    if (sub.includes('diaper') || sub.includes('wipe')) {
+      return name.includes('diaper') || name.includes('wipe') || name.includes('pampers') || name.includes('huggies') || name.includes('mamy poko') || name.includes('himalaya');
+    }
+    if (sub.includes('bath') || sub.includes('skin') || sub.includes('lotion') || sub.includes('shampoo')) {
+      return name.includes('shampoo') || name.includes('lotion') || name.includes('powder') || name.includes('oil') || name.includes('soap') || name.includes('wash') || name.includes('cream');
+    }
+    if (sub.includes('food') || sub.includes('cereal')) {
+      return name.includes('cerelac') || name.includes('cereal') || name.includes('nestle') || name.includes('feed') || name.includes('baby food');
+    }
   }
 
-  // Staples
-  if (sub.includes('atta') || sub.includes('flour')) return name.includes('atta') || name.includes('flour') || name.includes('maida') || name.includes('sooji') || name.includes('besan') || name.includes('aashirvaad');
-  if (sub.includes('rice')) return name.includes('rice') || name.includes('basmati') || name.includes('daawat') || name.includes('india gate') || name.includes('kolam');
-  if (sub.includes('dal') || sub.includes('pulse')) return name.includes('dal') || name.includes('pulse') || name.includes('toor') || name.includes('moong') || name.includes('chana');
+  // (c) Pet Care & Supplies
+  if (cat.includes('pet')) {
+    if (sub.includes('dog') || sub.includes('treat')) {
+      return name.includes('dog') || name.includes('pedigree') || name.includes('dentastix') || name.includes('bone') || name.includes('drools');
+    }
+    if (sub.includes('cat')) {
+      return name.includes('cat') || name.includes('whiskas') || name.includes('kitten');
+    }
+    if (sub.includes('grooming') || sub.includes('shampoo')) {
+      return name.includes('shampoo') || name.includes('grooming') || name.includes('zack') || name.includes('tea tree');
+    }
+  }
 
-  // Fresh Fruits & Veggies
-  if (sub.includes('fruit')) return name.includes('apple') || name.includes('banana') || name.includes('mango') || name.includes('grapes') || name.includes('berry') || name.includes('orange');
-  if (sub.includes('veggie') || sub.includes('vegetable')) return name.includes('tomato') || name.includes('potato') || name.includes('onion') || name.includes('broccoli') || name.includes('carrot') || name.includes('cucumber');
+  // (d) Beauty & Cosmetics
+  if (cat.includes('beauty') || cat.includes('cosmetics')) {
+    if (sub.includes('serum') || sub.includes('cream')) {
+      return name.includes('serum') || name.includes('cream') || name.includes('niacinamide') || name.includes('moisturizing');
+    }
+    if (sub.includes('sunscreen') || sub.includes('cleanser') || sub.includes('water')) {
+      return name.includes('sunscreen') || name.includes('micellar') || name.includes('cleansing') || name.includes('spf');
+    }
+    if (sub.includes('makeup') || sub.includes('kajal')) {
+      return name.includes('kajal') || name.includes('lipstick') || name.includes('eyeliner') || name.includes('maybelline') || name.includes('colossal');
+    }
+  }
+
+  // (e) Health & Wellness / Pharmacy
+  if (cat.includes('health') || cat.includes('wellness') || cat.includes('pharmacy')) {
+    if (sub.includes('immunity') || sub.includes('ayurveda')) {
+      return name.includes('chyawanprash') || name.includes('dabur') || name.includes('ayurvedic') || name.includes('herbal');
+    }
+    if (sub.includes('vitamin') || sub.includes('supplement')) {
+      return name.includes('revital') || name.includes('vitamin') || name.includes('charge') || name.includes('capsule') || name.includes('tablet') || name.includes('fast&up') || name.includes('multivitamin');
+    }
+    if (sub.includes('pain') || sub.includes('device')) {
+      return name.includes('volini') || name.includes('spray') || name.includes('thermometer') || name.includes('morepen') || name.includes('relief');
+    }
+  }
+
+  // (f) Meat, Seafood & Eggs
+  if (cat.includes('meat') || cat.includes('seafood') || cat.includes('chicken')) {
+    if (sub.includes('chicken')) {
+      return name.includes('chicken') || name.includes('breast') || name.includes('curry cut');
+    }
+    if (sub.includes('egg')) {
+      return name.includes('egg') || name.includes('brown eggs') || name.includes('country');
+    }
+    if (sub.includes('fish') || sub.includes('seafood') || sub.includes('prawn')) {
+      return name.includes('salmon') || name.includes('prawn') || name.includes('fish') || name.includes('steak');
+    }
+  }
+
+  // (g) Home & Kitchen
+  if (cat.includes('home') || cat.includes('kitchen')) {
+    if (sub.includes('cookware') || sub.includes('pan')) {
+      return name.includes('cooker') || name.includes('pan') || name.includes('prestige') || name.includes('hawkins');
+    }
+    if (sub.includes('bottle') || sub.includes('flask')) {
+      return name.includes('bottle') || name.includes('flask') || name.includes('milton');
+    }
+    if (sub.includes('storage') || sub.includes('container')) {
+      return name.includes('borosil') || name.includes('lunch') || name.includes('container') || name.includes('box');
+    }
+    if (sub.includes('tool') || sub.includes('knife')) {
+      return name.includes('knife') || name.includes('pigeon') || name.includes('shears') || name.includes('cutter');
+    }
+  }
+
+  // (h) Stationery & Office
+  if (cat.includes('stationery') || cat.includes('office')) {
+    if (sub.includes('notebook') || sub.includes('pad')) {
+      return name.includes('notebook') || name.includes('spiral') || name.includes('classmate') || name.includes('pad');
+    }
+    if (sub.includes('pen') || sub.includes('marker')) {
+      return name.includes('pen') || name.includes('parker') || name.includes('faber-castell') || name.includes('marker');
+    }
+    if (sub.includes('desk') || sub.includes('tape')) {
+      return name.includes('scotch') || name.includes('tape') || name.includes('scissors');
+    }
+    if (sub.includes('calculator')) {
+      return name.includes('casio') || name.includes('calculator');
+    }
+  }
+
+  // (i) Sports & Fitness
+  if (cat.includes('sports') || cat.includes('fitness')) {
+    if (sub.includes('racket') || sub.includes('ball')) {
+      return name.includes('yonex') || name.includes('badminton') || name.includes('football') || name.includes('nivia') || name.includes('racket');
+    }
+    if (sub.includes('supplement') || sub.includes('protein')) {
+      return name.includes('whey') || name.includes('muscleblaze') || name.includes('protein');
+    }
+    if (sub.includes('shaker') || sub.includes('bottle')) {
+      return name.includes('shaker') || name.includes('boldfit') || name.includes('mixer');
+    }
+    if (sub.includes('yoga') || sub.includes('mat')) {
+      return name.includes('yoga') || name.includes('mat') || name.includes('strava');
+    }
+  }
+
+  // (j) Toys & Games
+  if (cat.includes('toy') || cat.includes('game')) {
+    if (sub.includes('block') || sub.includes('lego')) {
+      return name.includes('lego') || name.includes('brick') || name.includes('building');
+    }
+    if (sub.includes('board') || sub.includes('puzzle')) {
+      return name.includes('monopoly') || name.includes('rubik') || name.includes('cube') || name.includes('puzzle');
+    }
+    if (sub.includes('car') || sub.includes('track')) {
+      return name.includes('hot wheels') || name.includes('car') || name.includes('diecast');
+    }
+    if (sub.includes('doll') || sub.includes('figurine')) {
+      return name.includes('barbie') || name.includes('doll');
+    }
+  }
+
+  // (k) Pooja & Spiritual Needs
+  if (cat.includes('pooja') || cat.includes('spiritual')) {
+    if (sub.includes('agarbatti') || sub.includes('incense')) {
+      return name.includes('agarbatti') || name.includes('incense') || name.includes('cycle');
+    }
+    if (sub.includes('diya') || sub.includes('lamp')) {
+      return name.includes('diya') || name.includes('lamp') || name.includes('brass');
+    }
+    if (sub.includes('camphor') || sub.includes('wick')) {
+      return name.includes('camphor') || name.includes('kapoor') || name.includes('wick') || name.includes('batti') || name.includes('bhimseni') || name.includes('mangaldeep');
+    }
+    if (sub.includes('haldi') || sub.includes('kumkum') || sub.includes('roli')) {
+      return name.includes('haldi') || name.includes('kumkum') || name.includes('roli') || name.includes('patanjali') || name.includes('shubhkart');
+    }
+  }
+
+  // (l) Fresh Fruits & Veggies / Produce
+  if (cat.includes('produce') || cat.includes('fruit') || cat.includes('veggie')) {
+    if (sub.includes('fruit')) {
+      return name.includes('apple') || name.includes('banana') || name.includes('mango') || name.includes('grapes') || name.includes('berry') || name.includes('orange') || name.includes('avocado') || name.includes('pomegranate') || name.includes('papaya');
+    }
+    if (sub.includes('veggie') || sub.includes('vegetable')) {
+      return name.includes('tomato') || name.includes('potato') || name.includes('onion') || name.includes('broccoli') || name.includes('carrot') || name.includes('cucumber') || name.includes('capsicum') || name.includes('spinach');
+    }
+    if (sub.includes('herb') || sub.includes('extra')) {
+      return name.includes('garlic') || name.includes('ginger') || name.includes('coriander') || name.includes('mint') || name.includes('lemon') || name.includes('chilli');
+    }
+  }
+
+  // (m) Dairy & Bakery
+  if (cat.includes('dairy') || cat.includes('bakery')) {
+    if (sub.includes('milk') || sub.includes('butter')) {
+      return name.includes('milk') || (name.includes('butter') && !name.includes('buttermilk')) || name.includes('taaza') || name.includes('amul gold');
+    }
+    if (sub.includes('cheese') || sub.includes('paneer')) {
+      return name.includes('paneer') || name.includes('cheese') || name.includes('mozzarella') || name.includes('slice');
+    }
+    if (sub.includes('bread') || sub.includes('bakery')) {
+      return name.includes('bread') || name.includes('loaf') || name.includes('wheat bread') || name.includes('multigrain') || name.includes('sourdough');
+    }
+    if (sub.includes('curd') || sub.includes('dahi') || sub.includes('yogurt')) {
+      return name.includes('curd') || name.includes('dahi') || name.includes('yogurt') || name.includes('masti') || name.includes('epigamia') || name.includes('buttermilk') || name.includes('lassi');
+    }
+  }
+
+  // (n) Snacks & Munchies
+  if (cat.includes('snack') || cat.includes('munch')) {
+    if (sub.includes('potato') || sub.includes('chip')) {
+      return name.includes('chip') || name.includes('lays') || name.includes('pringles') || name.includes('wafer') || name.includes('angles') || name.includes('sizzlin');
+    }
+    if (sub.includes('tortilla') || sub.includes('corn') || sub.includes('nacho')) {
+      return name.includes('dorito') || name.includes('nacho') || name.includes('cornito') || name.includes('tortilla');
+    }
+    if (sub.includes('namkeen') || sub.includes('crunch') || sub.includes('mix')) {
+      return name.includes('bhujia') || name.includes('mixture') || name.includes('kurkure') || name.includes('sev') || name.includes('boondi') || name.includes('popcorn') || name.includes('snack') || name.includes('moong dal');
+    }
+  }
+
+  // (o) Atta, Rice & Dal / Staples
+  if (cat.includes('staple') || cat.includes('atta') || cat.includes('rice') || cat.includes('dal')) {
+    if (sub.includes('atta') || sub.includes('flour')) {
+      return name.includes('atta') || name.includes('flour') || name.includes('maida') || name.includes('sooji') || name.includes('besan') || name.includes('aashirvaad');
+    }
+    if (sub.includes('rice') || sub.includes('grain')) {
+      return name.includes('rice') || name.includes('basmati') || name.includes('daawat') || name.includes('india gate') || name.includes('kolam');
+    }
+    if (sub.includes('dal') || sub.includes('pulse')) {
+      return name.includes('dal') || name.includes('pulse') || name.includes('toor') || name.includes('moong') || name.includes('chana');
+    }
+    if (sub.includes('salt') || sub.includes('spice') || sub.includes('noodle')) {
+      return name.includes('salt') || name.includes('tata salt') || name.includes('masala') || name.includes('chilli') || name.includes('noodle') || name.includes('maggi');
+    }
+  }
+
+  // (p) Chocolates & Sweets
+  if (cat.includes('chocolate') || cat.includes('sweet')) {
+    if (sub.includes('premium') || (sub.includes('chocolate') && !sub.includes('wafer') && !sub.includes('bar'))) {
+      return name.includes('dairy milk') || name.includes('silk') || name.includes('dark') || name.includes('bournville') || name.includes('ferrero') || name.includes('chocolate') || name.includes('cadbury');
+    }
+    if (sub.includes('wafer') || sub.includes('bar')) {
+      return name.includes('kitkat') || name.includes('munch') || name.includes('perk') || name.includes('snickers') || name.includes('5 star');
+    }
+    if (sub.includes('sweet') || sub.includes('mithai')) {
+      return name.includes('sweet') || name.includes('mithai') || name.includes('halwa') || name.includes('gulab') || name.includes('rasgulla') || name.includes('soan');
+    }
+    if (sub.includes('spread') || sub.includes('gift') || sub.includes('syrup')) {
+      return name.includes('nutella') || name.includes('hershey') || name.includes('spread') || name.includes('celebration') || name.includes('gift');
+    }
+  }
+
+  // (q) Biscuits & Cookies
+  if (cat.includes('biscuit') || cat.includes('cookie')) {
+    if (sub.includes('cream')) {
+      return name.includes('cream') || name.includes('oreo') || name.includes('bourbon') || name.includes('choco fills') || name.includes('dark fantasy') || name.includes('treat');
+    }
+    if (sub.includes('butter') || sub.includes('cookie') || sub.includes('nut')) {
+      return name.includes('butter') || name.includes('cookie') || name.includes('good day') || name.includes('hide & seek') || name.includes('cashew') || name.includes('unibic') || name.includes('nutri');
+    }
+    if (sub.includes('digestive') || sub.includes('glucose')) {
+      return name.includes('glucose') || name.includes('parle-g') || name.includes('marie') || name.includes('digestive') || name.includes('sunfeast') || name.includes('gold');
+    }
+  }
+
+  // (r) Edible Oils & Ghee
+  if (cat.includes('oil') || cat.includes('ghee')) {
+    if (sub.includes('sunflower') || sub.includes('mustard')) {
+      return name.includes('sunflower') || name.includes('sunlite') || name.includes('saffola') || name.includes('mustard') || name.includes('kachi ghani') || name.includes('dhara');
+    }
+    if (sub.includes('ghee')) {
+      return name.includes('ghee') || name.includes('cow ghee') || name.includes('amul pure');
+    }
+    if (sub.includes('olive') || sub.includes('heart') || sub.includes('specialty')) {
+      return name.includes('olive') || name.includes('rice bran') || name.includes('groundnut') || name.includes('sesame') || name.includes('coconut');
+    }
+  }
+
+  // (s) Personal Care
+  if (cat.includes('personal') || cat.includes('care')) {
+    if (sub.includes('handwash') || sub.includes('soap') || sub.includes('hygiene')) {
+      return name.includes('handwash') || name.includes('soap') || name.includes('dettol') || name.includes('dove') || name.includes('pears') || name.includes('fiama');
+    }
+    if (sub.includes('hair')) {
+      return name.includes('shampoo') || name.includes('hair') || name.includes('head & shoulders') || name.includes('pantene') || name.includes('clinic') || name.includes('conditioner');
+    }
+    if (sub.includes('oral') || sub.includes('skin') || sub.includes('body')) {
+      return name.includes('lotion') || name.includes('cream') || name.includes('nivea') || name.includes('vaseline') || name.includes('ponds') || name.includes('toothpaste') || name.includes('colgate') || name.includes('sensodyne');
+    }
+    if (sub.includes('grooming') || sub.includes('perfume')) {
+      return name.includes('deodorant') || name.includes('perfume') || name.includes('spray') || name.includes('razor') || name.includes('gillette') || name.includes('fogg') || name.includes('axe') || name.includes('park avenue');
+    }
+  }
+
+  // (t) Household Essentials
+  if (cat.includes('household')) {
+    if (sub.includes('detergent') || sub.includes('wash')) {
+      return name.includes('surf') || name.includes('ariel') || name.includes('tide') || name.includes('detergent') || name.includes('mat') || name.includes('rin');
+    }
+    if (sub.includes('dishwash') || sub.includes('cleaner')) {
+      return name.includes('vim') || name.includes('gel') || name.includes('harpic') || name.includes('lysol') || name.includes('collin') || name.includes('dettol');
+    }
+    if (sub.includes('air') || sub.includes('freshener')) {
+      return name.includes('godrej') || name.includes('aer') || name.includes('odonil') || name.includes('spray') || name.includes('freshener');
+    }
+    if (sub.includes('disinfectant') || sub.includes('pest') || sub.includes('mop')) {
+      return name.includes('hit') || name.includes('all out') || name.includes('goodknight') || name.includes('mop') || name.includes('wiper') || name.includes('scrub') || name.includes('scotch-brite') || name.includes('disinfectant');
+    }
+  }
+
+  // (u) Tea, Coffee & Drinks
+  if (cat.includes('tea') || cat.includes('coffee')) {
+    if (sub.includes('coffee')) return name.includes('coffee') || name.includes('nescafe') || name.includes('sunrise') || name.includes('bru') || name.includes('grand');
+    if (sub.includes('tea') || sub.includes('chai')) return name.includes('tea') || name.includes('red label') || name.includes('tata tea') || name.includes('taj mahal') || name.includes('chai');
+  }
+
+  // (v) Instant & Frozen Food
+  if (cat.includes('instant') || cat.includes('frozen')) {
+    if (sub.includes('noodle')) return name.includes('maggi') || name.includes('noodle') || name.includes('yippee') || name.includes('ramen');
+    if (sub.includes('soup') || sub.includes('chinese') || sub.includes('pasta')) return name.includes('soup') || name.includes('pasta') || name.includes('knorr') || name.includes('sauce');
+    if (sub.includes('curry') || sub.includes('ready')) return name.includes('curry') || name.includes('ready') || name.includes('meal') || name.includes('paneer');
+  }
+
+  // (w) Electronics & Gadgets
+  if (cat.includes('electronic')) {
+    if (sub.includes('watch') || sub.includes('smartwatch')) return name.includes('watch') || name.includes('smartwatch') || name.includes('wave call') || name.includes('pulse') || name.includes('ninja');
+    if (sub.includes('speaker')) return name.includes('speaker') || name.includes('soundbar') || name.includes('go 3') || name.includes('flip') || name.includes('warrior') || name.includes('jbl') || name.includes('sony');
+    if (sub.includes('headphone') || sub.includes('tws') || sub.includes('earbud')) return name.includes('headphone') || name.includes('earbud') || name.includes('earphone') || name.includes('tws') || name.includes('airdrop') || name.includes('buds') || name.includes('basshead') || name.includes('sony wh');
+    if (sub.includes('computer') || sub.includes('power') || sub.includes('accessories')) return name.includes('mouse') || name.includes('keyboard') || name.includes('power bank') || name.includes('usb') || name.includes('card') || name.includes('mic') || name.includes('sandisk') || name.includes('logitech') || name.includes('extender') || name.includes('bulb') || name.includes('receiver') || name.includes('rode');
+  }
+
+  // (x) Fashion & Accessories
+  if (cat.includes('fashion')) {
+    if (sub.includes('shoe') || sub.includes('sneaker')) return name.includes('shoe') || name.includes('sneaker') || name.includes('boot') || name.includes('running') || name.includes('bata') || name.includes('nike') || name.includes('puma') || name.includes('adidas') || name.includes('woodland') || name.includes('campus') || name.includes('sparx');
+    if (sub.includes('watch') || sub.includes('sunglass') || sub.includes('glasses')) return name.includes('watch') || name.includes('sunglass') || name.includes('ray-ban') || name.includes('titan') || name.includes('fastrack') || name.includes('fossil') || name.includes('casio') || name.includes('sonata');
+    if (sub.includes('bag') || sub.includes('wallet') || sub.includes('accessories')) return name.includes('bag') || name.includes('backpack') || name.includes('trolley') || name.includes('wallet') || name.includes('handbag') || name.includes('necklace') || name.includes('earring') || name.includes('belt') || name.includes('cap') || name.includes('tourister') || name.includes('skybags') || name.includes('safari') || name.includes('lavie') || name.includes('caprese') || name.includes('zaveri') || name.includes('youbella') || name.includes('tommy');
+  }
 
   // Fallback matching with stem strip (remove trailing 'es' or 's')
   const words = sub.split(' ').map(w => w.replace(/es$/, '').replace(/s$/, '')).filter(w => w.length > 2);
@@ -327,7 +700,10 @@ export default function CategoryPage() {
   const isMobile = w <= 640;
   const isTablet = w <= 1024;
 
-  const [activeSubCat, setActiveSubCat] = useState('All');
+  const [searchParams] = useSearchParams();
+  const subcatParam = searchParams.get('subcat');
+
+  const [activeSubCat, setActiveSubCat] = useState(() => subcatParam || 'All');
   const [activeBrands, setActiveBrands] = useState([]);
   const [priceRange, setPriceRange] = useState(5000);
   const [sort, setSort] = useState('Relevance');
@@ -338,75 +714,118 @@ export default function CategoryPage() {
   const [allProducts, setAllProducts] = useState(() => [...products]);
 
   useEffect(() => {
-    setActiveSubCat('All');
+    if (subcatParam) {
+      setActiveSubCat(subcatParam);
+    } else {
+      setActiveSubCat('All');
+    }
     setActiveBrands([]);
     forceScrollToTop();
-  }, [slug]);
+  }, [slug, subcatParam]);
 
   useEffect(() => {
     forceScrollToTop();
   }, [activeSubCat]);
 
   useEffect(() => {
-    const updateData = () => setAllProducts([...products]);
+    let isMounted = true;
+    const updateData = () => {
+      if (isMounted) setAllProducts([...products]);
+    };
     updateData();
+
+    // Actively fetch products from backend API so newly added seller products appear
+    const fetchApiProducts = async () => {
+      try {
+        if (typeof syncProductsFromBackend === 'function') {
+          await syncProductsFromBackend();
+        }
+        const res = await get('/products/').catch(() => []);
+        const apiProds = Array.isArray(res) ? res : (res?.results || []);
+        if (apiProds.length > 0 && isMounted) {
+          const existingIds = new Set(products.map(p => String(p.id)));
+          const newApiProds = [];
+          for (const ap of apiProds) {
+            const idStr = String(ap.id);
+            if (!existingIds.has(idStr)) {
+              const resolvedCat = inferProductCategory(ap, allCategories);
+              newApiProds.push({
+                id: ap.id,
+                name: ap.name,
+                price: Number(ap.price) || 0,
+                mrp: Number(ap.mrp || ap.price) || 0,
+                discount: ap.mrp ? Math.round(((ap.mrp - ap.price) / ap.mrp) * 100) : 10,
+                image: ap.image || ap.image_url || 'default-product.png',
+                category: resolvedCat,
+                category_slug: resolvedCat,
+                brand: ap.brand || 'Grabit Seller',
+                weight: ap.weight || ap.unit || '1 unit',
+                rating: Number(ap.rating) || 4.8,
+                reviews: Number(ap.reviews) || 12,
+                inStock: ap.is_active !== false && ((ap.stock ?? ap.stock_quantity ?? 1) > 0),
+                stock_quantity: parseInt(ap.stock_quantity ?? ap.stock ?? 50, 10),
+              });
+              existingIds.add(idStr);
+            }
+          }
+          if (newApiProds.length > 0) {
+            products.push(...newApiProds);
+          }
+          if (isMounted) {
+            setAllProducts([...products]);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch category products from API:', err);
+      }
+    };
+
+    fetchApiProducts();
+
     window.addEventListener('grabit_products_synced', updateData);
     window.addEventListener('grabit_products_updated', updateData);
     window.addEventListener('storage', updateData);
     return () => {
+      isMounted = false;
       window.removeEventListener('grabit_products_synced', updateData);
       window.removeEventListener('grabit_products_updated', updateData);
       window.removeEventListener('storage', updateData);
     };
-  }, []);
+  }, [slug]);
 
   const categoryProducts = allProducts.filter(p => {
     if (!slug) return true;
-    const targetSlug = cleanSlug;
-    const targetClean = cleanSlugSpace;
-
-    const pCat = String(p.category || '').toLowerCase().trim();
-    const pSlug = String(p.category_slug || '').toLowerCase().trim();
-    const pCatName = String(p.category_name || '').toLowerCase().trim();
-    const pCatId = String(p.category_id || '').toLowerCase().trim();
-
-    if (getCanonicalSlug(pCat) === canonicalSlug || getCanonicalSlug(pSlug) === canonicalSlug || getCanonicalSlug(pCatName) === canonicalSlug) {
-      return true;
-    }
-
-    if (matchedCatObj) {
-      const mId = String(matchedCatObj.id || '').toLowerCase().trim();
-      const mName = String(matchedCatObj.name || '').toLowerCase().trim();
-      const mSlug = String(matchedCatObj.slug || '').toLowerCase().trim();
-
-      if (mId && (pCatId === mId || pCat === mId)) return true;
-      if (mName && (pCatName === mName || pCat === mName)) return true;
-      if (mSlug && (pCat === mSlug || pSlug === mSlug)) return true;
-    }
-
-    if (pCat === targetSlug || pSlug === targetSlug) return true;
-    if (pCatName === targetClean || pCat === targetClean) return true;
-    if (pCatName && targetClean && (pCatName.includes(targetClean) || targetClean.includes(pCatName))) return true;
-    if (pCat && targetClean && (pCat.includes(targetClean) || targetClean.includes(pCat))) return true;
-
-    return false;
+    const resolvedCat = inferProductCategory(p, allCategories);
+    return resolvedCat === canonicalSlug;
   });
   const rawSubCats = subCategories[canonicalSlug] || subCategories[slug] || [{ name: 'All', count: categoryProducts.length }];
 
   const subCats = rawSubCats.map(s => {
     if (s.name === 'All') return { ...s, count: categoryProducts.length };
-    const matchedCount = categoryProducts.filter(p => matchesSubCategory(p, s.name)).length;
-    return { ...s, count: matchedCount > 0 ? matchedCount : s.count };
-  });
+    const matchedCount = categoryProducts.filter(p => matchesSubCategory(p, s.name, canonicalSlug)).length;
+    return { ...s, count: matchedCount };
+  }).filter(s => s.name === 'All' || s.count > 0);
 
-  const brandList = brands[canonicalSlug] || brands[slug] || [];
+  // Dynamically derive brandList with real counts from categoryProducts
+  const brandList = React.useMemo(() => {
+    const counts = {};
+    categoryProducts.forEach(p => {
+      if (p.brand && String(p.brand).trim()) {
+        const b = String(p.brand).trim();
+        counts[b] = (counts[b] || 0) + 1;
+      }
+    });
+    const dynamicList = Object.entries(counts).map(([name, count]) => ({ name, count }));
+    if (dynamicList.length > 0) return dynamicList;
+    return brands[canonicalSlug] || brands[slug] || [];
+  }, [categoryProducts, canonicalSlug, slug]);
 
   const toggleBrand = (b) => {
     setActiveBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]);
   };
 
   let filtered = categoryProducts.filter(p => {
-    if (activeSubCat !== 'All' && !matchesSubCategory(p, activeSubCat)) return false;
+    if (activeSubCat !== 'All' && !matchesSubCategory(p, activeSubCat, canonicalSlug)) return false;
     if (activeBrands.length > 0 && !activeBrands.includes(p.brand)) return false;
     if (p.price > priceRange) return false;
     return true;
@@ -414,12 +833,13 @@ export default function CategoryPage() {
 
   if (sort === 'Price: Low to High') filtered.sort((a, b) => a.price - b.price);
   if (sort === 'Price: High to Low') filtered.sort((a, b) => b.price - a.price);
-  if (sort === 'Rating: High to Low') filtered.sort((a, b) => b.rating - a.rating);
+  if (sort === 'Rating: High to Low') filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  if (sort === 'Discount: High to Low') filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
 
   const prodGridCols = isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)';
 
   return (
-    <div key={slug} className="container section category-transition-container" style={{ paddingTop: isMobile ? '20px' : '24px', paddingBottom: isMobile ? '90px' : '40px' }}>
+    <div key={slug} className="container section category-transition-container" style={{ paddingTop: isMobile ? '20px' : '24px', paddingBottom: isMobile ? '90px' : '40px', paddingLeft: isMobile ? '12px' : '24px', paddingRight: isMobile ? '12px' : '24px', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
 
 
@@ -543,20 +963,9 @@ export default function CategoryPage() {
             {catInfo.title}
           </h1>
 
-          <p style={{ color: catInfo.isDark ? '#94A3B8' : '#475569', fontSize: isMobile ? '13px' : '15px', lineHeight: 1.5, marginBottom: '14px', fontWeight: 500 }}>
+          <p style={{ color: catInfo.isDark ? '#94A3B8' : '#475569', fontSize: isMobile ? '13px' : '15px', lineHeight: 1.5, marginBottom: '4px', fontWeight: 500 }}>
             {catInfo.sub}
           </p>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: catInfo.isDark ? '#E2E8F0' : '#1E293B' }}>
-              <Zap size={15} color="#38BDF8" fill="#38BDF8" />
-              <span>30-45 Min Express</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: catInfo.isDark ? '#E2E8F0' : '#1E293B' }}>
-              <Star size={15} color="#F59E0B" fill="#F59E0B" />
-              <span>4.9★ Rated Favourites</span>
-            </div>
-          </div>
         </div>
 
         {/* Mobile Hero Graphic */}
@@ -616,6 +1025,129 @@ export default function CategoryPage() {
         )}
       </div>
 
+      {/* 🚀 COMPACT SUBCATEGORY CARDS BAR */}
+      {subCats.length > 1 && (
+        <div style={{
+          marginBottom: '14px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch',
+          padding: '2px 2px 6px 2px'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: isMobile ? '8px' : '10px',
+            alignItems: 'stretch',
+            width: 'max-content'
+          }}>
+            {subCats.map(s => {
+              const isSelected = activeSubCat === s.name;
+              const isAll = s.name === 'All';
+              const dedicatedImg = subCategoryImages && subCategoryImages[s.name];
+              const sampleProd = !isAll
+                ? categoryProducts.find(p => matchesSubCategory(p, s.name, canonicalSlug))
+                : null;
+              
+              const candidateUrl = !isAll
+                ? (dedicatedImg || (sampleProd?.image && sampleProd.image !== 'default-product.png' ? sampleProd.image : null))
+                : null;
+
+              return (
+                <button
+                  key={s.name}
+                  type="button"
+                  onClick={() => setActiveSubCat(s.name)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: isMobile ? '68px' : '82px',
+                    minWidth: isMobile ? '68px' : '82px',
+                    background: isSelected ? 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)' : '#FFFFFF',
+                    border: isSelected ? '2px solid #0071E3' : '1px solid #E2E8F0',
+                    borderRadius: '13px',
+                    padding: isMobile ? '6px 4px 6px' : '8px 6px 6px',
+                    cursor: 'pointer',
+                    boxShadow: isSelected
+                      ? '0 4px 14px rgba(0,113,227,0.18)'
+                      : '0 1px 4px rgba(0,0,0,0.03)',
+                    transition: 'all 0.15s ease',
+                    position: 'relative',
+                    flexShrink: 0,
+                    outline: 'none'
+                  }}
+                >
+                  {/* Thumbnail Image Container */}
+                  <div style={{
+                    width: isMobile ? '38px' : '46px',
+                    height: isMobile ? '38px' : '46px',
+                    borderRadius: '9px',
+                    background: '#F8FAFC',
+                    border: '1px solid #F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '4px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    position: 'relative'
+                  }}>
+                    {isAll ? (
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke={isSelected ? '#0071E3' : '#475569'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      </svg>
+                    ) : candidateUrl && (candidateUrl.startsWith('http') || candidateUrl.startsWith('/') || candidateUrl.endsWith('.jpg') || candidateUrl.endsWith('.png') || candidateUrl.endsWith('.webp')) ? (
+                      <>
+                        <img
+                          src={candidateUrl.startsWith('http') || candidateUrl.startsWith('/') ? candidateUrl : `/${candidateUrl}`}
+                          alt={s.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            padding: '2px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
+                        </div>
+                      </>
+                    ) : (
+                      <ProductSvg name={sampleProd?.name || s.name} size={isMobile ? 24 : 30} />
+                    )}
+                  </div>
+
+                  {/* Subcategory Name */}
+                  <span style={{
+                    fontSize: isMobile ? '10px' : '11px',
+                    fontWeight: isSelected ? 900 : 700,
+                    color: isSelected ? '#0071E3' : '#0F172A',
+                    textAlign: 'center',
+                    lineHeight: 1.15,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    wordBreak: 'break-word'
+                  }}>
+                    {s.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 🌟 CATEGORY TITLE ROW */}
       <div style={{ marginBottom: '14px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.3px' }}>
@@ -626,28 +1158,30 @@ export default function CategoryPage() {
       {/* 🌟 CLEAN FILTER & SORT TOOLBAR */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: '12px', marginBottom: '22px', width: '100%', boxSizing: 'border-box'
+        gap: isMobile ? '8px' : '12px', marginBottom: '20px', width: '100%', maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         {/* 1. Filters Drawer Trigger Pill */}
         <button
           onClick={() => setIsFilterDrawerOpen(true)}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            display: 'inline-flex', alignItems: 'center', gap: isMobile ? '6px' : '8px',
             background: (activeBrands.length > 0 || activeSubCat !== 'All') ? '#0071E3' : '#FFFFFF',
             color: (activeBrands.length > 0 || activeSubCat !== 'All') ? '#FFFFFF' : '#0F172A',
             border: (activeBrands.length > 0 || activeSubCat !== 'All') ? '1.5px solid #0071E3' : '1.5px solid #CBD5E1',
-            borderRadius: '24px', padding: '9px 18px', fontSize: '13px', fontWeight: 900,
+            borderRadius: '24px', padding: isMobile ? '6px 12px' : '9px 18px',
+            fontSize: isMobile ? '12px' : '13px', fontWeight: 900,
             cursor: 'pointer', boxShadow: (activeBrands.length > 0 || activeSubCat !== 'All') ? '0 4px 12px rgba(0,113,227,0.25)' : '0 2px 6px rgba(0,0,0,0.04)',
-            whiteSpace: 'nowrap', height: '40px', flexShrink: 0,
+            whiteSpace: 'nowrap', height: isMobile ? '36px' : '40px', flexShrink: 0,
             transition: 'all 0.15s ease'
           }}
         >
-          <Sliders size={15} color={(activeBrands.length > 0 || activeSubCat !== 'All') ? '#FFFFFF' : '#0071E3'} />
-          <span>Filters &amp; Refine</span>
+          <Sliders size={isMobile ? 14 : 15} color={(activeBrands.length > 0 || activeSubCat !== 'All') ? '#FFFFFF' : '#0071E3'} />
+          <span>{isMobile ? 'Filters' : 'Filters & Refine'}</span>
           {(activeBrands.length > 0 || activeSubCat !== 'All') && (
             <span style={{
               background: '#FFFFFF', color: '#0071E3',
-              fontSize: '10.5px', fontWeight: 900, padding: '2px 7px', borderRadius: '10px'
+              fontSize: '10.5px', fontWeight: 900, padding: '1px 6px', borderRadius: '10px'
             }}>
               {activeBrands.length + (activeSubCat !== 'All' ? 1 : 0)}
             </span>
@@ -656,18 +1190,20 @@ export default function CategoryPage() {
 
         {/* 2. Sort Dropdown Pill */}
         <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
           background: '#FFFFFF', border: '1.5px solid #CBD5E1',
-          borderRadius: '24px', padding: '0 14px', height: '40px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.03)', flexShrink: 0
+          borderRadius: '24px', padding: isMobile ? '0 10px' : '0 16px', height: isMobile ? '36px' : '40px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.03)', flexShrink: 0,
+          boxSizing: 'border-box'
         }}>
-          <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 800 }}>Sort:</span>
+          <span style={{ fontSize: isMobile ? '11.5px' : '12.5px', color: '#64748B', fontWeight: 800 }}>Sort:</span>
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
             style={{
-              background: 'transparent', border: 'none', fontSize: '13px',
-              fontWeight: 900, color: '#0F172A', cursor: 'pointer', outline: 'none'
+              background: 'transparent', border: 'none', fontSize: isMobile ? '11.5px' : '13px',
+              fontWeight: 900, color: '#0F172A', cursor: 'pointer', outline: 'none',
+              padding: 0, maxWidth: isMobile ? '100px' : 'auto'
             }}
           >
             {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
@@ -676,7 +1212,7 @@ export default function CategoryPage() {
       </div>
 
       {/* 🌟 ULTRA-PREMIUM ACTIVE FILTERS BAR */}
-      {(activeBrands.length > 0 || activeSubCat !== 'All') && (
+      {(activeBrands.length > 0 || activeSubCat !== 'All' || priceRange < 5000) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
           marginBottom: '18px', padding: '10px 14px', background: '#F8FAFC',
@@ -726,6 +1262,26 @@ export default function CategoryPage() {
               </div>
             </span>
           ))}
+
+          {priceRange < 5000 && (
+            <span
+              onClick={() => setPriceRange(5000)}
+              style={{
+                background: '#FFFFFF', color: '#0F172A', border: '1px solid #CBD5E1',
+                borderRadius: '20px', padding: '5px 12px', fontSize: '12px',
+                fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s ease'
+              }}
+            >
+              <span>Price: Under ₹{priceRange}</span>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#F1F5F9',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <X size={10} color="#64748B" strokeWidth={2.5} />
+              </div>
+            </span>
+          )}
 
           <button
             onClick={() => { setActiveSubCat('All'); setActiveBrands([]); setPriceRange(5000); }}
@@ -1001,7 +1557,17 @@ export default function CategoryPage() {
             <div style={{ background: '#FFFFFF', padding: '40px', borderRadius: '16px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>No products found</h3>
-              <p style={{ fontSize: '13px', color: '#64748B' }}>Try clearing brand or price filters to view items in {catInfo.title}.</p>
+              <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>Try clearing brand or price filters to view items in {catInfo.title}.</p>
+              <button
+                onClick={() => { setActiveBrands([]); setActiveSubCat('All'); setPriceRange(5000); }}
+                style={{
+                  background: '#0071E3', color: '#FFFFFF', border: 'none',
+                  borderRadius: '12px', padding: '10px 20px', fontSize: '13px',
+                  fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.2)'
+                }}
+              >
+                Reset All Filters
+              </button>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: prodGridCols, gap: isMobile ? '10px' : '16px' }}>

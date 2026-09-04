@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import { useWishlist } from '../../context/WishlistContext';
 import ProductSvg from './ProductSvg';
+import { getProductSlug } from '../../data/products';
 
 export default function ProductCard({ product, badge, badgeColor = '#E53935', initialQty = 0 }) {
   const { addItem, updateQty, getItemQty } = useCart();
@@ -13,11 +14,19 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
   const wishlisted = isInWishlist(product.id);
   const cartQty = getItemQty(product.id);
   
+  const isOutOfStock = product.inStock === false ||
+    (product.stock_quantity !== undefined && Number(product.stock_quantity) <= 0) ||
+    (product.stock !== undefined && Number(product.stock) <= 0);
+
   const [localQty, setLocalQty] = useState(initialQty);
   const qty = cartQty > 0 ? cartQty : localQty;
 
   const handleAdd = (e) => {
     e.preventDefault();
+    if (isOutOfStock) {
+      showToast('This item is currently out of stock!');
+      return;
+    }
     if (initialQty > 0) setLocalQty(1);
     addItem(product);
   };
@@ -35,6 +44,12 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
 
   const handlePlus = (e) => {
     e.preventDefault();
+    if (isOutOfStock) return;
+    const maxStock = product.stock_quantity ?? product.stock;
+    if (maxStock !== undefined && qty >= Number(maxStock)) {
+      showToast(`Only ${maxStock} units available in stock!`);
+      return;
+    }
     if (initialQty > 0) setLocalQty(qty + 1);
     updateQty(product.id, qty + 1);
   };
@@ -66,8 +81,17 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
         e.currentTarget.style.transform = 'none';
       }}
     >
-      {/* Top Left Discount Badge */}
-      {badge && (
+      {/* Top Left Discount Badge or Out of Stock Badge */}
+      {isOutOfStock ? (
+        <div style={{
+          position: 'absolute', top: '8px', left: '8px',
+          background: '#64748B', color: 'white',
+          fontSize: '9px', fontWeight: 900, padding: '2px 6px',
+          borderRadius: '4px', zIndex: 2
+        }}>
+          OUT OF STOCK
+        </div>
+      ) : badge && (
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
           background: badgeColor === '#E53935' ? '#FF3B30' : badgeColor, color: 'white',
@@ -109,7 +133,7 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
       </button>
 
       {/* Product Image Box */}
-      <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+      <Link to={`/product/${getProductSlug(product)}`} style={{ textDecoration: 'none' }}>
         <div style={{
           background: '#F8FAFC',
           borderRadius: '10px',
@@ -118,7 +142,10 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
           justifyContent: 'center',
           padding: '8px 4px',
           marginBottom: '8px',
-          height: '105px'
+          height: '105px',
+          opacity: isOutOfStock ? 0.5 : 1,
+          filter: isOutOfStock ? 'grayscale(0.6)' : 'none',
+          transition: 'opacity 0.2s ease'
         }}>
           <ProductSvg name={product.image} size={88} />
         </div>
@@ -126,7 +153,7 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
 
       {/* Product Details */}
       <div>
-        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+        <Link to={`/product/${getProductSlug(product)}`} style={{ textDecoration: 'none' }}>
           <div style={{
             fontSize: '11px',
             fontWeight: 700,
@@ -166,8 +193,30 @@ export default function ProductCard({ product, badge, badgeColor = '#E53935', in
             </span>
           </div>
 
-          {/* Add Button or Qty Selector */}
-          {qty === 0 ? (
+          {/* Add Button or Qty Selector or Out of Stock Button */}
+          {isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              style={{
+                flex: 1,
+                background: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                color: '#94A3B8',
+                borderRadius: '6px',
+                padding: '5px 8px',
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Out of Stock
+            </button>
+          ) : qty === 0 ? (
             <button
               onClick={handleAdd}
               style={{

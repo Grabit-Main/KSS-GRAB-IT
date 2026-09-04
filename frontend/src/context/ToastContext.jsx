@@ -6,11 +6,20 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
   const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    if (!message) return;
+    setToasts(prev => {
+      // Prevent duplicate identical messages from stacking
+      if (prev.some(t => t.message === message)) {
+        return prev;
+      }
+      const id = Date.now() + Math.random();
+      setTimeout(() => {
+        setToasts(current => current.filter(t => t.id !== id));
+      }, 2500);
+      // Keep at most 2 toasts at once
+      const trimmed = prev.length >= 2 ? prev.slice(prev.length - 1) : prev;
+      return [...trimmed, { id, message, type }];
+    });
   };
 
   return (

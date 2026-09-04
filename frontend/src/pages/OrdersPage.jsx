@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Zap, ArrowLeft, ShoppingBag, Truck, PackageCheck, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { trackerSteps } from '../data/orders';
+import { products } from '../data/products';
 import ProductSvg from '../components/common/ProductSvg';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
-import { get } from '../api';
+import { get, patch } from '../api';
 import { forceScrollToTop } from '../utils/scrollToTop';
+
+const canCancelOrder = (statusStr) => {
+  const st = String(statusStr || '').toLowerCase();
+  return st === 'placed' || st === 'preparing' || st === 'confirmed' || st === 'pending' || st === 'packed' || st === 'ready' || st === 'ready_for_pickup';
+};
 
 const ORDER_CYCLE_STAGES = [
   { key: 'placed', label: 'Placed', fullLabel: 'Order Placed', desc: 'Order received & payment verified', icon: '🛒' },
@@ -47,15 +54,13 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
 
   return (
     <div style={{
-      background: expanded
-        ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
-        : '#F8FAFC',
-      borderRadius: '16px',
-      padding: expanded ? '20px' : '14px 16px',
-      border: expanded ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
-      color: expanded ? '#FFFFFF' : '#0F172A',
+      background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)',
+      borderRadius: '18px',
+      padding: expanded ? '18px 20px' : '14px 16px',
+      border: '1.5px solid #DBEAFE',
+      color: '#0F172A',
       marginBottom: '16px',
-      boxShadow: expanded ? '0 10px 30px rgba(0,0,0,0.25)' : 'none'
+      boxShadow: '0 4px 16px rgba(0, 113, 227, 0.06)'
     }}>
       <style>{`
         @keyframes trackerPulse {
@@ -78,19 +83,19 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
             animation: isDelivered ? 'none' : 'trackerPulse 1.8s ease-in-out infinite'
           }} />
           <span style={{
-            fontSize: '12px', fontWeight: 800,
-            color: expanded ? '#93C5FD' : '#0071E3',
+            fontSize: '12px', fontWeight: 900,
+            color: '#0071E3',
             textTransform: 'uppercase', letterSpacing: '0.5px'
           }}>
-            {isDelivered ? '✓ Order Delivered' : 'Live Tracker Status'}
+            {isDelivered ? '✓ Order Delivered' : 'LIVE TRACKER STATUS'}
           </span>
         </div>
         {!isDelivered && (
           <div style={{
-            background: expanded ? 'rgba(0,113,227,0.25)' : '#EFF6FF',
-            color: expanded ? '#60A5FA' : '#0071E3',
-            border: expanded ? '1px solid rgba(0,113,227,0.4)' : '1px solid #BFDBFE',
-            padding: '3px 10px', borderRadius: '20px',
+            background: '#DBEAFE',
+            color: '#1E40AF',
+            border: '1px solid #93C5FD',
+            padding: '4px 12px', borderRadius: '20px',
             fontSize: '11.5px', fontWeight: 800,
             display: 'inline-flex', alignItems: 'center', gap: '4px'
           }}>
@@ -104,7 +109,7 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
         {/* Background track */}
         <div style={{
           position: 'absolute', top: '15px', left: '16px', right: '16px', height: '3px',
-          background: expanded ? 'rgba(255,255,255,0.12)' : '#E2E8F0', zIndex: 0
+          background: '#CBD5E1', zIndex: 0
         }} />
         {/* Progress track */}
         <div style={{
@@ -130,32 +135,32 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
                     ? '#10B981'
                     : isCurrent
                     ? '#0071E3'
-                    : expanded ? 'rgba(255,255,255,0.1)' : '#FFFFFF',
+                    : '#FFFFFF',
                   border: isCurrent
-                    ? '3px solid #FFFFFF'
+                    ? '3px solid #0071E3'
                     : isDone
                     ? '2px solid #10B981'
-                    : expanded ? '2px solid rgba(255,255,255,0.2)' : '2px solid #CBD5E1',
+                    : '2px solid #94A3B8',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: isCurrent ? '0 0 12px rgba(0,113,227,0.5)' : isDone ? '0 2px 6px rgba(16,185,129,0.2)' : 'none',
+                  boxShadow: isCurrent ? '0 0 10px rgba(0,113,227,0.35)' : isDone ? '0 2px 6px rgba(16,185,129,0.2)' : 'none',
                   fontSize: isCurrent ? '14px' : '11px',
                   transition: 'all 0.25s ease'
                 }}>
                   {isDone ? (
                     <Check size={13} color="#FFFFFF" strokeWidth={3} />
                   ) : (
-                    <span>{stage.icon}</span>
+                    <span style={{ color: isCurrent ? '#FFFFFF' : '#475569' }}>{stage.icon}</span>
                   )}
                 </div>
 
-                {/* Short Clean Label (No Overlap) */}
+                {/* Short Clean Label */}
                 <span style={{
-                  fontSize: '10px', fontWeight: isCurrent ? 800 : 600,
+                  fontSize: '10.5px', fontWeight: isCurrent ? 900 : 700,
                   color: isCurrent
-                    ? (expanded ? '#60A5FA' : '#0071E3')
+                    ? '#0071E3'
                     : isDone
-                    ? (expanded ? '#34D399' : '#10B981')
-                    : (expanded ? 'rgba(255,255,255,0.35)' : '#94A3B8'),
+                    ? '#059669'
+                    : '#64748B',
                   marginTop: '5px', textAlign: 'center',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   maxWidth: '100%'
@@ -170,15 +175,17 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
 
       {/* Active Stage Details Card */}
       <div style={{
-        padding: '12px 14px', borderRadius: '12px',
-        background: expanded ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-        border: expanded ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px'
+        padding: '12px 14px', borderRadius: '14px',
+        background: '#FFFFFF',
+        border: '1px solid #BFDBFE',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+        boxShadow: '0 2px 8px rgba(0,113,227,0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
           <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: expanded ? 'rgba(0,113,227,0.2)' : '#EFF6FF',
+            width: '38px', height: '38px', borderRadius: '10px',
+            background: '#EFF6FF',
+            border: '1px solid #DBEAFE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '18px', flexShrink: 0,
             animation: currentStep === 3 ? 'riderMove 1.5s ease-in-out infinite' : 'none'
@@ -186,10 +193,10 @@ const OrderTrackerCycle = ({ status, eta, expanded = false }) => {
             {activeStage.icon}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12.5px', fontWeight: 800, color: expanded ? '#FFFFFF' : '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Current Status: {activeStage.fullLabel}
             </div>
-            <div style={{ fontSize: '11px', color: expanded ? 'rgba(255,255,255,0.6)' : '#64748B', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeStage.desc}
             </div>
           </div>
@@ -276,9 +283,83 @@ const loadFastCachedOrders = () => {
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('All Orders');
   const [selectedOrderModal, setSelectedOrderModal] = useState(null);
+  const [cancellingOrder, setCancellingOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('Placed order by mistake');
+  const [isCancelling, setIsCancelling] = useState(false);
   const { addItem } = useCart();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  const handleConfirmCancelOrder = async () => {
+    if (!cancellingOrder) return;
+    setIsCancelling(true);
+    const targetId = cancellingOrder.rawId || cancellingOrder.id;
+    const finalReason = cancelReason || 'Cancelled by customer';
+
+    try {
+      try {
+        await patch(`/orders/${targetId}/status`, {
+          status: 'cancelled',
+          cancellation_reason: finalReason
+        });
+      } catch (err) {
+        console.warn('Backend patch failed, updating local stores:', err);
+      }
+
+      const updateList = (list) => {
+        if (!Array.isArray(list)) return [];
+        return list.map(o => {
+          if (o.id === cancellingOrder.id || o.rawId === targetId || o.id === targetId) {
+            return {
+              ...o,
+              status: 'cancelled',
+              cancellation_reason: finalReason,
+              cancelled_at: new Date().toISOString()
+            };
+          }
+          return o;
+        });
+      };
+
+      try {
+        const global = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        localStorage.setItem('grabit_orders', JSON.stringify(updateList(global)));
+
+        const digits = (cancellingOrder.customer_phone || '').replace(/\D/g, '');
+        const custPhone = digits.length >= 10 ? digits.slice(-10) : digits;
+        if (custPhone) {
+          const userOrders = JSON.parse(localStorage.getItem(`grabit_orders_${custPhone}`) || '[]');
+          localStorage.setItem(`grabit_orders_${custPhone}`, JSON.stringify(updateList(userOrders)));
+        }
+
+        const cached = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
+        sessionStorage.setItem('grabit_fast_orders_cache', JSON.stringify(updateList(cached)));
+      } catch (storageErr) {
+        console.warn('Local store update error:', storageErr);
+      }
+
+      setOrdersList(prev => updateList(prev));
+      if (selectedOrderModal && (selectedOrderModal.id === cancellingOrder.id || selectedOrderModal.rawId === targetId)) {
+        setSelectedOrderModal(prev => ({
+          ...prev,
+          status: 'cancelled',
+          cancellation_reason: finalReason
+        }));
+      }
+
+      window.dispatchEvent(new Event('grabit_orders_updated'));
+      window.dispatchEvent(new Event('grabit_notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      showToast(`Order #${cancellingOrder.id} has been cancelled.`);
+      setCancellingOrder(null);
+    } catch (e) {
+      console.error('Failed to cancel order:', e);
+      showToast('Failed to cancel order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const isFetchingRef = useRef(false);
 
@@ -315,9 +396,10 @@ export default function OrdersPage() {
       : (o.time || '');
 
     return {
-      id: displayId,
+      id: o.id || o.rawId || displayId,
       displayId,
       rawId: o.rawId || o.id,
+      canonicalId: o.rawId || o.id || displayId,
       date: timeStr ? `${dateStr}, ${timeStr}` : dateStr,
       status: normStatus,
       rawStatus: o.status,
@@ -335,8 +417,9 @@ export default function OrdersPage() {
 
   const [ordersList, setOrdersList] = useState(loadFastCachedOrders);
 
-  // ─ Fetch all orders for this customer from cloud (no localStorage) ─
+  // ─ Fetch all orders for this customer from cloud ─
   const fetchCloudOrders = useCallback(async () => {
+    if (document.hidden) return; // Pause polling when browser tab is in background
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
@@ -363,9 +446,44 @@ export default function OrdersPage() {
   }, [activeTab, selectedOrderModal]);
 
   useEffect(() => {
+    let isMounted = true;
+    isFetchingRef.current = false;
+
+    // Initial fetch on mount
     fetchCloudOrders();
-    const interval = setInterval(fetchCloudOrders, 10000);
-    return () => clearInterval(interval);
+
+    // Relaxed smart polling every 20s when tab is active
+    const interval = setInterval(() => {
+      if (isMounted && !document.hidden) {
+        fetchCloudOrders();
+      }
+    }, 20000);
+
+    // Refresh immediately when returning to tab
+    const handleVisibilityChange = () => {
+      if (isMounted && !document.hidden) {
+        fetchCloudOrders();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Refresh immediately on local orders/notification updates without waiting for polling
+    const handleOrdersUpdated = () => {
+      if (isMounted) {
+        fetchCloudOrders();
+      }
+    };
+    window.addEventListener('grabit_orders_updated', handleOrdersUpdated);
+    window.addEventListener('storage', handleOrdersUpdated);
+
+    return () => {
+      isMounted = false;
+      isFetchingRef.current = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('grabit_orders_updated', handleOrdersUpdated);
+      window.removeEventListener('storage', handleOrdersUpdated);
+    };
   }, [fetchCloudOrders]);
 
 
@@ -391,13 +509,24 @@ export default function OrdersPage() {
 
   const handleReorder = (order) => {
     const itemList = safeParseItems(order?.items);
-    itemList.forEach(item => addItem({
-      id: item.name,
-      name: item.name,
-      price: item.price || 50,
-      image: item.image,
-      qty: 1
-    }));
+    itemList.forEach(item => {
+      const matchedProd = products.find(p => 
+        (item.id && String(p.id) === String(item.id)) ||
+        (item.product_id && String(p.id) === String(item.product_id)) ||
+        (p.name && item.name && p.name.toLowerCase().trim() === item.name.toLowerCase().trim()) ||
+        (p.name && item.name && item.name.toLowerCase().startsWith(p.name.toLowerCase()))
+      );
+
+      const targetId = item.id || item.product_id || matchedProd?.id || item.name;
+      addItem({
+        id: targetId,
+        name: matchedProd?.name || item.name,
+        price: Number(item.price) || Number(matchedProd?.price) || 50,
+        mrp: Number(item.mrp) || Number(matchedProd?.mrp) || Math.round((Number(item.price) || 50) * 1.15),
+        image: item.image || matchedProd?.image || 'lays-classic-salted',
+        weight: item.weight || matchedProd?.weight || ''
+      }, Number(item.qty || item.quantity) || 1);
+    });
     showToast(`Added items from Order #${order.displayId || order.id} to your Cart!`);
   };
 
@@ -407,21 +536,8 @@ export default function OrdersPage() {
 
         {/* ── 1. PAGE HEADER ── */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
           marginBottom: isMobile ? '14px' : '20px'
         }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              width: '38px', height: '38px', borderRadius: '50%',
-              background: '#FFFFFF', border: '1px solid #E2E8F0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <ArrowLeft size={18} color="#0F172A" />
-          </button>
           <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
             My Orders
           </h1>
@@ -611,12 +727,44 @@ export default function OrdersPage() {
                       </div>
 
                       <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        flexWrap: 'wrap',
                         width: isMobile ? '100%' : 'auto',
-                        minWidth: isMobile ? '100%' : '260px'
+                        justifyContent: isMobile ? 'stretch' : 'flex-end'
                       }}>
+                        {canCancelOrder(order.status) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCancellingOrder(order);
+                              setCancelReason('Placed order by mistake');
+                            }}
+                            style={{
+                              background: '#FEF2F2',
+                              border: '1.5px solid #FECACA',
+                              borderRadius: '12px',
+                              padding: '10px 14px',
+                              fontSize: '13px',
+                              fontWeight: 800,
+                              color: '#DC2626',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px',
+                              flex: isMobile ? 1 : 'none'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.borderColor = '#F87171'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = '#FECACA'; }}
+                          >
+                            <X size={14} strokeWidth={2.4} />
+                            <span>Cancel Order</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => setSelectedOrderModal(order)}
@@ -624,7 +772,7 @@ export default function OrdersPage() {
                             background: '#FFFFFF',
                             border: '1.5px solid #CBD5E1',
                             borderRadius: '12px',
-                            padding: '10px 16px',
+                            padding: '10px 14px',
                             fontSize: '13px',
                             fontWeight: 800,
                             color: '#0F172A',
@@ -633,6 +781,7 @@ export default function OrdersPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            flex: isMobile ? 1 : 'none',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                           }}
                           onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#0071E3'; }}
@@ -640,6 +789,7 @@ export default function OrdersPage() {
                         >
                           View Details
                         </button>
+
                         <button
                           type="button"
                           onClick={() => {
@@ -663,7 +813,8 @@ export default function OrdersPage() {
                             transition: 'all 0.15s ease',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            flex: isMobile && canCancelOrder(order.status) ? '1 1 100%' : (isMobile ? 1 : 'none')
                           }}
                           onMouseEnter={e => e.currentTarget.style.background = '#005BB5'}
                           onMouseLeave={e => e.currentTarget.style.background = '#0071E3'}
@@ -712,7 +863,7 @@ export default function OrdersPage() {
       </div>
 
       {/* ── ORDER DETAILS MODAL ── */}
-      {selectedOrderModal && (
+      {selectedOrderModal && typeof document !== 'undefined' && createPortal(
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
@@ -793,19 +944,210 @@ export default function OrdersPage() {
               <span style={{ fontSize: '18px', fontWeight: 900, color: '#0071E3' }}>₹{selectedOrderModal.total}</span>
             </div>
 
-            <button
-              onClick={() => { handleReorder(selectedOrderModal); setSelectedOrderModal(null); }}
-              style={{
-                width: '100%', background: '#0071E3', border: 'none',
-                borderRadius: '14px', padding: '13px', fontSize: '14px',
-                fontWeight: 900, color: '#FFFFFF', cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,113,227,0.3)'
-              }}
-            >
-              Reorder All Items
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {canCancelOrder(selectedOrderModal.status) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const orderToCancel = selectedOrderModal;
+                    setSelectedOrderModal(null);
+                    setCancellingOrder(orderToCancel);
+                    setCancelReason('Placed order by mistake');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: '#FEF2F2',
+                    border: '1.5px solid #FECACA',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    fontSize: '13.5px',
+                    fontWeight: 800,
+                    color: '#DC2626',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#FEF2F2'; }}
+                >
+                  <X size={14} strokeWidth={2.4} />
+                  <span>Cancel Order</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isOngoingStatus(selectedOrderModal.status)) {
+                    const o = selectedOrderModal;
+                    setSelectedOrderModal(null);
+                    navigate(`/orders/track/${o.rawId || o.id}`, { state: { order: o } });
+                  } else {
+                    handleReorder(selectedOrderModal);
+                    setSelectedOrderModal(null);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  background: '#0071E3',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: 900,
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,113,227,0.3)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#005BB5'}
+                onMouseLeave={e => e.currentTarget.style.background = '#0071E3'}
+              >
+                {isOngoingStatus(selectedOrderModal.status) ? 'Track Live Order' : 'Reorder All Items'}
+              </button>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── CANCEL ORDER CONFIRMATION MODAL ── */}
+      {cancellingOrder && typeof document !== 'undefined' && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '24px', maxWidth: '440px', width: '100%',
+            padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', position: 'relative'
+          }}>
+            {/* Header Icon + Title */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '14px',
+                background: '#FEE2E2', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, border: '1px solid #FECACA'
+              }}>
+                <AlertCircle size={24} color="#DC2626" strokeWidth={2.4} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                  Cancel Order #{String(cancellingOrder.id || cancellingOrder.rawId || '').startsWith('ORD-') ? (cancellingOrder.id || cancellingOrder.rawId) : `ORD-${String(cancellingOrder.id || cancellingOrder.rawId || '').slice(0, 8).toUpperCase()}`}?
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                  Are you sure you want to cancel this order? Once cancelled, this action cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isCancelling && setCancellingOrder(null)}
+                style={{
+                  background: '#F1F5F9', border: 'none', borderRadius: '50%',
+                  width: '32px', height: '32px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#64748B', flexShrink: 0
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Refund notice banner */}
+            <div style={{
+              background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '14px',
+              padding: '12px 14px', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '10px'
+            }}>
+              <Check size={18} color="#16A34A" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '12.5px', color: '#166534', fontWeight: 600, lineHeight: 1.4 }}>
+                A 100% full refund of <strong style={{ fontWeight: 800 }}>₹{Number(cancellingOrder.total || 0).toLocaleString('en-IN')}</strong> will be credited to your original payment source within 15-30 minutes.
+              </div>
+            </div>
+
+            {/* Reason selector */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
+                Reason for cancellation:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  'Placed order by mistake',
+                  'Need to change delivery address or phone',
+                  'Forgot to add essential items',
+                  'Delivery time is taking too long',
+                  'Other reason'
+                ].map((reason) => {
+                  const isChecked = cancelReason === reason;
+                  return (
+                    <label
+                      key={reason}
+                      onClick={() => setCancelReason(reason)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        gap: '12px',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: isChecked ? '#EFF6FF' : '#F8FAFC',
+                        border: isChecked ? '1.5px solid #0071E3' : '1px solid #E2E8F0',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: isChecked ? 700 : 500,
+                        color: isChecked ? '#0071E3' : '#334155',
+                        transition: 'all 0.12s ease',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="cancelReason"
+                        checked={isChecked}
+                        onChange={() => setCancelReason(reason)}
+                        style={{ accentColor: '#0071E3', margin: 0, width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
+                      />
+                      <span style={{ textAlign: 'left', margin: 0 }}>{reason}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px' }}>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setCancellingOrder(null)}
+                style={{
+                  background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '12px',
+                  padding: '12px', fontSize: '13.5px', fontWeight: 800, color: '#334155',
+                  cursor: isCancelling ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={handleConfirmCancelOrder}
+                style={{
+                  background: '#DC2626', border: 'none', borderRadius: '12px',
+                  padding: '12px', fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF',
+                  cursor: isCancelling ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  opacity: isCancelling ? 0.7 : 1
+                }}
+              >
+                {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
