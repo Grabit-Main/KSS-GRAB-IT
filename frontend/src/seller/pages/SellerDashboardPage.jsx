@@ -324,6 +324,7 @@ export const SellerDashboardPage = () => {
   };
 
   const handleOrderStatusChange = async (orderId, nextStatus, deliveryAgentId = null) => {
+    const rawId = String(orderId || '').trim();
     const isMatch = (o) => {
       if (!o) return false;
       const target1 = String(orderId || '').toLowerCase().trim();
@@ -335,22 +336,39 @@ export const SellerDashboardPage = () => {
       return false;
     };
 
-    const targetOrder = liveOrders.find(isMatch);
-    const rawId = targetOrder?.rawId || orderId;
+    let finalAgentId = deliveryAgentId;
+    if (!finalAgentId && (String(nextStatus).toLowerCase() === 'out_for_delivery' || String(nextStatus).toLowerCase() === 'delivering')) {
+      finalAgentId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b';
+    }
 
     // Optimistic UI update immediately
     setLiveOrders((prev) =>
-      prev.map((o) => (isMatch(o) ? { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) } : o))
+      prev.map((o) => (isMatch(o) ? { ...o, status: nextStatus, ...(finalAgentId ? { delivery_agent_id: finalAgentId } : {}) } : o))
     );
 
     // Update shared localStorage (match by full UUID via isMatch)
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
-      const up = stored.map((o) =>
-        isMatch(o)
-          ? { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) }
-          : o
-      );
+      let matchFound = false;
+      const up = stored.map((o) => {
+        if (isMatch(o)) {
+          matchFound = true;
+          return { ...o, status: nextStatus, ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}) };
+        }
+        return o;
+      });
+
+      if (!matchFound) {
+        const targetOrder = liveOrders.find(isMatch);
+        if (targetOrder) {
+          up.unshift({
+            ...targetOrder,
+            status: nextStatus,
+            ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {})
+          });
+        }
+      }
+
       localStorage.setItem('grabit_orders', JSON.stringify(up));
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('grabit_orders_updated'));

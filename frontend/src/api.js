@@ -33,7 +33,8 @@ export async function api(path, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${API}${path}`, {
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const response = await fetch(`${API}${cleanPath}`, {
       ...options,
       signal: controller.signal,
       headers: {

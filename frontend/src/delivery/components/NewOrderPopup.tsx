@@ -18,92 +18,71 @@ import {
  * Dismisses when the user taps "View Order" (navigates to /active-delivery) or the X button.
  */
 export const NewOrderPopup: React.FC = () => {
-  const { state } = useDelivery();
-  const { agentStatus, currentOrder } = state;
+  const { state, acceptOrder, rejectOffer } = useDelivery();
+  const { pendingOffer, offerSecondsRemaining } = state;
   const navigate = useNavigate();
 
   const [visible, setVisible] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
-  const prevStatusRef = useRef<string | null>(null);
-  const prevOrderIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const prevStatus = prevStatusRef.current;
-    const prevOrderId = prevOrderIdRef.current;
-    const currentOrderId = currentOrder?.id ?? null;
-
-    const isVerifiedRider = (() => {
-      try {
-        const u = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('grabit_user') || '{}' : '{}');
-        if (u.partnerVerified === true) return true;
-        const clearances = u.clearances || {};
-        const ts = u.clearanceTimestamps || u.clearance_timestamps || {};
-        const ONE_HOUR = 60 * 60 * 1000;
-        const now = Date.now();
-        const biometricsDone = !!(u.biometricsDone || u.selfieImage || u.avatar_url || u.selfie_image);
-        const dlSubmitted = !!(u.drivingLicense || u.driving_license || u.vehicle || u.plate);
-        const dlTs = ts.dl;
-        const dlVerified = dlSubmitted && dlTs && (now - dlTs >= ONE_HOUR);
-        return biometricsDone && dlVerified;
-      } catch {
-        return false;
-      }
-    })();
-
-    // Fire popup ONLY when rider is verified, active, and a brand-new order arrives
-    const isNewOrder =
-      isVerifiedRider &&
-      agentStatus === 'ON_DELIVERY' &&
-      currentOrder !== null &&
-      (prevStatus !== 'ON_DELIVERY' || prevOrderId !== currentOrderId);
-
-    if (isNewOrder) {
+    if (pendingOffer) {
       setVisible(true);
       requestAnimationFrame(() => setAnimateIn(true));
-    } else if (!isVerifiedRider || agentStatus !== 'ON_DELIVERY' || !currentOrder) {
-      setVisible(false);
+    } else {
       setAnimateIn(false);
+      const timer = setTimeout(() => setVisible(false), 340);
+      return () => clearTimeout(timer);
     }
+  }, [pendingOffer]);
 
-    prevStatusRef.current = agentStatus;
-    prevOrderIdRef.current = currentOrderId;
-  }, [agentStatus, currentOrder]);
+  if (!visible || !pendingOffer) {
+    return null;
+  }
 
   const dismiss = () => {
     setAnimateIn(false);
     setTimeout(() => setVisible(false), 340);
   };
 
-  const handleViewOrder = () => {
+  const handleAccept = async () => {
+    if (!pendingOffer) return;
+    const targetOffer = pendingOffer;
+    setVisible(false);
+    setAnimateIn(false);
+    await acceptOrder(targetOffer);
+    navigate('/delivery/active-delivery');
+  };
+
+  const handleReject = async () => {
+    if (!pendingOffer) return;
     dismiss();
-    setTimeout(() => navigate('/delivery/active-delivery'), 100);
+    await rejectOffer(pendingOffer);
   };
 
   const handleOpenInMaps = () => {
-    if (!currentOrder) return;
-    const address = currentOrder.customer.address;
-    const coords = currentOrder.customer.coordinates;
+    if (!pendingOffer) return;
+    const address = pendingOffer.customer.address;
+    const coords = pendingOffer.customer.coordinates;
     let url: string;
     if (address) {
-      // Always navigate to the actual delivery address string
       const dest = encodeURIComponent(address);
       url = `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
     } else if (coords?.lat && coords?.lng) {
-      // Fallback to coordinates if no address string available
       url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
     } else {
-      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentOrder.customer.name)}`;
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pendingOffer.customer.name)}`;
     }
     window.open(url, '_blank');
   };
 
-  if (!visible || !currentOrder) return null;
+  if (!visible || !pendingOffer) return null;
 
   return (
     <>
       {/* Dim backdrop */}
       <div
-        onClick={dismiss}
+        onClick={handleReject}
         style={{
           position: 'fixed',
           inset: 0,
@@ -145,9 +124,9 @@ export const NewOrderPopup: React.FC = () => {
           <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(33,150,243,0.15)', filter: 'blur(40px)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(100,220,120,0.1)', filter: 'blur(30px)', pointerEvents: 'none' }} />
 
-          {/* Close button */}
+          {/* Close / Reject button */}
           <button
-            onClick={dismiss}
+            onClick={handleReject}
             style={{
               position: 'absolute',
               top: '16px',
@@ -167,7 +146,7 @@ export const NewOrderPopup: React.FC = () => {
             <X size={15} />
           </button>
 
-          {/* Header badge */}
+          {/* Header badge with countdown timer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
             <div
               style={{
@@ -182,26 +161,26 @@ export const NewOrderPopup: React.FC = () => {
             >
               <Zap size={13} color="#32D74B" />
               <span style={{ fontSize: '12px', fontWeight: '800', color: '#32D74B', letterSpacing: '0.5px' }}>
-                NEW ORDER ASSIGNED
+                NEW OFFER • EXPIRES IN {offerSecondsRemaining}s
               </span>
             </div>
           </div>
 
           {/* Order number */}
           <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
-            {currentOrder.orderNumber}
+            {pendingOffer.orderNumber}
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: '0 0 22px' }}>
-            GrabIt Supermarket → {currentOrder.customer.name}
+            GrabIt Supermarket → {pendingOffer.customer.name}
           </p>
 
           {/* Info pills row */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '22px' }}>
             {[
-              { icon: <MapPin size={13} />, text: `${currentOrder.distanceKm} km away` },
-              { icon: <Clock size={13} />, text: `~${currentOrder.estimatedMinutes ?? 20} min` },
-              { icon: <IndianRupee size={13} />, text: `₹${currentOrder.totalAmount.toFixed(0)}` },
-              { icon: <Package size={13} />, text: `${currentOrder.items.length} items` },
+              { icon: <MapPin size={13} />, text: `${pendingOffer.distanceKm} km away` },
+              { icon: <Clock size={13} />, text: `~${pendingOffer.estimatedMinutes ?? 20} min` },
+              { icon: <IndianRupee size={13} />, text: `₹${pendingOffer.totalAmount.toFixed(0)}` },
+              { icon: <Package size={13} />, text: `${pendingOffer.items.length} items` },
             ].map(({ icon, text }) => (
               <div
                 key={text}
@@ -243,7 +222,7 @@ export const NewOrderPopup: React.FC = () => {
                 Deliver to
               </p>
               <p style={{ fontSize: '13px', color: '#FFFFFF', margin: 0, fontWeight: '600' }}>
-                {currentOrder.customer.address}
+                {pendingOffer.customer.address}
               </p>
             </div>
           </div>
@@ -255,7 +234,7 @@ export const NewOrderPopup: React.FC = () => {
               onClick={handleOpenInMaps}
               style={{
                 flex: '0 0 auto',
-                padding: '16px 18px',
+                padding: '16px 14px',
                 background: 'rgba(255,255,255,0.12)',
                 color: '#FFFFFF',
                 fontSize: '13px',
@@ -266,7 +245,7 @@ export const NewOrderPopup: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '7px',
+                gap: '6px',
                 whiteSpace: 'nowrap',
               }}
               title="Open destination in Google Maps"
@@ -275,15 +254,15 @@ export const NewOrderPopup: React.FC = () => {
               Maps
             </button>
 
-            {/* Start Delivery */}
+            {/* Reject Button */}
             <button
-              onClick={handleViewOrder}
+              onClick={handleReject}
               style={{
                 flex: 1,
-                padding: '16px',
-                background: 'linear-gradient(135deg, #32D74B 0%, #28C240 100%)',
+                padding: '16px 12px',
+                background: 'linear-gradient(135deg, #FF3B30 0%, #D70015 100%)',
                 color: '#FFFFFF',
-                fontSize: '15px',
+                fontSize: '14px',
                 fontWeight: '900',
                 border: 'none',
                 borderRadius: '16px',
@@ -291,13 +270,38 @@ export const NewOrderPopup: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
+                gap: '6px',
+                letterSpacing: '-0.2px',
+                boxShadow: '0 4px 24px rgba(255, 59, 48, 0.4)',
+              }}
+            >
+              <X size={16} />
+              Reject
+            </button>
+
+            {/* Accept Button */}
+            <button
+              onClick={handleAccept}
+              style={{
+                flex: 1.2,
+                padding: '16px 14px',
+                background: 'linear-gradient(135deg, #32D74B 0%, #28C240 100%)',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: '900',
+                border: 'none',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
                 letterSpacing: '-0.2px',
                 boxShadow: '0 4px 24px rgba(50, 215, 75, 0.4)',
               }}
             >
-              <Navigation size={17} />
-              Start Delivery
+              <Navigation size={16} />
+              Accept Offer
             </button>
           </div>
         </div>

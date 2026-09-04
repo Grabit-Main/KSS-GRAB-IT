@@ -115,7 +115,7 @@ export function LoginPage() {
     const knownDemoMap = {
       '+919999900001': { name: 'Admin Supervisor', role: 'admin' },
       '+919999900002': { name: 'GrabIt Supermarket', role: 'seller' },
-      '+919999900003': { name: 'Speedy Express Delivery', role: 'delivery_agent' },
+      '+919999900003': { name: 'Karthik Rider', role: 'delivery_agent' },
       '+919999900004': { name: 'Rahul Sharma', role: 'customer' },
       '+919080841727': { name: 'Thabee', role: 'delivery_agent' },
     };
@@ -734,7 +734,7 @@ export function LoginPage() {
               {[
                 { label: 'Customer', icon: '🛒', phone: '+919999900004', name: 'Rahul Sharma', role: 'customer' },
                 { label: 'Seller', icon: '🏪', phone: '+919999900002', name: 'GrabIt Supermarket', role: 'seller' },
-                { label: 'Rider', icon: '🛵', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
+                { label: 'Rider', icon: '🛵', phone: '+919999900003', name: 'Karthik Rider', role: 'delivery_agent' },
                 { label: 'Admin', icon: '🛡️', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
               ].map((item) => {
                 const isSelected = phoneDigits === item.phone.replace('+91', '');

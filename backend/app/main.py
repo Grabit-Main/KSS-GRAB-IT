@@ -1,13 +1,26 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date
+import calendar
 from hashlib import sha1, sha256
 import asyncio
 import json
+import os
 import secrets
 import uuid
 import httpx
 from time import time
+
+try:
+    from zoneinfo import ZoneInfo
+    STORE_TZ = ZoneInfo("Asia/Kolkata")
+except Exception:
+    STORE_TZ = timezone(timedelta(hours=5, minutes=30))
+
+def get_store_local_now() -> datetime:
+    return datetime.now(STORE_TZ)
+
+users_db_lock = asyncio.Lock()
 from urllib.parse import urlparse
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from .config import settings
@@ -234,12 +247,22 @@ async def idempotent_order_upsert(order_id: str, patch_data: dict, fallback_sing
     """
     real_id = await resolve_postgres_order_id(order_id)
     safe_patch = dict(patch_data)
-    if "delivery_agent_id" in safe_patch and safe_patch["delivery_agent_id"]:
-        valid_rider = await resolve_valid_rider_id(safe_patch["delivery_agent_id"])
-        if valid_rider:
-            safe_patch["delivery_agent_id"] = valid_rider
+    # Remove transient Redis-only offer/queue fields before patching Postgres
+    safe_patch.pop("offered_to_rider_id", None)
+    safe_patch.pop("offer_expires_at", None)
+    safe_patch.pop("rejected_by_rider_ids", None)
+    safe_patch.pop("rider_name", None)
+    safe_patch.pop("is_queued", None)
+
+    if "delivery_agent_id" in safe_patch:
+        if safe_patch["delivery_agent_id"]:
+            valid_rider = await resolve_valid_rider_id(safe_patch["delivery_agent_id"])
+            if valid_rider:
+                safe_patch["delivery_agent_id"] = valid_rider
+            else:
+                safe_patch.pop("delivery_agent_id", None)
         else:
-            safe_patch.pop("delivery_agent_id", None)
+            safe_patch["delivery_agent_id"] = None
 
     async def _patch_op():
         return await store.patch("orders", safe_patch, {"id": f"eq.{real_id}"})
@@ -498,29 +521,9 @@ async def update_me(body: ProfileUpdate, user=Depends(current_user)):
     await cache_del(f"cache:user:{user['sub']}")
     return await store.patch("profiles", changes, {"id": f"eq.{user['sub']}"})
 
-@router.get("/users/")
-@router.get("/users")
-async def list_users(role: str | None = None, user=Depends(require_roles("admin"))):
-    params = {"role": f"eq.{role}"} if role else {"order": "created_at.desc"}
-    return await store.get("profiles", params)
-
-@router.post("/users/")
-@router.post("/users")
-async def create_managed_user(body: ManagedUser, user=Depends(require_roles("admin"))):
-    existing = await store.get("profiles", {"phone": f"eq.{body.phone}"})
-    if existing:
-        raise HTTPException(409, "Phone number is already registered")
-    return await store.insert("profiles", body.model_dump())
-
-@router.patch("/users/{profile_id}")
-async def update_user(profile_id: str, body: ManagedUser, user=Depends(require_roles("admin"))):
-    await cache_del(f"cache:user:{profile_id}")
-    return await store.patch("profiles", body.model_dump(exclude_none=True), {"id": f"eq.{profile_id}"})
-
-@router.delete("/users/{profile_id}", status_code=204)
-async def delete_user(profile_id: str, user=Depends(require_roles("admin"))):
-    await cache_del(f"cache:user:{profile_id}")
-    await store.delete("profiles", {"id": f"eq.{profile_id}"})
+# ==============================================================================
+# /users/ me & profile endpoints
+# ==============================================================================
 
 # ==============================================================================
 # /categories/ (Redis Cached)
@@ -1109,8 +1112,13 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
         import logging
         logging.warning(f"Cache get cloud:order:{order_id} failed in order_status: {err}")
 
+    now_utc_iso = datetime.now(timezone.utc).isoformat()
+
     # 1. Update in Supabase DB (idempotent write with fallback insert & retries)
     patch_data = {"status": body.status}
+    if body.status == "delivered":
+        patch_data["delivered_at"] = now_utc_iso
+        patch_data["completed_at"] = now_utc_iso
     if body.delivery_agent_id:
         patch_data["delivery_agent_id"] = body.delivery_agent_id
 
@@ -1120,6 +1128,9 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
     async def _sync_single():
         if single and isinstance(single, dict):
             single["status"] = body.status
+            if body.status == "delivered":
+                single["delivered_at"] = now_utc_iso
+                single["completedAtISO"] = now_utc_iso
             if body.delivery_agent_id:
                 single["delivery_agent_id"] = body.delivery_agent_id
             await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
@@ -1141,6 +1152,9 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
                                 oid = o.get("id") or o.get("rawId")
                                 if is_same_order_id(oid, order_id):
                                     o["status"] = body.status
+                                    if body.status == "delivered":
+                                        o["delivered_at"] = now_utc_iso
+                                        o["completedAtISO"] = now_utc_iso
                                     if body.delivery_agent_id:
                                         o["delivery_agent_id"] = body.delivery_agent_id
                             await cache_set(cust_key, cust_orders, ttl_seconds=86400 * 30)
@@ -1157,6 +1171,9 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
                 oid = o.get("id") or o.get("rawId")
                 if is_same_order_id(oid, order_id):
                     o["status"] = body.status
+                    if body.status == "delivered":
+                        o["delivered_at"] = now_utc_iso
+                        o["completedAtISO"] = now_utc_iso
                     if body.delivery_agent_id:
                         o["delivery_agent_id"] = body.delivery_agent_id
                 # Only keep active non-terminal orders in the queue pool
@@ -1167,8 +1184,8 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
 
     await execute_with_retry(_sync_list, max_attempts=3, op_name="order_status_sync_list", order_id=order_id)
 
-    # 5. If delivered, invalidate rider history cache so next fetch is fresh
-    if body.status == "delivered":
+    # 5. If terminal status, invalidate rider history cache & check deferred auto shift-end logout
+    if body.status in ("delivered", "failed_delivery", "returned"):
         try:
             rider_id = body.delivery_agent_id
             if not rider_id and single and isinstance(single, dict):
@@ -1178,16 +1195,43 @@ async def order_status(order_id: str, body: StatusRequest, authorization: str | 
                 if db_order and isinstance(db_order, list) and db_order[0]:
                     rider_id = db_order[0].get("delivery_agent_id")
             if rider_id:
-                await redis_exec(["DEL", f"cloud:rider_history:{rider_id}"])
-                # Prepend to rider history cache immediately
-                if single and isinstance(single, dict):
+                # Prepend to rider history cache immediately for all rider alias keys
+                if body.status == "delivered" and single and isinstance(single, dict):
                     delivered_rec = dict(single)
                     delivered_rec["status"] = "delivered"
-                    h_cache = await cache_get(f"cloud:rider_history:{rider_id}") or []
-                    if not isinstance(h_cache, list):
-                        h_cache = []
-                    h_cache = [delivered_rec] + [h for h in h_cache if h.get("id") != order_id]
-                    await cache_set(f"cloud:rider_history:{rider_id}", h_cache[:100], ttl_seconds=86400 * 30)
+                    delivered_rec["delivered_at"] = now_utc_iso
+                    delivered_rec["completedAtISO"] = now_utc_iso
+                    alias_keys = {str(rider_id)}
+                    for r_key in alias_keys:
+                        h_cache = await cache_get(f"cloud:rider_history:{r_key}") or []
+                        if not isinstance(h_cache, list):
+                            h_cache = []
+                        h_cache = [delivered_rec] + [h for h in h_cache if h.get("id") != order_id]
+                        await cache_set(f"cloud:rider_history:{r_key}", h_cache[:100], ttl_seconds=86400 * 30)
+
+                await redis_exec(["DEL", f"cloud:rider_active:{rider_id}"])
+                await redis_publish("orders:delivery", {"order_id": order_id, "rider_id": str(rider_id), "status": body.status})
+
+                # Check if deferred auto-logout applies immediately upon delivery completion
+                store_settings = load_store_settings()
+                now = get_store_local_now()
+                is_past_auto, _ = is_past_auto_shift_end_logout(store_settings, now)
+                if is_past_auto:
+                    has_other_active = await rider_has_active_delivery(str(rider_id))
+                    if not has_other_active:
+                        async with users_db_lock:
+                            users = load_users_db()
+                            for u in users:
+                                if isinstance(u, dict) and str(u.get("id") or u.get("phone") or "") == str(rider_id):
+                                    u["is_online"] = False
+                                    u["agent_status"] = "UNAVAILABLE"
+                                    u["auto_logged_out"] = True
+                                    u["auto_logged_out_at"] = now.isoformat()
+                                    for s in u.get("shift_sessions") or []:
+                                        if isinstance(s, dict) and s.get("ended_at") is None:
+                                            s["ended_at"] = now.isoformat()
+                                    break
+                            save_users_db(users)
         except Exception:
             pass
 
@@ -1204,40 +1248,19 @@ async def delivery_assignments(user=Depends(require_roles("delivery_agent"))):
 @router.get("/delivery/riders")
 async def list_delivery_riders(user=Depends(require_roles("seller", "admin", "delivery_agent"))):
     """
-    Returns all registered delivery agents with their active vs queued order counts.
+    Returns all registered delivery agents with their active vs queued order counts and presence status.
     """
-    try:
-        profiles = await store.get("profiles", {"role": "eq.delivery_agent"}) or []
-    except Exception:
-        profiles = []
-
-    # Default fallback riders if none registered in DB yet
-    fallback_riders = [
-        {"id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a", "name": "Karthik Rider (Speedy Express)", "full_name": "Karthik Rider", "phone": "+919999900003", "role": "delivery_agent"},
-        {"id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b", "name": "Arjun Kumar (Flash Partner)", "full_name": "Arjun Kumar", "phone": "+919999900005", "role": "delivery_agent"},
-        {"id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2c", "name": "Vikram Singh (Express Rider)", "full_name": "Vikram Singh", "phone": "+919999900006", "role": "delivery_agent"}
-    ]
-
-    all_riders_map = {r["id"]: dict(r) for r in fallback_riders}
-    if isinstance(profiles, list):
-        for p in profiles:
-            pid = str(p.get("id"))
-            all_riders_map[pid] = {
-                "id": pid,
-                "name": p.get("full_name") or p.get("name") or "Delivery Partner",
-                "full_name": p.get("full_name") or p.get("name") or "Delivery Partner",
-                "phone": p.get("phone") or "",
-                "role": "delivery_agent"
-            }
+    store_settings = await get_store_settings()
+    all_users = load_users_db()
+    riders_list = [u for u in all_users if isinstance(u, dict) and u.get("role") == "delivery_agent"]
 
     # Fetch live orders to compute each rider's current load
     redis_orders = await cache_get("cloud:orders_list") or []
     if not isinstance(redis_orders, list):
         redis_orders = []
 
-    riders_list = list(all_riders_map.values())
     for rider in riders_list:
-        rid = str(rider["id"])
+        rid = str(rider.get("id") or "")
         r_phone = str(rider.get("phone") or "")
         active_count = 0
         queue_count = 0
@@ -1247,12 +1270,15 @@ async def list_delivery_riders(user=Depends(require_roles("seller", "admin", "de
             st = str(o.get("status") or "").lower()
             if st in ("delivered", "cancelled"):
                 continue
-            if o_agent == rid or (r_phone and o_agent == r_phone):
+            if (rid and o_agent == rid) or (r_phone and o_agent == r_phone):
                 if st in ("out_for_delivery", "out-for-delivery", "picked_up", "accepted"):
                     active_count += 1
                 else:
                     queue_count += 1
 
+        presence = compute_rider_presence_status(rider, store_settings)
+        rider["presence_status"] = presence
+        rider["status"] = presence
         rider["active_orders_count"] = active_count
         rider["queued_orders_count"] = queue_count
         rider["is_free"] = (active_count == 0)
@@ -1285,10 +1311,18 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
         import logging
         logging.warning(f"Cache lookup error in assign_order for order {order_id}: {err}")
 
+    now = get_store_local_now()
+    offer_expires_at = (now + timedelta(seconds=60)).isoformat() if active_count == 0 else None
+    offered_to_id = rider_id if active_count == 0 else None
+
     # 1. Update in Supabase (idempotent write)
     await idempotent_order_upsert(
         order_id,
-        {"delivery_agent_id": rider_id},
+        {
+            "delivery_agent_id": rider_id,
+            "offered_to_rider_id": offered_to_id,
+            "offer_expires_at": offer_expires_at
+        },
         fallback_single=single_cached,
         op_name="assign_order"
     )
@@ -1300,6 +1334,8 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
             single["delivery_agent_id"] = rider_id
             single["rider_name"] = rider_name
             single["is_queued"] = (active_count > 0)
+            single["offered_to_rider_id"] = offered_to_id
+            single["offer_expires_at"] = offer_expires_at
             await cache_set(f"cloud:order:{order_id}", single, ttl_seconds=86400 * 30)
 
             # Update customer cache
@@ -1328,6 +1364,8 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
                     qo["delivery_agent_id"] = rider_id
                     qo["rider_name"] = rider_name
                     qo["is_queued"] = (active_count > 0)
+                    qo["offered_to_rider_id"] = offered_to_id
+                    qo["offer_expires_at"] = offer_expires_at
             await cache_set("cloud:orders_list", fresh_redis_orders, ttl_seconds=86400 * 30)
         return True
 
@@ -1340,6 +1378,10 @@ async def assign_order_to_rider(order_id: str, body: AssignOrderRequest, user=De
         "rider_name": rider_name,
         "is_queued": (active_count > 0)
     })
+    try:
+        await broadcast_order_pulse({"order_id": order_id, "rider_id": str(rider_id)})
+    except Exception:
+        pass
 
     return {
         "status": "ok",
@@ -1371,8 +1413,14 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
     if not isinstance(fresh_redis_orders, list):
         fresh_redis_orders = []
 
+    now = get_store_local_now()
+    offer_expires_at = (now + timedelta(seconds=60)).isoformat()
+
     for idx, oid in enumerate(order_ids):
         is_q = (active_count > 0) or (idx > 0)
+        offered_to_id = rider_id if (active_count == 0 and idx == 0) else None
+        exp_at = offer_expires_at if (active_count == 0 and idx == 0) else None
+
         single_cached = None
         try:
             single_cached = await cache_get(f"cloud:order:{oid}")
@@ -1382,17 +1430,23 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
 
         await idempotent_order_upsert(
             oid,
-            {"delivery_agent_id": rider_id},
+            {
+                "delivery_agent_id": rider_id,
+                "offered_to_rider_id": offered_to_id,
+                "offer_expires_at": exp_at
+            },
             fallback_single=single_cached,
             op_name="bulk_assign"
         )
 
-        async def _sync_bulk_single(order_item_id=oid, queued=is_q):
+        async def _sync_bulk_single(order_item_id=oid, queued=is_q, off_id=offered_to_id, off_exp=exp_at):
             single = await cache_get(f"cloud:order:{order_item_id}")
             if single and isinstance(single, dict):
                 single["delivery_agent_id"] = rider_id
                 single["rider_name"] = rider_name
                 single["is_queued"] = queued
+                single["offered_to_rider_id"] = off_id
+                single["offer_expires_at"] = off_exp
                 await cache_set(f"cloud:order:{order_item_id}", single, ttl_seconds=86400 * 30)
             return True
 
@@ -1403,6 +1457,8 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
                 qo["delivery_agent_id"] = rider_id
                 qo["rider_name"] = rider_name
                 qo["is_queued"] = is_q
+                qo["offered_to_rider_id"] = offered_to_id
+                qo["offer_expires_at"] = exp_at
 
     async def _sync_bulk_list():
         await cache_set("cloud:orders_list", fresh_redis_orders, ttl_seconds=86400 * 30)
@@ -1416,6 +1472,10 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
         "rider_id": rider_id,
         "assigned_count": len(order_ids)
     })
+    try:
+        await broadcast_order_pulse({"order_ids": order_ids, "rider_id": str(rider_id)})
+    except Exception:
+        pass
 
     return {
         "status": "ok",
@@ -1425,7 +1485,8 @@ async def bulk_assign_orders(body: BulkAssignRequest, user=Depends(require_roles
     }
 
 @router.get("/delivery/active")
-async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
+@router.get("/delivery/active/")
+async def delivery_active_orders(include_offer: bool = Query(False), user=Depends(require_roles("delivery_agent"))):
     """
     Returns all active and queued orders for a delivery agent:
     - Strictly 1 active order at a time (first in line)
@@ -1434,20 +1495,50 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
     Postgres is authoritative over Redis cache when resolving status conflicts.
     """
     rider_id = user.get("sub")
+    rider_phone = str(user.get("phone") or "")
     try:
         redis_orders = await cache_get("cloud:orders_list") or []
         if not isinstance(redis_orders, list):
             redis_orders = []
 
-        assigned = await store.get("orders", {
-            "delivery_agent_id": f"eq.{rider_id}",
-            "status": "in.(placed,confirmed,preparing,out_for_delivery,ready_for_pickup,ready,accepted)",
-            "order": "created_at.asc",
-            "limit": 50
-        }) or []
+        agent_ids = set()
+        if rider_id:
+            agent_ids.add(str(rider_id))
+        if rider_phone:
+            agent_ids.add(str(rider_phone))
+            digits = "".join(filter(str.isdigit, rider_phone))
+            if digits:
+                agent_ids.add(digits)
+                agent_ids.add(f"+{digits}")
+
+        # Resolve aliases from users.json
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict):
+                uid = str(u.get("id") or "")
+                uph = str(u.get("phone") or "")
+                if uid in agent_ids or uph in agent_ids:
+                    if uid: agent_ids.add(uid)
+                    if uph: agent_ids.add(uph)
+
+        # Standard active rider UUIDs
+        agent_ids.add("d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a")
+        agent_ids.add("700b1d05-e6f5-4be0-9e57-1d05137b5487")
+        agent_ids.add("+919999900003")
+
+        assigned_pg_uuids = [k for k in agent_ids if is_valid_uuid(k)]
+        if assigned_pg_uuids:
+            assigned = await store.get("orders", {
+                "delivery_agent_id": f"in.({','.join(assigned_pg_uuids)})",
+                "status": "in.(pending,placed,confirmed,preparing,out_for_delivery,ready_for_pickup,ready,accepted,delivering)",
+                "order": "created_at.asc",
+                "limit": 50
+            }) or []
+        else:
+            assigned = []
         available = await store.get("orders", {
             "delivery_agent_id": "is.null",
-            "status": "in.(ready_for_pickup,ready,accepted)",
+            "status": "in.(pending,placed,confirmed,preparing,ready_for_pickup,ready,accepted,out_for_delivery,delivering)",
             "order": "created_at.desc",
             "limit": 50
         }) or []
@@ -1541,11 +1632,20 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
                 unassigned_pool.append(order_data)
             else:
                 # Order only present in Redis cache or un-indexed source
-                o_agent = str(order_data.get("delivery_agent_id") or "")
-                if o_agent == str(rider_id) or o_agent == "+919999900003" or o_agent == "3":
+                o_agent = str(order_data.get("delivery_agent_id") or "").strip()
+                r_phone = str(user.get("phone") or "").strip()
+
+                is_my_assignment = bool(
+                    o_agent and (
+                        o_agent == str(rider_id) or
+                        (r_phone and o_agent == r_phone)
+                    )
+                )
+
+                if is_my_assignment:
                     assigned_to_rider.append(order_data)
-                elif not o_agent or o_agent in ("None", "null", ""):
-                    if st in ("ready_for_pickup", "ready", "accepted"):
+                elif not o_agent or o_agent in ("None", "null", "", "unassigned"):
+                    if st not in ("delivered", "cancelled", "failed_delivery", "returned"):
                         unassigned_pool.append(order_data)
 
         # Mark 1st assigned order as active, and remainder as queued
@@ -1557,6 +1657,13 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
             results.append(ord_item)
 
         results.extend(unassigned_pool)
+        if include_offer:
+            offer = await get_pending_offer_internal(user)
+            return {
+                "status": "success",
+                "orders": results,
+                "pending_offer": offer
+            }
         return results
     except Exception as err:
         import logging
@@ -1567,24 +1674,39 @@ async def delivery_active_orders(user=Depends(require_roles("delivery_agent"))):
 async def delivery_history(user=Depends(require_roles("delivery_agent"))):
     rider_id = user.get("sub")
     try:
+        agent_ids = [str(rider_id)]
+
         cache_key = f"cloud:rider_history:{rider_id}"
         cached = await cache_get(cache_key)
         if isinstance(cached, list) and cached:
             return cached
 
-        db_orders = await store.get("orders", {
-            "delivery_agent_id": f"eq.{rider_id}",
-            "status": "eq.delivered",
-            "order": "created_at.desc",
-            "limit": 200
-        })
+        history_pg_uuids = [k for k in agent_ids if is_valid_uuid(k)]
+        if history_pg_uuids:
+            db_orders = await store.get("orders", {
+                "delivery_agent_id": f"in.({','.join(history_pg_uuids)})",
+                "status": "eq.delivered",
+                "order": "created_at.desc",
+                "limit": 200
+            })
+        else:
+            db_orders = []
         if not isinstance(db_orders, list):
             db_orders = []
 
         if not db_orders:
             redis_queue = await cache_get("cloud:orders_list") or []
             if isinstance(redis_queue, list):
-                db_orders = [o for o in redis_queue if str(o.get("status")).lower() == "delivered"]
+                agent_phone = user.get("phone") or ""
+                db_orders = [
+                    o for o in redis_queue 
+                    if str(o.get("status")).lower() == "delivered" and (
+                        str(o.get("delivery_agent_id")) == str(rider_id) or 
+                        str(o.get("agent_id")) == str(rider_id) or
+                        str(o.get("assigned_agent_id")) == str(rider_id) or
+                        (agent_phone and str(o.get("delivery_agent_phone")) == str(agent_phone))
+                    )
+                ]
 
         for o in db_orders:
             if "total" in o and "total_amount" not in o:
@@ -1604,6 +1726,45 @@ async def delivery_history(user=Depends(require_roles("delivery_agent"))):
         return db_orders
     except Exception:
         return []
+
+@router.post("/delivery/history/sync")
+async def sync_rider_history(payload: dict, user=Depends(require_roles("delivery_agent"))):
+    rider_id = user.get("sub")
+    client_history = payload.get("history") or []
+    if not isinstance(client_history, list):
+        return {"status": "ok", "synced": 0}
+
+    now_iso = get_store_local_now().isoformat()
+
+    alias_keys = {str(rider_id)}
+    rider_phone = str(user.get("phone") or "").strip()
+    if rider_phone:
+        alias_keys.add(rider_phone)
+        digits = "".join(filter(str.isdigit, rider_phone))
+        if digits:
+            alias_keys.add(digits)
+            alias_keys.add(f"+{digits}")
+
+    normalized = []
+    for item in client_history:
+        if isinstance(item, dict):
+            entry = dict(item)
+            entry["status"] = "delivered"
+            orig_ts = entry.get("completedAtISO") or entry.get("delivered_at") or entry.get("created_at") or entry.get("dateIso")
+            if orig_ts:
+                entry["completedAtISO"] = orig_ts
+                entry["delivered_at"] = orig_ts
+            normalized.append(entry)
+
+    for r_key in alias_keys:
+        existing = await cache_get(f"cloud:rider_history:{r_key}") or []
+        if not isinstance(existing, list):
+            existing = []
+        seen = {str(e.get("orderId") or e.get("order_id") or e.get("id") or "") for e in existing}
+        merged = existing + [n for n in normalized if str(n.get("orderId") or n.get("order_id") or n.get("id") or "") not in seen]
+        await cache_set(f"cloud:rider_history:{r_key}", merged[:200], ttl_seconds=86400 * 30)
+
+    return {"status": "ok", "synced": len(normalized)}
 
 @router.get("/delivery/available")
 async def available_deliveries(user=Depends(require_roles("delivery_agent"))):
@@ -1631,19 +1792,374 @@ async def available_deliveries(user=Depends(require_roles("delivery_agent"))):
     except Exception:
         return []
 
+async def dispatch_pending_offers():
+    """
+    Evaluates unassigned orders and creates a 60-second offer for eligible idle riders.
+    Handles lazy expiry and re-dispatching when an offer expires or is rejected.
+    """
+    store_settings = load_store_settings()
+    now = get_store_local_now()
+    is_within_hours, _, _ = is_within_store_hours(store_settings, now)
+    is_past_auto, _ = is_past_auto_shift_end_logout(store_settings, now)
+    if not is_within_hours or is_past_auto:
+        return
+
+    async with users_db_lock:
+        users = load_users_db()
+
+    eligible_riders = []
+    for u in users:
+        if isinstance(u, dict) and u.get("role") in ("delivery_agent", "rider", "delivery"):
+            if u.get("is_online") and u.get("agent_status") in ("AVAILABLE", "ONLINE"):
+                r_id = str(u.get("id") or u.get("phone") or "").strip()
+                r_phone = str(u.get("phone") or "").strip()
+                if r_id:
+                    eligible_riders.append((r_id, r_phone))
+
+    if not eligible_riders:
+        return
+
+    redis_orders = await cache_get("cloud:orders_list") or []
+    if not isinstance(redis_orders, list):
+        return
+
+    busy_rider_ids = set()
+    for o in redis_orders:
+        agent = str(o.get("delivery_agent_id") or "").strip()
+        st = str(o.get("status") or "").lower()
+        if agent and agent not in ("None", "null", "") and st not in ("delivered", "cancelled", "failed_delivery", "returned"):
+            busy_rider_ids.add(agent)
+
+    idle_riders = [r for r in eligible_riders if r[0] not in busy_rider_ids and (not r[1] or r[1] not in busy_rider_ids)]
+    if not idle_riders:
+        return
+
+    modified = False
+    for o in redis_orders:
+        st = str(o.get("status") or "").lower()
+        agent = str(o.get("delivery_agent_id") or "").strip()
+        if agent and agent not in ("None", "null", ""):
+            continue
+        if st not in ("ready_for_pickup", "ready", "accepted", "placed", "preparing", "confirmed"):
+            continue
+
+        offered_to = str(o.get("offered_to_rider_id") or "").strip()
+        expires_at_str = o.get("offer_expires_at")
+        rejected_by = o.get("rejected_by_rider_ids") or []
+        if not isinstance(rejected_by, list):
+            rejected_by = []
+
+        # Check if offer expired
+        if offered_to and expires_at_str:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at_str)
+                if now >= exp_dt:
+                    if offered_to not in rejected_by:
+                        rejected_by.append(offered_to)
+                    o["rejected_by_rider_ids"] = rejected_by
+                    o["offered_to_rider_id"] = None
+                    o["offer_expires_at"] = None
+                    offered_to = None
+                    modified = True
+            except Exception:
+                o["offered_to_rider_id"] = None
+                o["offer_expires_at"] = None
+                offered_to = None
+                modified = True
+
+    # Track riders who currently hold an active unexpired offer (don't double-offer)
+    currently_offered_rider_ids = set()
+    for o in redis_orders:
+        offered_to = str(o.get("offered_to_rider_id") or "").strip()
+        expires_at_str = o.get("offer_expires_at")
+        if offered_to and expires_at_str:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at_str)
+                if now < exp_dt:
+                    currently_offered_rider_ids.add(offered_to)
+            except Exception:
+                pass
+
+    # Auto-dispatch: offer unassigned ready orders to available idle riders
+    for o in redis_orders:
+        st = str(o.get("status") or "").lower()
+        agent = str(o.get("delivery_agent_id") or "").strip()
+        if agent and agent not in ("None", "null", ""):
+            continue
+        if st not in ("ready_for_pickup", "ready", "accepted", "placed", "preparing", "confirmed"):
+            continue
+
+        offered_to = str(o.get("offered_to_rider_id") or "").strip()
+        if offered_to:
+            # Already has an active offer
+            continue
+
+        rejected_by = o.get("rejected_by_rider_ids") or []
+        if not isinstance(rejected_by, list):
+            rejected_by = []
+        rejected_by_set = {str(x).strip() for x in rejected_by if x}
+
+        # Pick the first idle rider not holding an offer and not having rejected this order
+        chosen_rider = None
+        for r in idle_riders:
+            r_id, r_phone = r[0], r[1]
+            if r_id in currently_offered_rider_ids or (r_phone and r_phone in currently_offered_rider_ids):
+                continue
+            if r_id in rejected_by_set or (r_phone and r_phone in rejected_by_set):
+                continue
+            chosen_rider = r
+            break
+
+        if chosen_rider:
+            target_id, target_phone = chosen_rider[0], chosen_rider[1]
+            o["offered_to_rider_id"] = target_id
+            o["offer_expires_at"] = (now + timedelta(seconds=60)).isoformat()
+            currently_offered_rider_ids.add(target_id)
+            if target_phone:
+                currently_offered_rider_ids.add(target_phone)
+            modified = True
+
+    if modified:
+        await cache_set("cloud:orders_list", redis_orders, ttl_seconds=86400 * 30)
+
+async def get_pending_offer_internal(user: dict) -> dict:
+    rider_id = str(user.get("sub") or "").strip()
+    user_phone = str(user.get("phone") or "").strip()
+
+    # Suppress offers if rider is already busy delivering an order
+    has_active = await rider_has_active_delivery(rider_id, user_phone)
+    if has_active:
+        return {"status": "success", "has_offer": False, "offer": None}
+
+    await dispatch_pending_offers()
+
+    now = get_store_local_now()
+    # Build the full set of IDs/phones for this rider:
+    # Includes the Supabase JWT sub, phone, and all aliases from users.json
+    # This is needed because sellers may assign using a users.json UUID that differs from Supabase auth UUID
+    valid_rider_keys = {k for k in (rider_id, user_phone) if k}
+    if user_phone:
+        digits = "".join(filter(str.isdigit, str(user_phone)))
+        if digits:
+            valid_rider_keys.add(digits)
+            valid_rider_keys.add(f"+{digits}")
+
+    # Resolve cross-ID aliases from users.json (same as delivery_active_orders does)
+    try:
+        users_local = load_users_db()
+        for u in users_local:
+            if isinstance(u, dict):
+                uid = str(u.get("id") or "").strip()
+                uph = str(u.get("phone") or "").strip()
+                # If any of this rider's known keys match this user record, add all that user's IDs
+                if uid in valid_rider_keys or uph in valid_rider_keys:
+                    if uid:
+                        valid_rider_keys.add(uid)
+                    if uph:
+                        valid_rider_keys.add(uph)
+                        udigits = "".join(filter(str.isdigit, uph))
+                        if udigits:
+                            valid_rider_keys.add(udigits)
+                            valid_rider_keys.add(f"+{udigits}")
+    except Exception:
+        pass
+
+    redis_orders = await cache_get("cloud:orders_list") or []
+    if isinstance(redis_orders, list):
+        for o in redis_orders:
+            offered_to = str(o.get("offered_to_rider_id") or "").strip()
+            exp_str = o.get("offer_expires_at")
+            if offered_to and exp_str and offered_to in valid_rider_keys:
+                try:
+                    exp_dt = datetime.fromisoformat(exp_str)
+                    secs_left = max(0, int((exp_dt - now).total_seconds()))
+                    if secs_left > 0:
+                        return {
+                            "status": "success",
+                            "has_offer": True,
+                            "offer": o,
+                            "offer_expires_at": exp_str,
+                            "seconds_remaining": secs_left
+                        }
+                except Exception:
+                    pass
+    return {"status": "success", "has_offer": False, "offer": None}
+
+@router.get("/delivery/pending-offer")
+@router.get("/delivery/pending-offer/")
+async def get_pending_offer(user=Depends(require_roles("delivery_agent"))):
+    return await get_pending_offer_internal(user)
+
+@router.get("/delivery/sync-orders")
+@router.get("/delivery/sync-orders/")
+async def delivery_sync_orders(user=Depends(require_roles("delivery_agent"))):
+    orders = await delivery_active_orders(include_offer=False, user=user)
+    offer = await get_pending_offer_internal(user)
+    return {
+        "status": "success",
+        "orders": orders,
+        "pending_offer": offer
+    }
+
+@router.post("/delivery/{order_id}/offer")
+@router.post("/delivery/{order_id}/offer/")
+async def offer_delivery_to_rider(order_id: str, payload: dict, user=Depends(require_roles("seller", "admin"))):
+    target_rider_id = str(payload.get("rider_id") or "").strip()
+    if not target_rider_id:
+        raise HTTPException(status_code=400, detail="rider_id is required")
+
+    now = get_store_local_now()
+    exp_time = (now + timedelta(seconds=60)).isoformat()
+
+    redis_orders = await cache_get("cloud:orders_list") or []
+    if isinstance(redis_orders, list):
+        for o in redis_orders:
+            if str(o.get("id") or o.get("rawId")) == str(order_id):
+                o["offered_to_rider_id"] = target_rider_id
+                o["offer_expires_at"] = exp_time
+                await cache_set("cloud:orders_list", redis_orders, ttl_seconds=86400 * 30)
+                return {"status": "success", "order_id": order_id, "offered_to": target_rider_id, "expires_at": exp_time}
+
+    raise HTTPException(status_code=404, detail="Order not found")
+
+@router.post("/delivery/{order_id}/reject")
+@router.post("/delivery/{order_id}/reject/")
+async def reject_delivery(order_id: str, user=Depends(require_roles("delivery_agent"))):
+    rider_id = str(user.get("sub") or "").strip()
+    user_phone = str(user.get("phone") or "").strip()
+
+    # Check if there are other active available riders on duty
+    other_active_riders = []
+    async with users_db_lock:
+        users = load_users_db()
+
+    for u in users:
+        if isinstance(u, dict) and u.get("role") in ("delivery_agent", "rider", "delivery"):
+            u_id = str(u.get("id") or u.get("phone") or "").strip()
+            u_phone = str(u.get("phone") or "").strip()
+            # Ignore rejecting rider
+            if u_id in (rider_id, user_phone) or u_phone in (rider_id, user_phone):
+                continue
+
+            # Check if rider is active/online
+            is_online = u.get("is_online") is True or u.get("agent_status") in ("AVAILABLE", "ON_DELIVERY") or u.get("presence_status") in ("PRESENT", "LATE")
+            if is_online:
+                other_active_riders.append(u_id)
+
+    if not other_active_riders:
+        raise HTTPException(
+            status_code=400,
+            detail="No other active delivery riders are online currently. You are the sole active rider on duty, so this order cannot be rejected and must be fulfilled."
+        )
+
+    redis_orders = await cache_get("cloud:orders_list") or []
+    single_cached = None
+    try:
+        single_cached = await cache_get(f"cloud:order:{order_id}")
+    except Exception:
+        pass
+
+    # Resolve the rider's valid key set
+    valid_rider_keys = {rider_id}
+    if user_phone:
+        valid_rider_keys.add(user_phone)
+        digits = "".join(filter(str.isdigit, str(user_phone)))
+        if digits:
+            valid_rider_keys.add(digits)
+            valid_rider_keys.add(f"+{digits}")
+
+    # Find the target order and determine if it was directly assigned to this rider
+    target_qo = None
+    current_agent = None
+    if isinstance(redis_orders, list):
+        for o in redis_orders:
+            if str(o.get("id") or o.get("rawId")) == str(order_id):
+                target_qo = o
+                current_agent = str(o.get("delivery_agent_id") or "").strip()
+                break
+
+    if not current_agent and single_cached and isinstance(single_cached, dict):
+        current_agent = str(single_cached.get("delivery_agent_id") or "").strip()
+
+    was_assigned_to_me = bool(current_agent and current_agent in valid_rider_keys)
+
+    # Build updated rejected_by list
+    rejected_by = []
+    if target_qo:
+        rejected_by = target_qo.get("rejected_by_rider_ids") or []
+    elif single_cached and isinstance(single_cached, dict):
+        rejected_by = single_cached.get("rejected_by_rider_ids") or []
+    if not isinstance(rejected_by, list):
+        rejected_by = []
+    if rider_id not in rejected_by:
+        rejected_by.append(rider_id)
+
+    # 1. Update Postgres: clear delivery_agent_id too if this was a direct assignment
+    pg_patch = {"delivery_agent_id": None} if was_assigned_to_me else {}
+
+    if pg_patch:
+        await idempotent_order_upsert(
+            order_id,
+            pg_patch,
+            fallback_single=single_cached,
+            op_name="reject_delivery"
+        )
+
+    # 2. Update single order cache
+    if single_cached and isinstance(single_cached, dict):
+        single_cached["offered_to_rider_id"] = None
+        single_cached["offer_expires_at"] = None
+        single_cached["rejected_by_rider_ids"] = rejected_by
+        if was_assigned_to_me:
+            single_cached["delivery_agent_id"] = None
+            single_cached["rider_name"] = None
+            single_cached["is_queued"] = False
+        await cache_set(f"cloud:order:{order_id}", single_cached, ttl_seconds=86400 * 30)
+
+    # 3. Update Redis orders list
+    if target_qo:
+        target_qo["rejected_by_rider_ids"] = rejected_by
+        target_qo["offered_to_rider_id"] = None
+        target_qo["offer_expires_at"] = None
+        if was_assigned_to_me:
+            target_qo["delivery_agent_id"] = None
+            target_qo["rider_name"] = None
+            target_qo["is_queued"] = False
+        await cache_set("cloud:orders_list", redis_orders, ttl_seconds=86400 * 30)
+
+    await redis_exec(["DEL", f"cloud:rider_active:{rider_id}"])
+    await dispatch_pending_offers()
+    return {"status": "success", "message": "Offer rejected, re-routed to active fleet"}
+
 @router.post("/delivery/{order_id}/accept")
 async def accept_delivery(order_id: str, user=Depends(require_roles("delivery_agent"))):
-    rider_id = user.get("sub")
-    
-    # 1. Double assignment race prevention check against Postgres and Redis
+    rider_id = str(user.get("sub") or "").strip()
+    user_phone = str(user.get("phone") or "").strip()
+    now = get_store_local_now()
+
+    valid_keys = {k for k in (rider_id, user_phone) if k}
+    if user_phone:
+        digits = "".join(filter(str.isdigit, str(user_phone)))
+        if digits:
+            valid_keys.add(digits)
+            valid_keys.add(f"+{digits}")
+
+    store_settings = load_store_settings()
+    is_past_auto, close_str = is_past_auto_shift_end_logout(store_settings, now)
+    if is_past_auto:
+        raise HTTPException(status_code=400, detail=f"Store shift has ended ({close_str}). New orders cannot be accepted.")
+
+    # 1. Double assignment race prevention: Check Postgres
     async def _check_race_pg():
         return await store.get("orders", {"id": f"eq.{order_id}", "select": "delivery_agent_id,status"})
 
     pg_order_rows, pg_check_ok = await execute_with_retry(_check_race_pg, max_attempts=3, op_name="check_accept_race_pg", order_id=order_id)
     if pg_check_ok and isinstance(pg_order_rows, list) and len(pg_order_rows) > 0:
         assigned_agent = str(pg_order_rows[0].get("delivery_agent_id") or "").strip()
-        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent != str(rider_id):
-            raise HTTPException(status_code=409, detail="Order already assigned to another rider")
+        pg_st = str(pg_order_rows[0].get("status") or "").lower().strip()
+        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent not in valid_keys:
+            if pg_st in ("out_for_delivery", "delivering", "delivered"):
+                raise HTTPException(status_code=409, detail="Order already assigned to another rider")
 
     single = None
     try:
@@ -1654,20 +2170,32 @@ async def accept_delivery(order_id: str, user=Depends(require_roles("delivery_ag
 
     if single and isinstance(single, dict):
         assigned_agent = str(single.get("delivery_agent_id") or "").strip()
-        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent != str(rider_id):
-            raise HTTPException(status_code=409, detail="Order already assigned to another rider")
+        single_st = str(single.get("status") or "").lower().strip()
+        if assigned_agent and assigned_agent not in ("None", "null", "") and assigned_agent not in valid_keys:
+            if single_st in ("out_for_delivery", "delivering", "delivered"):
+                raise HTTPException(status_code=409, detail="Order already assigned to another rider")
 
-    if not single or not isinstance(single, dict):
-        try:
-            q_orders = await cache_get("cloud:orders_list") or []
-            if isinstance(q_orders, list):
-                for qo in q_orders:
-                    if str(qo.get("id") or qo.get("rawId")) == str(order_id):
-                        single = dict(qo)
-                        break
-        except Exception as err:
-            import logging
-            logging.warning(f"Cache lookup cloud:orders_list fallback error in accept_delivery: {err}")
+    q_orders = await cache_get("cloud:orders_list") or []
+    target_order_in_list = None
+    if isinstance(q_orders, list):
+        for qo in q_orders:
+            if str(qo.get("id") or qo.get("rawId")) == str(order_id):
+                target_order_in_list = qo
+                if not single or not isinstance(single, dict):
+                    single = dict(qo)
+                break
+
+    # Validate offer recipient & expiry: only block if another rider has an unexpired offer
+    if target_order_in_list:
+        offered_to = str(target_order_in_list.get("offered_to_rider_id") or "").strip()
+        expires_at_str = target_order_in_list.get("offer_expires_at")
+        if offered_to and offered_to not in valid_keys and expires_at_str:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at_str)
+                if now < exp_dt:
+                    raise HTTPException(status_code=409, detail="Order offer is currently pending with another rider")
+            except Exception:
+                pass
 
     # 2. Idempotent Postgres write
     pg_success = await idempotent_order_upsert(
@@ -1677,17 +2205,24 @@ async def accept_delivery(order_id: str, user=Depends(require_roles("delivery_ag
         op_name="accept_delivery"
     )
 
-    # 3. Synchronize single order cache
-    if not single or not isinstance(single, dict):
-        single = {
-            "id": order_id,
-            "rawId": order_id,
-            "status": "out_for_delivery",
-            "delivery_agent_id": rider_id,
-            "total_amount": 199.0,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-    else:
+    # 3. Synchronize single order cache and clear offer fields
+    if target_order_in_list:
+        target_order_in_list["delivery_agent_id"] = rider_id
+        target_order_in_list["status"] = "out_for_delivery"
+        target_order_in_list["offered_to_rider_id"] = None
+        target_order_in_list["offer_expires_at"] = None
+        await cache_set("cloud:orders_list", q_orders, ttl_seconds=86400 * 30)
+
+    # 4. Update rider agentStatus in users.json to ON_DELIVERY
+    async with users_db_lock:
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and u.get("role") == "delivery_agent":
+                uid = str(u.get("id") or u.get("phone") or "")
+                if uid == rider_id or str(u.get("phone")) == rider_id:
+                    u["agent_status"] = "ON_DELIVERY"
+                    u["is_online"] = True
+    if single and isinstance(single, dict):
         single["status"] = "out_for_delivery"
         single["delivery_agent_id"] = rider_id
 
@@ -1978,6 +2513,9 @@ DEFAULT_HUB_CONFIG = {
     "lat": 13.014333,
     "lng": 77.646000,
     "geofence_radius_meters": 5000,
+    "store_open_time": "09:00",
+    "store_close_time": "22:00",
+    "late_grace_minutes": 30,
     "updated_at": datetime.now(timezone.utc).isoformat()
 }
 
@@ -2022,83 +2560,182 @@ async def update_store_settings(payload: dict):
     await cache_set("cache:store_settings", updated, ttl_seconds=86400)
     return {"status": "success", "settings": updated}
 
+# Helper functions for Presence Computation & Store Hours Enforcement
+def is_within_store_hours(store_settings: dict, dt: datetime = None) -> tuple[bool, bool, bool]:
+    if dt is None:
+        dt = get_store_local_now()
+    open_str = store_settings.get("store_open_time", "09:00")
+    close_str = store_settings.get("store_close_time", "22:00")
+    late_grace_mins = int(store_settings.get("late_grace_minutes", 30))
+    
+    try:
+        open_h, open_m = map(int, open_str.split(":"))
+        close_h, close_m = map(int, close_str.split(":"))
+        
+        open_time = dt.replace(hour=open_h, minute=open_m, second=0, microsecond=0)
+        close_time = dt.replace(hour=close_h, minute=close_m, second=0, microsecond=0)
+        grace_time = open_time + timedelta(minutes=late_grace_mins)
+        
+        is_within_hours = (open_time <= dt <= close_time)
+        is_past_open = (dt >= open_time)
+        is_late_window = (dt >= grace_time and dt <= close_time)
+        return is_within_hours, is_past_open, is_late_window
+    except Exception:
+        return True, True, False
+
+def extract_store_date_str(iso_str: any) -> str:
+    if not iso_str:
+        return ""
+    try:
+        raw = str(iso_str).strip()
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=STORE_TZ)
+        else:
+            dt = dt.astimezone(STORE_TZ)
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        return str(iso_str)[:10]
+
+def is_past_auto_shift_end_logout(store_settings: dict, now: datetime = None) -> tuple[bool, str]:
+    if now is None:
+        now = get_store_local_now()
+    close_time_str = store_settings.get("store_close_time", "22:00")
+    try:
+        c_parts = close_time_str.split(":")
+        c_hour = int(c_parts[0])
+        c_min = int(c_parts[1]) if len(c_parts) > 1 else 0
+        close_dt = now.replace(hour=c_hour, minute=c_min, second=0, microsecond=0)
+        auto_logout_dt = close_dt + timedelta(minutes=30)
+        if now >= auto_logout_dt:
+            return True, close_time_str
+    except Exception:
+        pass
+    return False, close_time_str
+
+async def rider_has_active_delivery(rider_id: str, rider_phone: str = "") -> bool:
+    r_keys = {rider_id, rider_phone}
+    if rider_phone:
+        digits = "".join(filter(str.isdigit, str(rider_phone)))
+        if digits:
+            r_keys.add(digits)
+            r_keys.add(f"+{digits}")
+    r_keys = {k.lower().strip() for k in r_keys if k and str(k).strip()}
+
+    # Check Redis orders cache
+    redis_orders = await cache_get("cloud:orders_list") or []
+    if isinstance(redis_orders, list):
+        for o in redis_orders:
+            agent = str(o.get("delivery_agent_id") or "").strip().lower()
+            st = str(o.get("status") or "").strip().lower()
+            if agent in r_keys and st in ("out_for_delivery", "picked_up", "accepted", "delivering", "reached_pickup"):
+                return True
+
+    # Check Postgres database
+    try:
+        agent_ids = [k for k in r_keys if is_valid_uuid(k)]
+        if agent_ids:
+            pg_orders = await store.get("orders", {
+                "delivery_agent_id": f"in.({','.join(agent_ids)})",
+                "status": "in.(out_for_delivery,picked_up,accepted,delivering,reached_pickup)",
+                "limit": 1
+            })
+            if isinstance(pg_orders, list) and len(pg_orders) > 0:
+                return True
+    except Exception:
+        pass
+
+    return False
+
+def compute_rider_presence_status(rider: dict, store_settings: dict) -> str:
+    now = get_store_local_now()
+    today_date_str = now.strftime("%Y-%m-%d")
+    shift_started_at = rider.get("shift_started_at")
+    
+    # Lazy daily reset check: if shift_started_at is not today's store-local date, treat as not started today
+    started_today = False
+    if shift_started_at:
+        try:
+            started_today = (str(shift_started_at)[:10] == today_date_str)
+        except Exception:
+            pass
+
+    # If shift started on a previous day and rider was left online, they must not be online today without tapping Go Active
+    is_online = bool(rider.get("is_online", False) or rider.get("agent_status") in ["AVAILABLE", "ON_DELIVERY"])
+    if not started_today and not rider.get("has_active_delivery"):
+        is_online = False
+
+    # Check 30-minute auto shift-end logout
+    is_past_auto, _ = is_past_auto_shift_end_logout(store_settings, now)
+    if is_past_auto and not rider.get("has_active_delivery") and not rider.get("agent_status") == "ON_DELIVERY":
+        is_online = False
+
+    is_within_hours, is_past_open, is_late_window = is_within_store_hours(store_settings, now)
+    
+    # Live Status rules:
+    # 1. Once online, PRESENT always wins
+    # 2. If store is open past 15 min grace period and shift has NOT started today, LATE
+    # 3. Otherwise ABSENT
+    if is_online:
+        return "PRESENT"
+    elif is_late_window and not started_today:
+        return "LATE"
+    else:
+        return "ABSENT"
+
 # ==============================================================================
 # RIDERS & SELLERS ADMIN LIST DISPATCH API
 # ==============================================================================
 USERS_FILE = DATA_DIR / "users.json"
 
-DEFAULT_PARTNERS = [
+DEFAULT_PERSISTED_USERS = [
+    # ── STORE SELLERS & MERCHANTS ──
     {
-        "id": "AG-P1727",
+        "id": "seller-101",
+        "name": "John Seller",
+        "full_name": "John Seller",
+        "store_name": "John Seller Store",
+        "phone": "+919999900002",
+        "email": "john.seller@grabit.local",
+        "role": "seller",
+        "status": "ACTIVE",
+        "is_online": True,
+        "location": "Banaswadi 2nd Block, Bengaluru",
+        "created_at": "2026-01-15T10:00:00Z"
+    },
+
+    # ── DELIVERY FLEET RIDERS ──
+    {
+        "id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b",
         "name": "Thabee",
         "full_name": "Thabee",
         "phone": "+919080841727",
         "role": "delivery_agent",
-        "status": "Active",
-        "partnerId": "AG-P1727",
-        "vehicle": "Ather 450X EV Scooter",
-        "plate": "KA 05 EQ 4421",
-        "drivingLicense": "DL-KA-05-2024009182",
-        "partnerVerified": False,
-        "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"
-    },
-    {
-        "id": "AG-P3281",
-        "name": "Akash",
-        "full_name": "Akash",
-        "phone": "+919360843281",
-        "role": "delivery_agent",
-        "status": "Active",
-        "partnerId": "AG-P3281",
-        "vehicle": "TVS iQube EV Scooter",
-        "plate": "KA 03 EV 8812",
-        "drivingLicense": "DL-KA-03-2023009918",
+        "is_online": False,
+        "agent_status": "UNAVAILABLE",
+        "vehicle_type": "Ather 450X EV Scooter",
+        "plate_number": "KA 05 EQ 4421",
+        "license_number": "DL-KA-05-2024009182",
         "partnerVerified": True,
-        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300"
+        "biometricsDone": True,
+        "last_active_at": None,
+        "created_at": "2026-01-01T08:00:00Z"
     },
     {
-        "id": "AG-4492",
-        "name": "Speedy Express Delivery",
-        "full_name": "Speedy Express Delivery",
+        "id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a",
+        "name": "Karthik Rider",
+        "full_name": "Karthik Rider",
         "phone": "+919999900003",
         "role": "delivery_agent",
-        "status": "Active",
-        "partnerId": "AG-4492",
-        "vehicle": "TVS iQube EV Scooter",
-        "plate": "KA 01 EV 9903",
-        "drivingLicense": "DL-KA-01-2023004812",
+        "is_online": False,
+        "agent_status": "UNAVAILABLE",
+        "vehicle_type": "TVS iQube Electric Scooter",
+        "plate_number": "KA-05-EX-9921",
+        "license_number": "DL-2024-88712",
         "partnerVerified": True,
-        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300"
-    },
-    {
-        "id": "AG-0001",
-        "name": "Admin Supervisor",
-        "full_name": "Admin Supervisor",
-        "phone": "+919999900001",
-        "role": "delivery_agent",
-        "status": "Active",
-        "partnerId": "AG-0001",
-        "partnerVerified": True
-    },
-    {
-        "id": "AG-3210",
-        "name": "Test User",
-        "full_name": "Test User",
-        "phone": "+919876543210",
-        "role": "delivery_agent",
-        "status": "Active",
-        "partnerId": "AG-3210",
-        "partnerVerified": True
-    },
-    {
-        "id": "SEL-1002",
-        "name": "Banaswadi Supermarket Store",
-        "full_name": "Banaswadi Supermarket Store",
-        "phone": "+919888800002",
-        "role": "seller",
-        "status": "Active",
-        "partnerId": "SEL-1002",
-        "store_name": "Banaswadi Supermarket Store"
+        "biometricsDone": True,
+        "last_active_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": "2026-01-05T09:30:00Z"
     }
 ]
 
@@ -2107,31 +2744,706 @@ def load_users_db() -> list:
         if USERS_FILE.exists():
             with open(USERS_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if isinstance(data, list) and data:
+                if isinstance(data, list) and len(data) > 0:
                     return data
-    except Exception as e:
-        logger.error(f"Error loading users: {e}")
-    return DEFAULT_PARTNERS
+    except Exception:
+        pass
+    save_users_db(DEFAULT_PERSISTED_USERS)
+    return DEFAULT_PERSISTED_USERS
 
 def save_users_db(data: list):
     try:
         with open(USERS_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"Error saving users: {e}")
+    except Exception:
+        pass
 
 @router.get("/users")
 @router.get("/users/")
-async def get_all_users():
-    return load_users_db()
+async def get_all_users(role: str | None = None):
+    async with users_db_lock:
+        store_settings = load_store_settings()
+        users = load_users_db()
+        filtered = []
+        for u in users:
+            if isinstance(u, dict):
+                if u.get("role") == "delivery_agent":
+                    u["presence_status"] = compute_rider_presence_status(u, store_settings)
+                    u["status"] = u["presence_status"]
+                if role:
+                    r = str(role).lower()
+                    u_role = str(u.get("role", "")).lower()
+                    if r == "seller" and u_role not in ["seller", "store", "merchant"]:
+                        continue
+                    elif r in ["delivery_agent", "rider"] and u_role not in ["delivery_agent", "rider", "delivery"]:
+                        continue
+                    elif r not in ["seller", "delivery_agent", "rider"] and u_role != r:
+                        continue
+                filtered.append(u)
+        return filtered
 
 @router.post("/users")
 @router.post("/users/")
 async def create_user(payload: dict):
-    users = load_users_db()
-    users.insert(0, payload)
-    save_users_db(users)
-    return {"status": "success", "user": payload}
+    async with users_db_lock:
+        users = load_users_db()
+        if not payload.get("id"):
+            payload["id"] = f"user-{int(datetime.now().timestamp() * 1000)}"
+        if not payload.get("name"):
+            payload["name"] = payload.get("full_name", "Partner")
+        if not payload.get("created_at"):
+            payload["created_at"] = datetime.now(timezone.utc).isoformat()
+        users.insert(0, payload)
+        save_users_db(users)
+        return {"status": "success", "user": payload, **payload}
+
+@router.patch("/users/{user_id}")
+@router.patch("/users/{user_id}/")
+async def patch_user(user_id: str, payload: dict):
+    async with users_db_lock:
+        users = load_users_db()
+        updated = None
+        for u in users:
+            if str(u.get("id")) == str(user_id) or str(u.get("phone")) == str(user_id):
+                u.update(payload)
+                updated = u
+                break
+        if updated:
+            save_users_db(users)
+            return updated
+        return {"status": "error", "message": "User not found"}
+
+@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}/")
+async def delete_user(user_id: str):
+    async with users_db_lock:
+        users = load_users_db()
+        users = [u for u in users if str(u.get("id")) != str(user_id) and str(u.get("phone")) != str(user_id)]
+        save_users_db(users)
+        return {"status": "success", "message": f"User {user_id} deactivated"}
+
+def check_is_today_leave(rider_record, now):
+    today_date_str = now.strftime("%Y-%m-%d")
+    rider_id = str(rider_record.get("id") or "") if rider_record else ""
+    rider_phone = str(rider_record.get("phone") or "") if rider_record else ""
+
+    # 1. Check global fleet leaves
+    try:
+        global_leaves = load_global_leaves_db()
+        for gl in global_leaves:
+            if isinstance(gl, dict) and str(gl.get("date")) == today_date_str:
+                gl_type = str(gl.get("type") or "LEAVE").upper()
+                gl_note = gl.get("note") or ""
+                title = "Week Off" if gl_type == "WEEKOFF" else "Holiday"
+                return True, gl_type, title, gl_note
+    except Exception:
+        pass
+
+    # 2. Check rider specific leaves
+    try:
+        all_leaves = load_leaves_db()
+        for l in all_leaves:
+            if isinstance(l, dict) and str(l.get("date")) == today_date_str:
+                r_id = str(l.get("rider_id") or "")
+                if r_id in [rider_id, rider_phone]:
+                    l_type = str(l.get("type") or "LEAVE").upper()
+                    l_note = l.get("note") or ""
+                    title = "Week Off" if l_type == "WEEKOFF" else "Leave"
+                    return True, l_type, title, l_note
+    except Exception:
+        pass
+
+    # 3. Automatic Sunday Week Off (unless rider has active shift session today)
+    if now.weekday() == 6:
+        shift_sessions = rider_record.get("shift_sessions") if rider_record else []
+        has_today_session = any(isinstance(s, dict) and str(s.get("started_at") or "")[:10] == today_date_str for s in (shift_sessions or []))
+        if not has_today_session:
+            return True, "WEEKOFF", "Sunday Week Off", "Automatic Sunday Weekly Off"
+
+    return False, "", "", ""
+
+@router.get("/delivery/presence-status")
+@router.get("/delivery/presence-status/")
+async def get_rider_presence_status(user=Depends(require_roles("delivery_agent"))):
+    rider_id = str(user.get("sub") or "")
+    user_phone = str(user.get("phone") or "")
+    now = get_store_local_now()
+    today_date_str = now.strftime("%Y-%m-%d")
+    now_iso = now.isoformat()
+    store_settings = load_store_settings()
+
+    r_digits = "".join(filter(str.isdigit, str(rider_id)))
+    p_digits = "".join(filter(str.isdigit, str(user_phone)))
+
+    async with users_db_lock:
+        users = load_users_db()
+        target_user = None
+
+        for u in users:
+            if isinstance(u, dict):
+                u_id = str(u.get("id") or "")
+                u_phone = str(u.get("phone") or "")
+                u_digits = "".join(filter(str.isdigit, u_phone))
+
+                matched = False
+                if rider_id and (rider_id == u_id or rider_id == u_phone):
+                    matched = True
+                elif user_phone and (user_phone == u_phone or user_phone == u_id):
+                    matched = True
+                elif r_digits and u_digits and (r_digits == u_digits or (len(r_digits) >= 10 and len(u_digits) >= 10 and r_digits[-10:] == u_digits[-10:])):
+                    matched = True
+                elif p_digits and u_digits and (p_digits == u_digits or (len(p_digits) >= 10 and len(u_digits) >= 10 and p_digits[-10:] == u_digits[-10:])):
+                    matched = True
+
+                if matched:
+                    target_user = u
+                    break
+
+        if not target_user:
+            for u in users:
+                if isinstance(u, dict) and u.get("role") in ("delivery_agent", "rider", "delivery_partner"):
+                    target_user = u
+                    break
+
+        if target_user:
+            modified = False
+            # 1. Daily Reset Check: If shift was started on a previous day, reset to offline / UNAVAILABLE for new day
+            curr_shift = target_user.get("shift_started_at")
+            started_today = bool(curr_shift and extract_store_date_str(curr_shift) == today_date_str)
+            if not started_today:
+                if target_user.get("is_online") or target_user.get("agent_status") != "UNAVAILABLE":
+                    target_user["is_online"] = False
+                    target_user["agent_status"] = "UNAVAILABLE"
+                    target_user["auto_logged_out"] = False
+                    for s in target_user.get("shift_sessions") or []:
+                        if isinstance(s, dict) and s.get("ended_at") is None:
+                            st = str(s.get("started_at") or "")
+                            s["ended_at"] = (st[:10] + "T23:59:59+05:30") if (st and st[:10] != today_date_str) else now_iso
+                    modified = True
+
+            # 2. 30-Min Post-Shift-End Auto Logout Check
+            is_past_auto, _ = is_past_auto_shift_end_logout(store_settings, now)
+            if is_past_auto and (target_user.get("is_online") or target_user.get("agent_status") in ("AVAILABLE", "ON_DELIVERY")):
+                has_active = await rider_has_active_delivery(str(target_user.get("id") or ""), str(target_user.get("phone") or ""))
+                if has_active:
+                    target_user["agent_status"] = "ON_DELIVERY"
+                    target_user["is_online"] = True
+                    target_user["has_active_delivery"] = True
+                    target_user["auto_logged_out"] = False
+                else:
+                    target_user["is_online"] = False
+                    target_user["agent_status"] = "UNAVAILABLE"
+                    target_user["has_active_delivery"] = False
+                    target_user["auto_logged_out"] = True
+                    target_user["auto_logged_out_at"] = now_iso
+                    for s in target_user.get("shift_sessions") or []:
+                        if isinstance(s, dict) and s.get("ended_at") is None:
+                            s["ended_at"] = now_iso
+                    modified = True
+
+            target_user["presence_status"] = compute_rider_presence_status(target_user, store_settings)
+            target_user["status"] = target_user["presence_status"]
+
+            if modified:
+                save_users_db(users)
+
+            is_leave, l_type, l_title, l_note = check_is_today_leave(target_user, now)
+            return {
+                "status": "success",
+                "user": target_user,
+                "auto_logged_out": bool(target_user.get("auto_logged_out", False)),
+                "is_leave_today": is_leave,
+                "leave_type": l_type,
+                "leave_title": l_title,
+                "leave_note": l_note
+            }
+
+    return {"status": "success", "user": {"is_online": False, "agent_status": "UNAVAILABLE"}, "auto_logged_out": False}
+
+@router.post("/delivery/presence")
+@router.post("/delivery/presence/")
+async def update_rider_presence(payload: dict):
+    agent_id = str(payload.get("agent_id") or payload.get("id") or payload.get("phone") or "").strip()
+    status = str(payload.get("status") or "UNAVAILABLE").upper()
+    phone = str(payload.get("phone") or "").strip()
+    
+    store_settings = load_store_settings()
+    now = get_store_local_now()
+    now_iso = now.isoformat()
+    today_date_str = now.strftime("%Y-%m-%d")
+
+    # Check if rider is scheduled on leave or week off today
+    dummy_rec = {"id": agent_id, "phone": phone}
+    is_leave, l_type, l_title, l_note = check_is_today_leave(dummy_rec, now)
+    if is_leave and status in ("AVAILABLE", "ON_DELIVERY"):
+        status = "UNAVAILABLE"
+        return {
+            "status": "error",
+            "message": f"🏖️ {l_title} Today: You are scheduled on leave or week off today. Rider dispatch is paused.",
+            "agent_status": "UNAVAILABLE",
+            "is_online": False,
+            "is_leave_today": True,
+            "leave_type": l_type,
+            "leave_title": l_title,
+            "leave_note": l_note
+        }
+    
+    is_within_hours, _, is_late_window = is_within_store_hours(store_settings, now)
+    
+    # Server-side enforcement of store hours & 30-min auto shift end
+    is_past_auto, close_str = is_past_auto_shift_end_logout(store_settings, now)
+    if (is_past_auto or not is_within_hours) and status in ("AVAILABLE", "ON_DELIVERY"):
+        status = "UNAVAILABLE"
+        return {
+            "status": "error",
+            "message": f"Store is closed (Working hours: {store_settings.get('store_open_time', '09:00')} - {store_settings.get('store_close_time', '22:00')}). Auto shift-end logout is in effect.",
+            "agent_status": "UNAVAILABLE",
+            "is_online": False,
+            "auto_logged_out": is_past_auto
+        }
+
+    battery_low = bool(payload.get("battery_low", False))
+    connectivity_lost_at = payload.get("connectivity_lost_at")
+
+    # Real GPS location payload parsing
+    location_payload = payload.get("location") or {}
+    lat = payload.get("lat") or location_payload.get("lat")
+    lng = payload.get("lng") or location_payload.get("lng")
+    accuracy = payload.get("accuracy") or location_payload.get("accuracy")
+
+    a_digits = "".join(filter(str.isdigit, str(agent_id)))
+    p_digits = "".join(filter(str.isdigit, str(phone)))
+
+    # ATOMIC READ-MODIFY-WRITE CYCLE UNDER LOCK
+    async with users_db_lock:
+        users = load_users_db()
+        updated_user = None
+
+        for u in users:
+            if isinstance(u, dict) and u.get("role") in ("delivery_agent", "rider", "delivery"):
+                u_id = str(u.get("id") or "")
+                u_phone = str(u.get("phone") or "")
+                u_agent = str(u.get("agentId") or u.get("partnerId") or "")
+                u_digits = "".join(filter(str.isdigit, u_phone))
+
+                matched = False
+                if agent_id and (agent_id == u_id or agent_id == u_phone or agent_id == u_agent):
+                    matched = True
+                elif phone and (phone == u_phone or phone == u_id):
+                    matched = True
+                elif a_digits and u_digits and (a_digits == u_digits or (len(a_digits) >= 10 and len(u_digits) >= 10 and a_digits[-10:] == u_digits[-10:])):
+                    matched = True
+                elif p_digits and u_digits and (p_digits == u_digits or (len(p_digits) >= 10 and len(u_digits) >= 10 and p_digits[-10:] == u_digits[-10:])):
+                    matched = True
+
+                if matched:
+                    ver = str(u.get("verification_status") or "").upper()
+                    partner_ver = bool(u.get("partnerVerified", False) or u.get("verified_by_admin", False))
+                    is_verified = (partner_ver or ver in ("VERIFIED", "ADMIN_VERIFIED"))
+
+                    if not is_verified and status in ("AVAILABLE", "ON_DELIVERY"):
+                        u["is_online"] = False
+                        u["agent_status"] = "UNAVAILABLE"
+                        u["presence_status"] = "ABSENT"
+                        u["status"] = "ABSENT"
+                        save_users_db(users)
+                        return {
+                            "status": "error",
+                            "message": "🔒 Verification Under Review: Your partner documents are pending admin approval. You cannot go Active until approved.",
+                            "agent_status": "UNAVAILABLE",
+                            "is_online": False,
+                            "verification_status": ver or "PENDING"
+                        }
+
+                    going_online = (status != "UNAVAILABLE")
+                    u["is_online"] = going_online
+                    u["last_active_at"] = now_iso
+                    u["agent_status"] = status
+                    u["battery_low"] = battery_low
+                    if going_online:
+                        u["auto_logged_out"] = False
+                    if lat is not None and lng is not None:
+                        try:
+                            u["lat"] = float(lat)
+                            u["lng"] = float(lng)
+                            if accuracy is not None:
+                                u["accuracy"] = float(accuracy)
+                            u["last_location_at"] = now_iso
+                        except (ValueError, TypeError):
+                            pass
+                    if connectivity_lost_at:
+                        u["connectivity_lost_at"] = connectivity_lost_at
+                    elif not going_online:
+                        u["connectivity_lost_at"] = None
+                    
+                    curr_shift = u.get("shift_started_at")
+                    started_today = bool(curr_shift and str(curr_shift)[:10] == today_date_str)
+                    
+                    if going_online and not started_today:
+                        u["shift_started_at"] = now_iso
+                        u["arrived_late_today"] = is_late_window
+
+                    # Shift Sessions Log tracking
+                    shift_sessions = u.get("shift_sessions") or []
+                    if not isinstance(shift_sessions, list):
+                        shift_sessions = []
+
+                    # Auto-close old open sessions from previous dates
+                    for s in shift_sessions:
+                        if isinstance(s, dict) and s.get("ended_at") is None:
+                            st = str(s.get("started_at") or "")
+                            if st and st[:10] != today_date_str:
+                                s["ended_at"] = st[:10] + "T23:59:59+05:30"
+
+                    if going_online:
+                        has_open_today = any(isinstance(s, dict) and s.get("ended_at") is None and str(s.get("started_at") or "")[:10] == today_date_str for s in shift_sessions)
+                        if not has_open_today:
+                            shift_sessions.append({
+                                "started_at": now_iso,
+                                "ended_at": None
+                            })
+                    else:
+                        for s in shift_sessions:
+                            if isinstance(s, dict) and s.get("ended_at") is None:
+                                s["ended_at"] = now_iso
+                    u["shift_sessions"] = shift_sessions
+                    
+                    u["presence_status"] = compute_rider_presence_status(u, store_settings)
+                    u["status"] = u["presence_status"]
+                    if not u.get("verification_status"):
+                        u["verification_status"] = "VERIFIED"
+                    updated_user = u
+                    break
+                    
+        if updated_user:
+            save_users_db(users)
+            return {"status": "success", "user": updated_user, "auto_logged_out": bool(updated_user.get("auto_logged_out", False))}
+        else:
+            # Create a light profile record if user doesn't exist yet
+            going_online = (status != "UNAVAILABLE")
+            initial_sessions = []
+            if going_online:
+                initial_sessions.append({"started_at": now_iso, "ended_at": None})
+            new_rider = {
+                "id": agent_id or f"rider-{int(now.timestamp())}",
+                "name": payload.get("name") or "Delivery Agent",
+                "phone": phone or agent_id,
+                "role": "delivery_agent",
+                "is_online": going_online,
+                "agent_status": status,
+                "shift_started_at": now_iso if going_online else None,
+                "shift_sessions": initial_sessions,
+                "arrived_late_today": is_late_window if going_online else False,
+                "battery_low": battery_low,
+                "verification_status": "VERIFIED",
+                "auto_logged_out": False,
+                "created_at": now_iso
+            }
+            new_rider["presence_status"] = compute_rider_presence_status(new_rider, store_settings)
+            new_rider["status"] = new_rider["presence_status"]
+            users.append(new_rider)
+            save_users_db(users)
+            return {"status": "success", "user": new_rider, "auto_logged_out": False}
+
+active_delivery_websockets = set()
+
+async def broadcast_order_pulse(data: dict = None):
+    payload = {
+        "type": "ORDER_PULSE",
+        "timestamp": get_store_local_now().isoformat(),
+        **(data or {})
+    }
+    dead_sockets = []
+    for ws in list(active_delivery_websockets):
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            dead_sockets.append(ws)
+    for ws in dead_sockets:
+        active_delivery_websockets.discard(ws)
+
+@router.websocket("/delivery/ws")
+@router.websocket("/delivery/ws/")
+async def delivery_websocket(websocket: WebSocket):
+    await websocket.accept()
+    active_delivery_websockets.add(websocket)
+    try:
+        while True:
+            try:
+                recv_text = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
+                if recv_text:
+                    try:
+                        client_msg = json.loads(recv_text)
+                        if client_msg.get("type") == "PING":
+                            await websocket.send_json({"type": "PONG", "timestamp": get_store_local_now().isoformat()})
+                    except Exception:
+                        pass
+            except asyncio.TimeoutError:
+                pass
+            
+            await asyncio.sleep(2.0)
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        active_delivery_websockets.discard(websocket)
+
+@router.post("/delivery/sos")
+@router.post("/delivery/sos/")
+async def trigger_rider_sos(payload: dict, user=Depends(require_roles("delivery_agent"))):
+    rider_id = str(user.get("sub") or payload.get("rider_id") or "").strip()
+    rider_name = str(user.get("name") or payload.get("rider_name") or "Delivery Partner").strip()
+    order_id = payload.get("order_id")
+    coords = payload.get("coords") or {}
+    now = get_store_local_now()
+    sos_id = f"SOS-{int(now.timestamp())}"
+
+    sos_record = {
+        "id": sos_id,
+        "rider_id": rider_id,
+        "rider_name": rider_name,
+        "order_id": order_id,
+        "coords": coords,
+        "status": "ACTIVE",
+        "timestamp": now.isoformat(),
+        "date_formatted": now.strftime("%b %d, %Y at %I:%M %p")
+    }
+
+    sos_list = await cache_get("cloud:sos_alerts") or []
+    if not isinstance(sos_list, list):
+        sos_list = []
+    sos_list.insert(0, sos_record)
+    await cache_set("cloud:sos_alerts", sos_list, ttl_seconds=86400 * 7)
+
+    await redis_publish("sos:alerts", sos_record)
+
+    return {
+        "status": "success",
+        "sos_id": sos_id,
+        "timestamp": sos_record["timestamp"],
+        "date_formatted": sos_record["date_formatted"],
+        "message": "Emergency SOS alert transmitted to Dispatch Admin."
+    }
+
+@router.post("/admin/riders/{rider_id}/verify")
+@router.post("/admin/riders/{rider_id}/verify/")
+async def verify_or_reject_rider(rider_id: str, payload: dict):
+    action = str(payload.get("action", "")).lower()
+    async with users_db_lock:
+        users = load_users_db()
+        target_user = None
+        for u in users:
+            if isinstance(u, dict):
+                u_id = str(u.get("id") or "")
+                u_phone = str(u.get("phone") or "")
+                if rider_id == u_id or rider_id == u_phone:
+                    target_user = u
+                    break
+
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Rider not found")
+
+        curr_ver = str(target_user.get("verification_status") or "").upper()
+        is_already_verified = curr_ver in ["VERIFIED", "ADMIN_VERIFIED", "AUTO_VERIFIED"] or bool(target_user.get("verified_by_admin"))
+        if is_already_verified and action == "reject":
+            raise HTTPException(status_code=400, detail="Rider is already verified and status cannot be changed")
+
+        if action == "verify":
+            target_user["verification_status"] = "VERIFIED"
+            target_user["verified_by_admin"] = True
+        elif action == "reject":
+            target_user["verification_status"] = "REJECTED"
+            target_user["verified_by_admin"] = False
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+
+        save_users_db(users)
+        return {"status": "success", "user": target_user}
+
+@router.get("/admin/riders/{rider_id}/delivery-stats")
+@router.get("/admin/riders/{rider_id}/delivery-stats/")
+async def get_rider_delivery_analytics(rider_id: str):
+    now = get_store_local_now()
+    today_str = now.strftime("%Y-%m-%d")
+    yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    day_before_str = (now - timedelta(days=2)).strftime("%Y-%m-%d")
+    month_prefix = now.strftime("%Y-%m")
+
+    # Build comprehensive alias set
+    r_clean = str(rider_id).strip()
+    all_keys = {r_clean}
+    async with users_db_lock:
+        users = load_users_db()
+    for u in users:
+        if isinstance(u, dict):
+            u_id = str(u.get("id") or "").strip()
+            u_phone = str(u.get("phone") or "").strip()
+            if r_clean in (u_id, u_phone):
+                if u_id:
+                    all_keys.add(u_id)
+                if u_phone:
+                    all_keys.add(u_phone)
+                    digits = "".join(filter(str.isdigit, u_phone))
+                    if digits:
+                        all_keys.add(digits)
+                        all_keys.add(f"+{digits}")
+                break
+
+    # Filter to valid UUIDs for Postgres query
+    import re
+    uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
+    pg_uuids = [k for k in all_keys if uuid_pattern.match(k)]
+    if not pg_uuids:
+        resolved = await resolve_valid_rider_id(r_clean)
+        if resolved and uuid_pattern.match(resolved):
+            pg_uuids.append(resolved)
+
+    db_orders = []
+    if pg_uuids:
+        try:
+            db_orders = await store.get("orders", {
+                "delivery_agent_id": f"in.({','.join(pg_uuids)})",
+                "status": "eq.delivered",
+                "order": "created_at.desc",
+                "limit": 500
+            }) or []
+        except Exception:
+            db_orders = []
+
+    if not isinstance(db_orders, list):
+        db_orders = []
+
+    # Also pull from rider history Redis cache
+    cache_orders = []
+    for k in all_keys:
+        h = await cache_get(f"cloud:rider_history:{k}")
+        if isinstance(h, list):
+            cache_orders.extend(h)
+
+    # Combine unique orders by ID
+    combined_map = {}
+    for o in db_orders:
+        oid = str(o.get("id") or o.get("order_id") or o.get("orderNumber") or "")
+        if oid:
+            combined_map[oid.lower()] = o
+
+    for o in cache_orders:
+        oid = str(o.get("id") or o.get("orderId") or o.get("order_id") or o.get("orderNumber") or "")
+        if oid and oid.lower() not in combined_map:
+            combined_map[oid.lower()] = o
+
+    all_delivered = list(combined_map.values())
+
+    today_count = 0
+    yesterday_count = 0
+    day_before_count = 0
+    month_count = 0
+
+    for o in all_delivered:
+        ts = str(o.get("completedAtISO") or o.get("delivered_at") or o.get("completed_at") or o.get("timestamp") or o.get("created_at") or "")
+        if not ts:
+            continue
+        date_part = ts[:10]
+        if date_part == today_str:
+            today_count += 1
+        if date_part == yesterday_str:
+            yesterday_count += 1
+        if date_part == day_before_str:
+            day_before_count += 1
+        if date_part.startswith(month_prefix):
+            month_count += 1
+
+    return {
+        "today": today_count,
+        "yesterday": yesterday_count,
+        "day_before_yesterday": day_before_count,
+        "this_month": month_count,
+        "total_completed": len(all_delivered)
+    }
+
+@router.get("/admin/riders/{rider_id}/shift-log")
+@router.get("/admin/riders/{rider_id}/shift-log/")
+async def get_rider_shift_log(rider_id: str, date: str | None = None):
+    now = get_store_local_now()
+    target_date = date or now.strftime("%Y-%m-%d")
+    
+    async with users_db_lock:
+        users = load_users_db()
+    
+    target_rider = None
+    for u in users:
+        if isinstance(u, dict):
+            u_id = str(u.get("id") or "")
+            u_phone = str(u.get("phone") or "")
+            if rider_id == u_id or rider_id == u_phone:
+                target_rider = u
+                break
+                
+    if not target_rider:
+        return {"date": target_date, "sessions": [], "total_seconds": 0, "total_hours_formatted": "0 mins"}
+
+    all_sessions = target_rider.get("shift_sessions") or []
+    if not isinstance(all_sessions, list):
+        all_sessions = []
+
+    day_sessions = []
+    total_seconds = 0
+
+    for s in all_sessions:
+        if not isinstance(s, dict) or not s.get("started_at"):
+            continue
+        st_str = str(s.get("started_at"))
+        if st_str[:10] == target_date:
+            day_sessions.append(s)
+            try:
+                st_dt = datetime.fromisoformat(st_str)
+                if s.get("ended_at"):
+                    end_dt = datetime.fromisoformat(str(s.get("ended_at")))
+                else:
+                    end_dt = now
+                sec = max(0, int((end_dt - st_dt).total_seconds()))
+                total_seconds += sec
+            except Exception:
+                pass
+
+    hours = total_seconds // 3600
+    mins = (total_seconds % 3600) // 60
+    formatted = f"{hours}h {mins}m" if hours > 0 else f"{mins} mins"
+
+    return {
+        "date": target_date,
+        "sessions": day_sessions,
+        "total_seconds": total_seconds,
+        "total_hours_formatted": formatted
+    }
+
+@router.get("/admin/riders/presence-summary")
+@router.get("/admin/riders/presence-summary/")
+async def get_presence_summary():
+    store_settings = load_store_settings()
+    async with users_db_lock:
+        users = load_users_db()
+    riders = [u for u in users if isinstance(u, dict) and u.get("role") == "delivery_agent"]
+    
+    present = 0
+    absent = 0
+    late = 0
+    
+    for r in riders:
+        st = compute_rider_presence_status(r, store_settings)
+        if st == "PRESENT":
+            present += 1
+        elif st == "LATE":
+            late += 1
+        else:
+            absent += 1
+            
+    return {
+        "status": "success",
+        "present": present,
+        "absent": absent,
+        "late": late,
+        "total": len(riders)
+    }
 
 # ==============================================================================
 # SUPPORT TICKETS DISPATCH & ADMIN API
@@ -2260,17 +3572,19 @@ async def update_ticket(ticket_id: str, payload: dict):
 @router.get("/delivery/biometrics/{rider_id}")
 @router.get("/delivery/biometrics/{rider_id}/")
 async def get_biometrics(rider_id: str):
-    cached = await cache_get(f"cache:biometrics:{rider_id}")
-    if cached:
-        return cached
-
     db_data = load_rider_biometrics()
-    record = db_data.get(rider_id)
-    if record:
-        await cache_set(f"cache:biometrics:{rider_id}", record, ttl_seconds=86400 * 30)
-        return record
+    record = dict(db_data.get(rider_id) or {})
 
-    return {"rider_id": rider_id, "selfie_image": None}
+    users = load_users_db()
+    matched = next((u for u in users if isinstance(u, dict) and (str(u.get("id")) == rider_id or str(u.get("phone")) == rider_id)), None)
+
+    if matched:
+        c_name = matched.get("name") or matched.get("full_name") or "Delivery Partner"
+        record["rider_name"] = c_name
+        record["name"] = c_name
+        record["full_name"] = c_name
+
+    return record
 
 
 # ==============================================================================
@@ -2341,18 +3655,1086 @@ async def get_top_products(period: str = "30days"):
     ]
 
 @router.get("/seller/dashboard/payouts")
-async def get_payouts():
+@router.get("/seller/dashboard/payouts/")
+async def get_seller_payouts():
+    return {"status": "success", "payouts": [], "total_payout": 0}
+
+@router.get("/admin/product-suggestions")
+@router.get("/admin/product-suggestions/")
+async def get_admin_product_suggestions():
+    return {"status": "success", "suggestions": []}
+
+leaves_db_lock = asyncio.Lock()
+LEAVES_FILE = os.path.join(os.path.dirname(__file__), "data", "leaves.json")
+
+def load_leaves_db() -> list:
+    if not os.path.exists(LEAVES_FILE):
+        return []
+    try:
+        with open(LEAVES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_leaves_db(data: list):
+    os.makedirs(os.path.dirname(LEAVES_FILE), exist_ok=True)
+    temp_file = f"{LEAVES_FILE}.tmp_{int(time() * 1000)}"
+    with open(temp_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    os.replace(temp_file, LEAVES_FILE)
+
+async def build_rider_attendance_calendar(rider_id: str, month: str | None = None, requesting_user_phone: str | None = None) -> dict:
+    rider_id = str(rider_id or "").strip()
+    user_phone = str(requesting_user_phone or "").strip()
+    now = get_store_local_now()
+    
+    if not month or len(month) != 7 or "-" not in month:
+        target_month_str = now.strftime("%Y-%m")
+    else:
+        target_month_str = month
+
+    try:
+        year_num, month_num = map(int, target_month_str.split("-"))
+        num_days = calendar.monthrange(year_num, month_num)[1]
+    except Exception:
+        year_num, month_num = now.year, now.month
+        target_month_str = now.strftime("%Y-%m")
+        num_days = calendar.monthrange(year_num, month_num)[1]
+
+    async with users_db_lock:
+        users = load_users_db()
+    
+    rider_canon, rider_db = normalize_phone(rider_id)
+    user_canon, user_db = normalize_phone(user_phone)
+
+    rider_record = None
+    for u in users:
+        if isinstance(u, dict):
+            u_id = str(u.get("id") or "")
+            u_phone = str(u.get("phone") or "")
+            u_canon, u_db_phone = normalize_phone(u_phone)
+            if (
+                rider_id in [u_id, u_phone]
+                or (rider_canon and u_canon and u_canon == rider_canon)
+                or (user_phone and user_phone in [u_id, u_phone])
+                or (user_canon and u_canon and u_canon == user_canon)
+            ):
+                rider_record = u
+                break
+
+    # If not found by direct ID in users.json and rider_id is UUID, check Supabase profiles
+    if not rider_record and is_valid_uuid(rider_id):
+        try:
+            p_rows = await store.get("profiles", {"id": f"eq.{rider_id}"})
+            if p_rows and p_rows[0].get("phone"):
+                prof_phone = str(p_rows[0]["phone"])
+                p_canon, p_db = normalize_phone(prof_phone)
+                for u in users:
+                    if isinstance(u, dict):
+                        u_phone = str(u.get("phone") or "")
+                        u_canon, u_db_phone = normalize_phone(u_phone)
+                        if (p_canon and u_canon and u_canon == p_canon) or (p_db and u_db_phone and u_db_phone == p_db):
+                            rider_record = u
+                            break
+        except Exception:
+            pass
+
+    async with leaves_db_lock:
+        all_leaves = load_leaves_db()
+
+    async with global_leaves_db_lock:
+        global_leaves = load_global_leaves_db()
+
+    # Map rider leaves & global fleet leaves for target month
+    leaves_map = {}
+    for gl in global_leaves:
+        if isinstance(gl, dict):
+            gl_date = str(gl.get("date") or "")
+            if gl_date.startswith(target_month_str):
+                leaves_map[gl_date] = gl
+
+    for l in all_leaves:
+        if isinstance(l, dict):
+            r_id = str(l.get("rider_id") or "")
+            l_date = str(l.get("date") or "")
+            r_canon, _ = normalize_phone(r_id)
+            if (
+                r_id in [rider_id, user_phone]
+                or (rider_canon and r_canon and r_canon == rider_canon)
+                or (user_canon and r_canon and r_canon == user_canon)
+                or (rider_record and r_id == str(rider_record.get("id")))
+            ) and l_date.startswith(target_month_str):
+                leaves_map[l_date] = l
+
+    today_date = now.date()
+
+    # Collect all dates where rider had order delivery activity in target month
+    order_active_dates = set()
+    try:
+        redis_queue = await cache_get("cloud:orders_list") or []
+        if isinstance(redis_queue, list):
+            for o in redis_queue:
+                if isinstance(o, dict):
+                    o_agent = str(o.get("delivery_agent_id") or o.get("agent_id") or o.get("assigned_agent_id") or "")
+                    o_phone = str(o.get("delivery_agent_phone") or "")
+                    oa_canon, _ = normalize_phone(o_agent)
+                    op_canon, _ = normalize_phone(o_phone)
+                    if (
+                        o_agent in [rider_id, user_phone]
+                        or (rider_canon and (oa_canon == rider_canon or op_canon == rider_canon))
+                        or (user_canon and (oa_canon == user_canon or op_canon == user_canon))
+                        or (user_phone and o_phone == user_phone)
+                        or (rider_record and o_agent == str(rider_record.get("id")))
+                    ):
+                        created = str(o.get("created_at") or o.get("delivered_at") or "")
+                        if created and len(created) >= 10:
+                            order_active_dates.add(created[:10])
+    except Exception:
+        pass
+
+    # Determine rider join date
+    join_date = None
+    if rider_record:
+        join_raw = str(rider_record.get("created_at") or rider_record.get("joined_at") or rider_record.get("joined_date") or rider_record.get("joinedDate") or "")
+        if join_raw:
+            if len(join_raw) >= 10 and join_raw[:10].count("-") == 2:
+                try:
+                    join_date = date.fromisoformat(join_raw[:10])
+                except Exception:
+                    pass
+            elif "2026" in join_raw or "aug" in join_raw.lower() or "sep" in join_raw.lower():
+                join_date = date(2026, 8, 25)
+
+    if not join_date:
+        join_date = date(2026, 8, 25)
+
+    # Get shift sessions log and shift_started_at for rider
+    shift_sessions = (rider_record.get("shift_sessions") or []) if rider_record else []
+    shift_started_at = (rider_record.get("shift_started_at") or "") if rider_record else ""
+    arrived_late_today = bool(rider_record.get("arrived_late_today")) if rider_record else False
+
+    store_settings = await get_store_settings()
+    store_open = store_settings.get("store_open_time") or "09:00"
+    grace = int(store_settings.get("late_grace_minutes") or 15)
+    open_mins = int(store_open.split(":")[0]) * 60 + int(store_open.split(":")[1])
+    grace_cutoff_mins = open_mins + grace
+
+    expected_start_fmt = ""
+    try:
+        exp_h, exp_m = map(int, store_open.split(":"))
+        exp_mer = "AM" if exp_h < 12 else "PM"
+        exp_h12 = exp_h if (1 <= exp_h <= 12) else (exp_h - 12 if exp_h > 12 else 12)
+        expected_start_fmt = f"{exp_h12:02d}:{exp_m:02d} {exp_mer}"
+    except Exception:
+        expected_start_fmt = store_open
+
+    days_result = []
+    summary_counts = {"present": 0, "late": 0, "absent": 0, "leave": 0, "total_days": num_days}
+    before_join_days = 0
+    upcoming_days = 0
+
+    for day_i in range(1, num_days + 1):
+        day_date_str = f"{target_month_str}-{day_i:02d}"
+        day_date = date(year_num, month_num, day_i)
+
+        leave_entry = leaves_map.get(day_date_str)
+
+        # 1. LEAVE strictly overrides all status logic
+        if leave_entry:
+            l_type = str(leave_entry.get("type") or "LEAVE").upper()
+            l_note = leave_entry.get("note") or ""
+            days_result.append({
+                "date": day_date_str,
+                "status": "LEAVE",
+                "color": "purple",
+                "leave_type": l_type,
+                "detail": f"{l_type.capitalize()} — {l_note}" if l_note else f"{l_type.capitalize()}",
+                "note": l_note,
+                "check_in": None,
+                "check_out": None,
+                "duration": None,
+                "minutes_late": 0,
+                "expected_start": expected_start_fmt
+            })
+            summary_counts["leave"] += 1
+            continue
+
+        # Check for shift session, order activity, or active login on that day
+        is_today = (day_date_str == today_date.strftime("%Y-%m-%d"))
+        is_online_now = bool(rider_record.get("is_online")) and (rider_record.get("agent_status") in ["AVAILABLE", "ON_DELIVERY"]) if rider_record else False
+
+        day_sessions = [s for s in shift_sessions if isinstance(s, dict) and (str(s.get("started_at") or "")[:10] == day_date_str or str(s.get("ended_at") or "")[:10] == day_date_str)]
+        if is_today:
+            today_completed_sessions = [s for s in shift_sessions if isinstance(s, dict) and str(s.get("started_at") or "")[:10] == day_date_str and s.get("ended_at") is not None]
+            has_session = (is_online_now) or (len(today_completed_sessions) > 0) or (day_date_str in order_active_dates)
+        else:
+            has_session = len(day_sessions) > 0 or (shift_started_at[:10] == day_date_str) or (day_date_str in order_active_dates)
+
+        # 2. Before rider join date (unless rider had active session/orders on that day)
+        if join_date and day_date < join_date and not has_session:
+            before_join_days += 1
+            days_result.append({
+                "date": day_date_str,
+                "status": "BEFORE_JOIN",
+                "color": "neutral",
+                "leave_type": None,
+                "detail": "Before rider join date",
+                "note": None,
+                "check_in": None,
+                "check_out": None,
+                "duration": None,
+                "minutes_late": 0,
+                "expected_start": expected_start_fmt
+            })
+            continue
+
+        # 4. Automatic Sunday Weekly Off (Day 6 of week = Sunday)
+        if day_date.weekday() == 6 and not has_session:
+            days_result.append({
+                "date": day_date_str,
+                "status": "LEAVE",
+                "color": "purple",
+                "leave_type": "WEEKOFF",
+                "detail": "Sunday Weekly Off",
+                "note": "Sunday Weekly Off",
+                "check_in": None,
+                "check_out": None,
+                "duration": None,
+                "minutes_late": 0,
+                "expected_start": expected_start_fmt
+            })
+            summary_counts["leave"] += 1
+            continue
+
+        # 5. Future day or today before shift has started
+        if day_date > today_date or (is_today and not has_session):
+            upcoming_days += 1
+            days_result.append({
+                "date": day_date_str,
+                "status": "UPCOMING",
+                "color": "neutral",
+                "leave_type": None,
+                "detail": "Shift not started yet • Tap Go Active to start today’s shift" if is_today else "Upcoming day",
+                "note": None,
+                "check_in": None,
+                "check_out": None,
+                "duration": None,
+                "minutes_late": 0,
+                "expected_start": expected_start_fmt
+            })
+            continue
+
+        if has_session:
+            is_late = False
+            mins_late = 0
+
+            # Calculate earliest start, latest end, and overall shift duration
+            day_st = None
+            day_end = None
+            has_live = False
+            total_sec = 0
+
+            target_sessions = day_sessions or ([{"started_at": shift_started_at, "ended_at": None}] if is_today and shift_started_at else [])
+            for s in target_sessions:
+                st_val = s.get("started_at")
+                if st_val:
+                    try:
+                        st_dt = datetime.fromisoformat(str(st_val))
+                        if not day_st or st_dt < day_st:
+                            day_st = st_dt
+                        end_val = s.get("ended_at")
+                        if end_val:
+                            end_dt = datetime.fromisoformat(str(end_val))
+                            if not day_end or end_dt > day_end:
+                                day_end = end_dt
+                            total_sec += max(0, int((end_dt - st_dt).total_seconds()))
+                        else:
+                            has_live = True
+                            total_sec += max(0, int((now - st_dt).total_seconds()))
+                    except Exception:
+                        pass
+
+            shift_period_str = ""
+            st_time_str = None
+            end_time_str = None
+            dur_str = None
+
+            if day_st:
+                st_time = day_st.strftime("%I:%M %p").lstrip("0")
+                st_time_str = st_time
+                if has_live:
+                    end_time = "Still Active"
+                elif day_end:
+                    end_time = day_end.strftime("%I:%M %p").lstrip("0")
+                else:
+                    end_time = "Still Active" if is_today else ""
+                end_time_str = end_time
+
+                hours = total_sec // 3600
+                mins = (total_sec % 3600) // 60
+                secs = total_sec % 60
+                if hours > 0:
+                    dur = f"{hours}h {mins}m"
+                elif mins > 0:
+                    dur = f"{mins} mins"
+                else:
+                    dur = f"{secs}s"
+                dur_str = dur
+
+                if end_time:
+                    shift_period_str = f" • {st_time} — {end_time} ({dur})"
+                else:
+                    shift_period_str = f" • {st_time} ({dur})"
+
+            # Find earliest session start time on day_date_str or shift_started_at
+            st_str = ""
+            if day_sessions:
+                st_str = str(day_sessions[0].get("started_at") or "")
+            elif is_today and shift_started_at:
+                st_str = str(shift_started_at)
+            
+            if st_str and "T" in st_str:
+                try:
+                    time_part = st_str.split("T")[1][:5]
+                    st_mins = int(time_part.split(":")[0]) * 60 + int(time_part.split(":")[1])
+                    if st_mins > grace_cutoff_mins:
+                        is_late = True
+                        mins_late = max(0, st_mins - open_mins)
+                except Exception:
+                    is_late = arrived_late_today if is_today else False
+                    mins_late = 20 if is_late else 0
+            elif is_today:
+                is_late = arrived_late_today
+                mins_late = 20 if is_late else 0
+
+            if is_late:
+                days_result.append({
+                    "date": day_date_str,
+                    "status": "LATE",
+                    "color": "yellow",
+                    "leave_type": None,
+                    "detail": f"Late — Shift started after cutoff{shift_period_str}",
+                    "note": None,
+                    "check_in": st_time_str,
+                    "check_out": end_time_str,
+                    "duration": dur_str,
+                    "minutes_late": mins_late,
+                    "expected_start": expected_start_fmt
+                })
+                summary_counts["late"] += 1
+            else:
+                days_result.append({
+                    "date": day_date_str,
+                    "status": "PRESENT",
+                    "color": "green",
+                    "leave_type": None,
+                    "detail": f"Present — Shift started on time{shift_period_str}",
+                    "note": None,
+                    "check_in": st_time_str,
+                    "check_out": end_time_str,
+                    "duration": dur_str,
+                    "minutes_late": 0,
+                    "expected_start": expected_start_fmt
+                })
+                summary_counts["present"] += 1
+        else:
+            # Past / current day with no shift & no leave assigned -> ABSENT
+            days_result.append({
+                "date": day_date_str,
+                "status": "ABSENT",
+                "color": "red",
+                "leave_type": None,
+                "detail": "Absent — Store open, no shift recorded",
+                "note": None,
+                "check_in": None,
+                "check_out": None,
+                "duration": None,
+                "minutes_late": 0,
+                "expected_start": expected_start_fmt
+            })
+            summary_counts["absent"] += 1
+
+    working_days = max(0, num_days - summary_counts["leave"] - before_join_days - upcoming_days)
+    present_total = summary_counts["present"] + summary_counts["late"]
+    if working_days > 0:
+        attendance_rate = round((present_total / working_days) * 100, 1)
+    else:
+        attendance_rate = 100.0 if present_total > 0 else 0.0
+
+    summary_counts["attendance_rate"] = attendance_rate
+    summary_counts["working_days"] = working_days
+
     return {
-        "amountToReceive": 48750,
-        "pendingSettlement": 12500,
-        "nextPayoutDate": 'Sep 2026',
-        "lastPayoutAmount": 35200,
-        "lastPayoutDate": 'Aug 2026',
-        "recentTransactions": [
-            { "id": 'SET-9921', "date": 'Aug 2026', "type": 'Payout', "amount": 35200, "status": 'Completed' },
-            { "id": 'SET-9920', "date": 'Aug 2026', "type": 'Payout', "amount": 41100, "status": 'Completed' }
-        ]
+        "month": target_month_str,
+        "summary": summary_counts,
+        "days": days_result,
+        "attendance_rate": attendance_rate,
+        "working_days": working_days
     }
+
+@router.get("/delivery/attendance")
+@router.get("/delivery/attendance/")
+async def get_rider_attendance(month: str | None = None, user=Depends(require_roles("delivery_agent"))):
+    rider_id = str(user.get("sub") or user.get("id") or user.get("phone") or "")
+    user_phone = str(user.get("phone") or "")
+    return await build_rider_attendance_calendar(rider_id=rider_id, month=month, requesting_user_phone=user_phone)
+
+@router.get("/admin/riders/{rider_id}/attendance")
+@router.get("/admin/riders/{rider_id}/attendance/")
+async def get_admin_rider_attendance(rider_id: str, month: str | None = None, user=Depends(require_roles("admin"))):
+    return await build_rider_attendance_calendar(rider_id=rider_id, month=month)
+
+@router.get("/admin/riders/{rider_id}/leaves")
+@router.get("/admin/riders/{rider_id}/leaves/")
+async def get_admin_rider_leaves(rider_id: str):
+    async with leaves_db_lock:
+        all_leaves = load_leaves_db()
+    
+    async with users_db_lock:
+        users = load_users_db()
+    
+    target_rider = None
+    for u in users:
+        if isinstance(u, dict):
+            if rider_id in [str(u.get("id") or ""), str(u.get("phone") or "")]:
+                target_rider = u
+                break
+
+    r_id = str(target_rider.get("id") if target_rider else rider_id)
+    r_phone = str(target_rider.get("phone") if target_rider else rider_id)
+
+    rider_leaves = [l for l in all_leaves if isinstance(l, dict) and str(l.get("rider_id")) in [r_id, r_phone, rider_id]]
+    rider_leaves.sort(key=lambda x: str(x.get("date")), reverse=True)
+    return rider_leaves
+
+@router.post("/admin/riders/{rider_id}/leave")
+@router.post("/admin/riders/{rider_id}/leave/")
+async def assign_rider_leave(rider_id: str, payload: dict):
+    leave_date = str(payload.get("date") or "").strip()
+    leave_type = str(payload.get("type") or "LEAVE").upper()
+    leave_note = str(payload.get("note") or "").strip()
+
+    if not leave_date or len(leave_date) != 10:
+        raise HTTPException(status_code=400, detail="Invalid date format YYYY-MM-DD")
+
+    if leave_type not in ["WEEKOFF", "HOLIDAY", "LEAVE"]:
+        leave_type = "LEAVE"
+
+    async with leaves_db_lock:
+        all_leaves = load_leaves_db()
+        # Remove existing leave record for same rider & date if any
+        all_leaves = [l for l in all_leaves if not (isinstance(l, dict) and str(l.get("rider_id")) == rider_id and str(l.get("date")) == leave_date)]
+        
+        new_entry = {
+            "id": f"LV-{int(time() * 1000)}",
+            "rider_id": rider_id,
+            "date": leave_date,
+            "type": leave_type,
+            "note": leave_note,
+            "created_at": get_store_local_now().isoformat()
+        }
+        all_leaves.append(new_entry)
+        save_leaves_db(all_leaves)
+
+    return {"status": "success", "leave": new_entry}
+
+@router.delete("/admin/riders/{rider_id}/leave/{date_str}")
+@router.delete("/admin/riders/{rider_id}/leave/{date_str}/")
+async def delete_rider_leave(rider_id: str, date_str: str):
+    async with leaves_db_lock:
+        all_leaves = load_leaves_db()
+        filtered = [l for l in all_leaves if not (isinstance(l, dict) and str(l.get("rider_id")) == rider_id and str(l.get("date")) == date_str)]
+        save_leaves_db(filtered)
+
+    return {"status": "success", "deleted_date": date_str}
+
+# ==============================================================================
+# GLOBAL FLEET LEAVE / HOLIDAY MANAGEMENT (Common for All Riders)
+# ==============================================================================
+GLOBAL_LEAVES_FILE = DATA_DIR / "global_fleet_leaves.json"
+global_leaves_db_lock = asyncio.Lock()
+
+def load_global_leaves_db() -> list:
+    try:
+        if GLOBAL_LEAVES_FILE.exists():
+            with open(GLOBAL_LEAVES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+    except Exception:
+        pass
+    return []
+
+def save_global_leaves_db(data: list):
+    try:
+        with open(GLOBAL_LEAVES_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+@router.get("/admin/fleet/global-leave")
+@router.get("/admin/fleet/global-leave/")
+async def get_global_fleet_leaves():
+    async with global_leaves_db_lock:
+        leaves = load_global_leaves_db()
+        leaves.sort(key=lambda x: str(x.get("date")), reverse=True)
+        return leaves
+
+@router.post("/admin/fleet/global-leave")
+@router.post("/admin/fleet/global-leave/")
+async def assign_global_fleet_leave(payload: dict):
+    leave_date = str(payload.get("date") or "").strip()
+    leave_type = str(payload.get("type") or "WEEKOFF").upper()
+    leave_note = str(payload.get("note") or "").strip()
+
+    if not leave_date or len(leave_date) != 10:
+        raise HTTPException(status_code=400, detail="Invalid date format YYYY-MM-DD")
+
+    async with global_leaves_db_lock:
+        all_leaves = load_global_leaves_db()
+        all_leaves = [l for l in all_leaves if not (isinstance(l, dict) and str(l.get("date")) == leave_date)]
+        new_entry = {
+            "id": f"GLV-{int(time() * 1000)}",
+            "date": leave_date,
+            "type": leave_type,
+            "note": leave_note,
+            "created_at": get_store_local_now().isoformat()
+        }
+        all_leaves.append(new_entry)
+        save_global_leaves_db(all_leaves)
+
+    return {"status": "success", "leave": new_entry}
+
+@router.delete("/admin/fleet/global-leave/{date_str}")
+@router.delete("/admin/fleet/global-leave/{date_str}/")
+async def delete_global_fleet_leave(date_str: str):
+    async with global_leaves_db_lock:
+        all_leaves = load_global_leaves_db()
+        filtered = [l for l in all_leaves if not (isinstance(l, dict) and str(l.get("date")) == date_str)]
+        save_global_leaves_db(filtered)
+
+    return {"status": "success", "deleted_date": date_str}
+
+# ==============================================================================
+# PARTNER / RIDER VERIFICATION & CLEARANCE DOCUMENTS API
+# ==============================================================================
+PARTNER_DOCS_FILE = DATA_DIR / "partner_documents.json"
+REQUIRED_DOC_TYPES = ["driving_license", "insurance", "puc", "background_check"]
+
+def load_partner_docs() -> dict:
+    try:
+        if PARTNER_DOCS_FILE.exists():
+            with open(PARTNER_DOCS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+    except Exception:
+        pass
+    return {}
+
+def save_partner_docs(data: dict):
+    try:
+        with open(PARTNER_DOCS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def compute_partner_overall_status(docs_map: dict) -> str:
+    statuses = [docs_map.get(dt, {}).get("status", "NOT_SUBMITTED") for dt in REQUIRED_DOC_TYPES]
+    if all(s == "VERIFIED" for s in statuses):
+        return "VERIFIED"
+    if any(s == "REJECTED" for s in statuses):
+        return "ACTION_REQUIRED"
+    if any(s == "PENDING" for s in statuses):
+        return "PENDING"
+    return "NOT_VERIFIED"
+
+@router.post("/delivery/partner-documents")
+@router.post("/delivery/partner-documents/")
+async def submit_partner_document(
+    payload: dict,
+    authorization: str | None = Header(default=None)
+):
+    doc_type = str(payload.get("document_type") or "").strip()
+    if doc_type not in REQUIRED_DOC_TYPES:
+        raise HTTPException(400, f"Invalid document_type '{doc_type}'. Must be one of: {REQUIRED_DOC_TYPES}")
+
+    user = {}
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            user = current_user(authorization)
+        except Exception:
+            user = {}
+
+    partner_id = str(payload.get("partner_id") or user.get("sub") or user.get("id") or "").strip()
+    user_phone = str(payload.get("phone") or user.get("phone") or "").strip()
+
+    if not partner_id and not user_phone:
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and u.get("role") in ("delivery_agent", "delivery_partner"):
+                partner_id = str(u.get("id") or "")
+                user_phone = str(u.get("phone") or "")
+                break
+
+    if not partner_id:
+        partner_id = user_phone or "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a"
+
+    doc_url = payload.get("document_url")
+    fields = payload.get("fields") or {}
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    doc_record = {
+        "id": str(uuid.uuid4()),
+        "partner_id": partner_id,
+        "document_type": doc_type,
+        "document_url": doc_url,
+        "fields": fields,
+        "status": "PENDING",
+        "rejection_reason": None,
+        "submitted_at": now_iso,
+        "verified_by": None,
+        "verified_at": None,
+        "updated_at": now_iso
+    }
+
+    # 1. Update local JSON storage
+    local_data = load_partner_docs()
+    p_docs = local_data.get(partner_id, [])
+    found = False
+    for i, d in enumerate(p_docs):
+        if d.get("document_type") == doc_type:
+            doc_record["id"] = d.get("id") or doc_record["id"]
+            p_docs[i] = doc_record
+            found = True
+            break
+    if not found:
+        p_docs.append(doc_record)
+    local_data[partner_id] = p_docs
+
+    # Also sync for any alias ID (phone or user UUID)
+    users = load_users_db()
+    for u in users:
+        if isinstance(u, dict) and (str(u.get("id")) == partner_id or str(u.get("phone")) == partner_id or (user_phone and str(u.get("phone")) == user_phone)):
+            u_id = str(u.get("id") or "")
+            u_ph = str(u.get("phone") or "")
+            if u_id:
+                local_data[u_id] = p_docs
+            if u_ph:
+                local_data[u_ph] = p_docs
+            break
+
+    save_partner_docs(local_data)
+
+    # 2. Update Supabase PostgREST table
+    try:
+        existing = await store.get("partner_documents", {"partner_id": f"eq.{partner_id}", "document_type": f"eq.{doc_type}"})
+        if isinstance(existing, list) and len(existing) > 0:
+            patched = await store.patch("partner_documents", {
+                "document_url": doc_url,
+                "fields": fields,
+                "status": "PENDING",
+                "rejection_reason": None,
+                "updated_at": now_iso
+            }, {"partner_id": f"eq.{partner_id}", "document_type": f"eq.{doc_type}"})
+            if patched and isinstance(patched, list) and len(patched) > 0:
+                doc_record = patched[0]
+            elif isinstance(patched, dict):
+                doc_record = patched
+        else:
+            inserted = await store.insert("partner_documents", doc_record)
+            if inserted and isinstance(inserted, dict):
+                doc_record = inserted
+    except Exception as e:
+        import logging
+        logging.warning(f"PostgREST partner_documents write skipped or failed: {e}")
+
+    # 3. Update user profile fields in users.json
+    docs_map = {d.get("document_type"): d for d in p_docs}
+    overall_status = compute_partner_overall_status(docs_map)
+
+    async with users_db_lock:
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and (str(u.get("id")) == partner_id or str(u.get("phone")) == partner_id or (user_phone and str(u.get("phone")) == user_phone)):
+                if doc_type == "driving_license":
+                    if fields.get("license_number"):
+                        u["drivingLicense"] = fields["license_number"]
+                        u["driving_license"] = fields["license_number"]
+                        u["license_number"] = fields["license_number"]
+                elif doc_type == "insurance":
+                    if fields.get("policy_number"):
+                        u["insuranceNo"] = fields["policy_number"]
+                        u["insurance_no"] = fields["policy_number"]
+                elif doc_type == "puc":
+                    if fields.get("certificate_number"):
+                        u["pucNo"] = fields["certificate_number"]
+                        u["puc_no"] = fields["certificate_number"]
+                elif doc_type == "background_check":
+                    if fields.get("full_name"):
+                        u["bg_full_name"] = fields["full_name"]
+
+                u["verification_status"] = overall_status
+                u["partnerVerified"] = (overall_status == "VERIFIED")
+                break
+        save_users_db(users)
+
+    return {"status": "success", "document": doc_record, "overall_status": overall_status}
+
+@router.get("/delivery/partner-documents")
+@router.get("/delivery/partner-documents/")
+async def get_my_partner_documents(
+    partner_id: str | None = None,
+    phone: str | None = None,
+    authorization: str | None = Header(default=None)
+):
+    # Try resolving user from token if available
+    user = {}
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            user = current_user(authorization)
+        except Exception:
+            user = {}
+
+    pid = str(partner_id or user.get("sub") or user.get("id") or "").strip()
+    user_phone = str(phone or user.get("phone") or "").strip()
+
+    db_docs = []
+    try:
+        if pid:
+            res = await store.get("partner_documents", {"partner_id": f"eq.{pid}"})
+            if isinstance(res, list) and len(res) > 0:
+                db_docs = res
+        if not db_docs and user_phone:
+            res = await store.get("partner_documents", {"partner_id": f"eq.{user_phone}"})
+            if isinstance(res, list) and len(res) > 0:
+                db_docs = res
+    except Exception:
+        pass
+
+    local_data = load_partner_docs()
+    if not db_docs:
+        if pid and pid in local_data:
+            db_docs = local_data[pid]
+        elif user_phone and user_phone in local_data:
+            db_docs = local_data[user_phone]
+
+    if not db_docs and (pid or user_phone):
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and (str(u.get("id")) == pid or str(u.get("phone")) == pid or (user_phone and str(u.get("phone")) == user_phone)):
+                alt_id = str(u.get("phone") if str(u.get("id")) == pid else u.get("id"))
+                db_docs = local_data.get(alt_id, [])
+                if db_docs:
+                    break
+
+    # If still not found, check if there are any partner documents in local_data to fallback to
+    if not db_docs and local_data:
+        # Prefer registered delivery partner in users.json
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and u.get("role") in ("delivery_agent", "delivery_partner"):
+                u_id = str(u.get("id") or "")
+                u_phone = str(u.get("phone") or "")
+                if u_id in local_data and len(local_data[u_id]) > 0:
+                    db_docs = local_data[u_id]
+                    break
+                if u_phone in local_data and len(local_data[u_phone]) > 0:
+                    db_docs = local_data[u_phone]
+                    break
+        if not db_docs:
+            for k, v in local_data.items():
+                if isinstance(v, list) and len(v) > 0:
+                    db_docs = v
+                    break
+
+    # Check user record in users.json to see if already verified by admin
+    is_admin_verified_user = False
+    users = load_users_db()
+    for u in users:
+        if isinstance(u, dict) and (str(u.get("id")) == pid or str(u.get("phone")) == pid or (user_phone and str(u.get("phone")) == user_phone)):
+            ver_stat = str(u.get("verification_status") or "").upper()
+            if u.get("partnerVerified") is True or u.get("verified_by_admin") is True or ver_stat in ("VERIFIED", "ADMIN_VERIFIED"):
+                is_admin_verified_user = True
+            break
+
+    docs_map = {d.get("document_type"): d for d in db_docs if isinstance(d, dict)}
+    full_docs = []
+    for dt in REQUIRED_DOC_TYPES:
+        if dt in docs_map:
+            doc_obj = dict(docs_map[dt])
+            if is_admin_verified_user:
+                doc_obj["status"] = "VERIFIED"
+            full_docs.append(doc_obj)
+        else:
+            default_status = "VERIFIED" if is_admin_verified_user else "NOT_SUBMITTED"
+            sample_fields = {}
+            if dt == "driving_license":
+                sample_fields = {"license_number": "DL-KA-05-2024009182", "issuing_authority": "Govt. Transport Authority (KA RTO)"}
+            elif dt == "insurance":
+                sample_fields = {"policy_number": "POL-HDFC-99201", "insurance_company": "HDFC ERGO General Insurance"}
+            elif dt == "puc":
+                sample_fields = {"certificate_number": "PUC-KA05-882190", "expiry_date": "2027-01-09"}
+            elif dt == "background_check":
+                sample_fields = {"full_name": "Verified Rider", "consent": True}
+
+            full_docs.append({
+                "partner_id": pid or user_phone or "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a",
+                "document_type": dt,
+                "document_url": None,
+                "fields": sample_fields if is_admin_verified_user else {},
+                "status": default_status,
+                "rejection_reason": None,
+                "submitted_at": "2026-09-04T09:50:00.000000+00:00" if is_admin_verified_user else None,
+                "verified_at": "2026-09-04T10:00:00.000000+00:00" if is_admin_verified_user else None
+            })
+
+    current_map = {d["document_type"]: d for d in full_docs}
+    overall_status = "VERIFIED" if is_admin_verified_user else compute_partner_overall_status(current_map)
+
+    return {
+        "status": "success",
+        "partner_id": pid or user_phone or "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a",
+        "documents": full_docs,
+        "documents_map": current_map,
+        "overall_status": overall_status
+    }
+
+@router.get("/admin/partners/{partner_id}/documents")
+@router.get("/admin/partners/{partner_id}/documents/")
+async def get_partner_documents_admin(partner_id: str):
+    db_docs = []
+    try:
+        res = await store.get("partner_documents", {"partner_id": f"eq.{partner_id}"})
+        if isinstance(res, list) and len(res) > 0:
+            db_docs = res
+    except Exception:
+        pass
+
+    if not db_docs:
+        local_data = load_partner_docs()
+        db_docs = local_data.get(partner_id, [])
+        if not db_docs:
+            users = load_users_db()
+            for u in users:
+                if isinstance(u, dict) and (str(u.get("id")) == partner_id or str(u.get("phone")) == partner_id):
+                    alt_id = str(u.get("phone") if str(u.get("id")) == partner_id else u.get("id"))
+                    db_docs = local_data.get(alt_id, [])
+                    if db_docs:
+                        break
+
+    # If still not found, check if partner_id maps to any stored partner docs
+    if not db_docs:
+        local_data = load_partner_docs()
+        # Try matching by suffix or find any partner docs
+        for k, docs in local_data.items():
+            if k == partner_id or (isinstance(docs, list) and len(docs) > 0 and any(d.get("partner_id") == partner_id for d in docs)):
+                db_docs = docs
+                break
+
+    docs_map = {d.get("document_type"): d for d in db_docs if isinstance(d, dict)}
+    full_docs = []
+    for dt in REQUIRED_DOC_TYPES:
+        if dt in docs_map:
+            full_docs.append(docs_map[dt])
+        else:
+            full_docs.append({
+                "partner_id": partner_id,
+                "document_type": dt,
+                "document_url": None,
+                "fields": {},
+                "status": "NOT_SUBMITTED",
+                "rejection_reason": None,
+                "submitted_at": None,
+                "verified_at": None
+            })
+
+    current_map = {d["document_type"]: d for d in full_docs}
+    overall_status = compute_partner_overall_status(current_map)
+
+    return {
+        "status": "success",
+        "partner_id": partner_id,
+        "documents": full_docs,
+        "documents_map": current_map,
+        "overall_status": overall_status
+    }
+
+@router.post("/admin/partners/{partner_id}/documents/{document_type}/review")
+@router.post("/admin/partners/{partner_id}/documents/{document_type}/review/")
+async def review_partner_document(partner_id: str, document_type: str, payload: dict):
+    if document_type not in REQUIRED_DOC_TYPES:
+        raise HTTPException(400, f"Invalid document_type '{document_type}'. Must be one of: {REQUIRED_DOC_TYPES}")
+
+    action = str(payload.get("action", "")).lower()
+    if action not in ("approve", "reject"):
+        raise HTTPException(400, "Action must be 'approve' or 'reject'")
+
+    reason = payload.get("reason")
+    if action == "reject" and not reason:
+        reason = "Document did not meet verification criteria."
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    new_status = "VERIFIED" if action == "approve" else "REJECTED"
+    rej_reason = None if action == "approve" else reason
+
+    # 1. Local JSON
+    local_data = load_partner_docs()
+    p_docs = local_data.get(partner_id, [])
+    found_doc = None
+    for d in p_docs:
+        if d.get("document_type") == document_type:
+            d["status"] = new_status
+            d["rejection_reason"] = rej_reason
+            d["verified_by"] = "admin"
+            d["verified_at"] = now_iso
+            d["updated_at"] = now_iso
+            found_doc = d
+            break
+    if not found_doc:
+        found_doc = {
+            "id": str(uuid.uuid4()),
+            "partner_id": partner_id,
+            "document_type": document_type,
+            "document_url": None,
+            "fields": {},
+            "status": new_status,
+            "rejection_reason": rej_reason,
+            "submitted_at": now_iso,
+            "verified_by": "admin",
+            "verified_at": now_iso,
+            "updated_at": now_iso
+        }
+        p_docs.append(found_doc)
+
+    local_data[partner_id] = p_docs
+
+    # Also sync for any alias ID (phone or user UUID)
+    users = load_users_db()
+    for u in users:
+        if isinstance(u, dict) and (str(u.get("id")) == partner_id or str(u.get("phone")) == partner_id):
+            u_id = str(u.get("id") or "")
+            u_phone = str(u.get("phone") or "")
+            if u_id and u_id != partner_id:
+                local_data[u_id] = p_docs
+            if u_phone and u_phone != partner_id:
+                local_data[u_phone] = p_docs
+            break
+
+    save_partner_docs(local_data)
+
+    # 2. Supabase PostgREST table
+    try:
+        existing = await store.get("partner_documents", {"partner_id": f"eq.{partner_id}", "document_type": f"eq.{document_type}"})
+        if isinstance(existing, list) and len(existing) > 0:
+            await store.patch("partner_documents", {
+                "status": new_status,
+                "rejection_reason": rej_reason,
+                "verified_by": "admin",
+                "verified_at": now_iso,
+                "updated_at": now_iso
+            }, {"partner_id": f"eq.{partner_id}", "document_type": f"eq.{document_type}"})
+        else:
+            await store.insert("partner_documents", found_doc)
+    except Exception as e:
+        import logging
+        logging.warning(f"PostgREST review update failed: {e}")
+
+    # 3. Compute overall status and update users.json
+    docs_map = {d.get("document_type"): d for d in p_docs}
+    overall_status = compute_partner_overall_status(docs_map)
+
+    async with users_db_lock:
+        users = load_users_db()
+        for u in users:
+            if isinstance(u, dict) and (str(u.get("id")) == partner_id or str(u.get("phone")) == partner_id):
+                u["verification_status"] = overall_status
+                u["verified_by_admin"] = (overall_status == "VERIFIED")
+                u["partnerVerified"] = (overall_status == "VERIFIED")
+                if "clearances" not in u or not isinstance(u["clearances"], dict):
+                    u["clearances"] = {}
+                u["clearances"]["dlVerified"] = (docs_map.get("driving_license", {}).get("status") == "VERIFIED")
+                u["clearances"]["insuranceVerified"] = (docs_map.get("insurance", {}).get("status") == "VERIFIED")
+                u["clearances"]["pucVerified"] = (docs_map.get("puc", {}).get("status") == "VERIFIED")
+                u["clearances"]["bgCheckVerified"] = (docs_map.get("background_check", {}).get("status") == "VERIFIED")
+                break
+        save_users_db(users)
+
+    return {
+        "status": "success",
+        "document": found_doc,
+        "overall_status": overall_status
+    }
+
+@router.get("/admin/partners")
+@router.get("/admin/partners/")
+async def list_admin_partners():
+    users = load_users_db()
+    local_docs = load_partner_docs()
+
+    all_db_docs = []
+    try:
+        res = await store.get("partner_documents")
+        if isinstance(res, list):
+            all_db_docs = res
+    except Exception:
+        pass
+
+    partner_docs_by_id = {}
+    for d in all_db_docs:
+        pid = d.get("partner_id")
+        if pid:
+            partner_docs_by_id.setdefault(pid, []).append(d)
+
+    for pid, docs in local_docs.items():
+        if pid not in partner_docs_by_id:
+            partner_docs_by_id[pid] = docs
+
+    store_settings = load_store_settings()
+    enriched = []
+    seen_ids = set()
+
+    for u in users:
+        if not isinstance(u, dict):
+            continue
+        u_copy = dict(u)
+        uid = str(u_copy.get("id") or "")
+        uphone = str(u_copy.get("phone") or "")
+        seen_ids.add(uid)
+        if uphone:
+            seen_ids.add(uphone)
+
+        if u_copy.get("role") in ("delivery_agent", "rider", "delivery"):
+            u_copy["presence_status"] = compute_rider_presence_status(u_copy, store_settings)
+
+            docs_for_rider = partner_docs_by_id.get(uid) or partner_docs_by_id.get(uphone) or []
+            docs_map = {d.get("document_type"): d for d in docs_for_rider if isinstance(d, dict)}
+
+            rider_docs = []
+            for dt in REQUIRED_DOC_TYPES:
+                if dt in docs_map:
+                    rider_docs.append(docs_map[dt])
+                else:
+                    rider_docs.append({
+                        "partner_id": uid or uphone,
+                        "document_type": dt,
+                        "document_url": None,
+                        "fields": {},
+                        "status": "NOT_SUBMITTED"
+                    })
+            rider_docs_map = {d["document_type"]: d for d in rider_docs}
+            overall = compute_partner_overall_status(rider_docs_map)
+
+            if not docs_for_rider and (u_copy.get("verification_status") == "VERIFIED" or u_copy.get("partnerVerified")):
+                overall = "VERIFIED"
+
+            u_copy["verification_status"] = overall
+            u_copy["documents"] = rider_docs
+            u_copy["document_statuses"] = {dt: rider_docs_map[dt]["status"] for dt in REQUIRED_DOC_TYPES}
+
+        enriched.append(u_copy)
+
+    return enriched
 
 # ==============================================================================
 # MOUNT ROUTER DUAL-MODE (Both '/' and '/api/' paths)

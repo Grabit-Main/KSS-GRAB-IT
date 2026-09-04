@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { OrderStatus } from '../types/delivery';
+import { useDelivery } from '../context/DeliveryContext';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -249,9 +250,9 @@ export const RouteMapVisualizer: React.FC<RouteMapVisualizerProps> = ({
     const loggedRiderName = (() => {
       try {
         const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
-        return u.full_name || u.name || 'Thabee';
+        return u.full_name || u.name || 'Partner';
       } catch {
-        return 'Thabee';
+        return 'Partner';
       }
     })();
 
@@ -321,11 +322,17 @@ export const RouteMapVisualizer: React.FC<RouteMapVisualizerProps> = ({
     });
   }, [hubCoords, targetCoords, orderStatus, useDeviceGps, deviceGpsCoords, generateRouteWaypoints, getDriverPosition]);
 
+  const { showAlert } = useDelivery();
+
   // Handle Real Device GPS Geolocation
   const toggleDeviceGps = () => {
     if (!useDeviceGps) {
       if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser.');
+        showAlert({
+          title: 'GPS Unavailable',
+          message: 'Geolocation is not supported by your browser.',
+          type: 'warning'
+        });
         return;
       }
 
@@ -358,7 +365,11 @@ export const RouteMapVisualizer: React.FC<RouteMapVisualizerProps> = ({
         },
         (err) => {
           setIsGpsLoading(false);
-          alert(`Could not acquire real GPS location: ${err.message}. Showing simulated route.`);
+          showAlert({
+            title: 'GPS Notice',
+            message: `Could not acquire real GPS location: ${err.message}. Showing simulated route.`,
+            type: 'info'
+          });
           setGpsStatusText('Simulated GPS Active (±3m)');
         },
         { enableHighAccuracy: true, timeout: 8000 }
