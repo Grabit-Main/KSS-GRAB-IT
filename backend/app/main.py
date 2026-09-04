@@ -2763,11 +2763,37 @@ def save_users_db(data: list):
 async def get_all_users(role: str | None = None):
     async with users_db_lock:
         store_settings = load_store_settings()
-        users = load_users_db()
+        db_profiles = []
+        try:
+            res = await store.get("profiles")
+            if isinstance(res, list):
+                db_profiles = res
+        except Exception:
+            pass
+
+        local_users = load_users_db()
+        seen_keys = set()
+        users = []
+
+        for u in (db_profiles + local_users):
+            if not isinstance(u, dict):
+                continue
+            uid = str(u.get("id") or "")
+            uphone = str(u.get("phone") or "")
+            key = uid or uphone
+            if not key or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            if uid:
+                seen_keys.add(uid)
+            if uphone:
+                seen_keys.add(uphone)
+            users.append(u)
+
         filtered = []
         for u in users:
             if isinstance(u, dict):
-                if u.get("role") == "delivery_agent":
+                if u.get("role") in ("delivery_agent", "rider", "delivery"):
                     u["presence_status"] = compute_rider_presence_status(u, store_settings)
                     u["status"] = u["presence_status"]
                 if role:
@@ -4669,8 +4695,34 @@ async def review_partner_document(partner_id: str, document_type: str, payload: 
 @router.get("/admin/partners")
 @router.get("/admin/partners/")
 async def list_admin_partners():
-    users = load_users_db()
+    db_profiles = []
+    try:
+        res = await store.get("profiles")
+        if isinstance(res, list):
+            db_profiles = res
+    except Exception:
+        pass
+
+    local_users = load_users_db()
     local_docs = load_partner_docs()
+
+    # Deduplicate db_profiles and local_users
+    seen_ids = set()
+    users = []
+    for u in (db_profiles + local_users):
+        if not isinstance(u, dict):
+            continue
+        uid = str(u.get("id") or "")
+        uphone = str(u.get("phone") or "")
+        key = uid or uphone
+        if not key or key in seen_ids:
+            continue
+        seen_ids.add(key)
+        if uid:
+            seen_ids.add(uid)
+        if uphone:
+            seen_ids.add(uphone)
+        users.append(u)
 
     all_db_docs = []
     try:
@@ -4692,7 +4744,6 @@ async def list_admin_partners():
 
     store_settings = load_store_settings()
     enriched = []
-    seen_ids = set()
 
     for u in users:
         if not isinstance(u, dict):
@@ -4700,9 +4751,6 @@ async def list_admin_partners():
         u_copy = dict(u)
         uid = str(u_copy.get("id") or "")
         uphone = str(u_copy.get("phone") or "")
-        seen_ids.add(uid)
-        if uphone:
-            seen_ids.add(uphone)
 
         if u_copy.get("role") in ("delivery_agent", "rider", "delivery"):
             u_copy["presence_status"] = compute_rider_presence_status(u_copy, store_settings)
