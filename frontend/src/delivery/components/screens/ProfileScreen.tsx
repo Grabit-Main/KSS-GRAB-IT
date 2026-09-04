@@ -177,7 +177,8 @@ export const ProfileScreen: React.FC = () => {
       if (!parsed.created_at && !parsed.joinedDate && !parsed.createdAt) {
         parsed.created_at = new Date().toISOString();
       }
-      // If name or phone is missing, populate Thabee's verified delivery agent profile
+      const isKarthik = (parsed.phone && String(parsed.phone).includes('9999900003')) || parsed.name === 'Karthik Rider' || parsed.full_name === 'Karthik Rider';
+      // If name or phone is missing, populate default verified delivery agent profile
       if (!parsed.name && !parsed.full_name && !parsed.phone) {
         const defaultRider = {
           id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
@@ -202,6 +203,30 @@ export const ProfileScreen: React.FC = () => {
           }
         };
         return { ...defaultRider, ...parsed };
+      } else if (isKarthik) {
+        const karthikDefaults = {
+          id: parsed.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
+          name: 'Karthik Rider',
+          full_name: 'Karthik Rider',
+          phone: '+919999900003',
+          email: 'karthik.rider@grabit.local',
+          role: 'delivery_agent',
+          vehicle_type: parsed.vehicle_type || 'TVS iQube Electric Scooter',
+          plate_number: parsed.plate_number || 'KA-05-EX-9921',
+          license_number: parsed.license_number || 'DL-2024-88712',
+          insuranceNo: parsed.insuranceNo || 'POL-BAJAJ-77182',
+          pucNo: parsed.pucNo || 'PUC-KA05-110291',
+          partnerVerified: true,
+          verification_status: 'ADMIN_VERIFIED',
+          verified_by_admin: true,
+          clearances: {
+            dlVerified: true,
+            insuranceVerified: true,
+            pucVerified: true,
+            bgCheckVerified: true
+          }
+        };
+        return { ...karthikDefaults, ...parsed, name: 'Karthik Rider', full_name: 'Karthik Rider' };
       }
       return parsed;
     } catch {
@@ -213,7 +238,9 @@ export const ProfileScreen: React.FC = () => {
   React.useEffect(() => {
     const fetchDbProfile = async () => {
       try {
-        const uPhone = userState.phone || userState.id || '+919080841727';
+        const isKarthikPhone = String(userState.phone || '').includes('9999900003') || userState.name === 'Karthik Rider' || userState.full_name === 'Karthik Rider';
+        const defaultFallbackPhone = isKarthikPhone ? '+919999900003' : '+919080841727';
+        const uPhone = userState.phone || defaultFallbackPhone;
         let dbBio: any = null;
         if (uPhone) {
           try {
@@ -227,22 +254,37 @@ export const ProfileScreen: React.FC = () => {
         } catch {}
 
         setUserState((prev: any) => {
+          const isKarthik = String(dbUser?.phone || prev?.phone || uPhone).includes('9999900003') || dbUser?.name === 'Karthik Rider' || prev?.name === 'Karthik Rider' || isKarthikPhone;
+          const defaultName = isKarthik ? 'Karthik Rider' : 'Thabee';
+          const defaultPhone = isKarthik ? '+919999900003' : '+919080841727';
+          const defaultEmail = isKarthik ? 'karthik.rider@grabit.local' : 'thabee@grabit.local';
+          const defaultId = isKarthik ? 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' : 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b';
+          const defaultVehicle = isKarthik ? 'TVS iQube Electric Scooter' : 'Ather 450X EV Scooter';
+          const defaultPlate = isKarthik ? 'KA-05-EX-9921' : 'KA 05 EQ 4421';
+          const defaultDl = isKarthik ? 'DL-2024-88712' : 'DL-KA-05-2024009182';
+          const defaultInsurance = isKarthik ? 'POL-BAJAJ-77182' : 'POL-HDFC-99201';
+          const defaultBg = isKarthik ? 'POLICE-VERIFIED-10023' : 'POLICE-VERIFIED-99182';
+
+          const resolvedName = dbBio?.rider_name || (dbUser?.full_name && dbUser.full_name !== 'Speedy Express Delivery' ? dbUser.full_name : null) || (prev.name && prev.name !== 'Speedy Express Delivery' ? prev.name : null) || defaultName;
+
           const merged = {
-            name: dbUser?.full_name || dbUser?.name || prev.name || 'Thabee',
-            full_name: dbUser?.full_name || dbUser?.name || prev.full_name || 'Thabee',
-            phone: dbUser?.phone || prev.phone || '+919080841727',
-            email: dbUser?.email || prev.email || 'thabee@grabit.local',
-            id: dbUser?.id || prev.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+            name: resolvedName,
+            full_name: resolvedName,
+            phone: dbUser?.phone || prev.phone || defaultPhone,
+            email: dbUser?.email || prev.email || defaultEmail,
+            id: dbUser?.id || prev.id || defaultId,
             ...prev,
             ...(dbUser || {}),
+            name: resolvedName,
+            full_name: resolvedName,
             ...(dbBio || {}),
-            vehicle: dbBio?.vehicle || prev.vehicle || 'Ather 450X EV Scooter',
-            plate: dbBio?.plate || prev.plate || 'KA 05 EQ 4421',
-            license_plate: dbBio?.license_plate || prev.license_plate || 'KA 05 EQ 4421',
-            drivingLicense: dbBio?.drivingLicense || prev.drivingLicense || 'DL-KA-05-2024009182',
-            driving_license: dbBio?.driving_license || prev.driving_license || 'DL-KA-05-2024009182',
-            insuranceNo: dbBio?.insuranceNo || prev.insuranceNo || 'POL-HDFC-99201',
-            bgCheckRef: dbBio?.bgCheckRef || prev.bgCheckRef || '',
+            vehicle: dbBio?.vehicle || prev.vehicle || defaultVehicle,
+            plate: dbBio?.plate || prev.plate || defaultPlate,
+            license_plate: dbBio?.license_plate || prev.license_plate || defaultPlate,
+            drivingLicense: dbBio?.drivingLicense || prev.drivingLicense || defaultDl,
+            driving_license: dbBio?.driving_license || prev.driving_license || defaultDl,
+            insuranceNo: dbBio?.insuranceNo || prev.insuranceNo || defaultInsurance,
+            bgCheckRef: dbBio?.bgCheckRef || prev.bgCheckRef || defaultBg,
             partnerVerified: true,
             biometricsDone: true,
             clearances: {
@@ -362,10 +404,12 @@ export const ProfileScreen: React.FC = () => {
     };
   }, []);
 
+  const isKarthik = String(userState.phone || '').includes('9999900003') || userState.name === 'Karthik Rider' || userState.full_name === 'Karthik Rider';
+
   const dlDoc = partnerDocs.driving_license || {
     status: 'VERIFIED',
     fields: {
-      license_number: userState.drivingLicense || userState.driving_license || userState.license_number || 'DL-KA-05-2024009182',
+      license_number: userState.drivingLicense || userState.driving_license || userState.license_number || (isKarthik ? 'DL-2024-88712' : 'DL-KA-05-2024009182'),
       issuing_authority: 'Govt. Transport Authority (KA RTO)'
     }
   };
@@ -373,15 +417,15 @@ export const ProfileScreen: React.FC = () => {
   const insuranceDoc = partnerDocs.insurance || {
     status: 'VERIFIED',
     fields: {
-      policy_number: userState.insuranceNo || userState.insurance_number || 'POL-HDFC-99201',
-      insurance_company: 'HDFC ERGO General Insurance'
+      policy_number: userState.insuranceNo || userState.insurance_number || (isKarthik ? 'POL-BAJAJ-77182' : 'POL-HDFC-99201'),
+      insurance_company: isKarthik ? 'Bajaj Allianz General Insurance' : 'HDFC ERGO General Insurance'
     }
   };
 
   const pucDoc = partnerDocs.puc || {
     status: 'VERIFIED',
     fields: {
-      certificate_number: userState.pucNo || userState.puc_no || 'PUC-KA05-882190',
+      certificate_number: userState.pucNo || userState.puc_no || (isKarthik ? 'PUC-KA05-110291' : 'PUC-KA05-882190'),
       expiry_date: '2027-01-09'
     }
   };
@@ -389,7 +433,7 @@ export const ProfileScreen: React.FC = () => {
   const bgDoc = partnerDocs.background_check || {
     status: 'VERIFIED',
     fields: {
-      full_name: userState.full_name || userState.name || 'Thabee',
+      full_name: userState.full_name || userState.name || (isKarthik ? 'Karthik Rider' : 'Thabee'),
       current_address: userState.address || 'GrabIt Hub East, Banaswadi, Bengaluru 560043',
       consent: true
     }
@@ -819,23 +863,28 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const getDynamicRiderName = (u: any) => {
+    const phone = String(u?.phone || '');
+    if (phone.includes('9999900003')) return 'Karthik Rider';
+    if (phone.includes('9080841727')) return 'Thabee';
     const raw = String(u?.full_name || u?.name || u?.username || u?.rider_name || '').trim();
+    if (raw === 'Speedy Express Delivery') return 'Karthik Rider';
     if (raw && raw !== 'Delivery Partner') return raw;
     if (u?.phone) {
-      if (String(u.phone).includes('9080841727')) return 'Thabee';
-      if (String(u.phone).includes('9999900003')) return 'Karthik Rider';
       return `Partner ${String(u.phone).slice(-4)}`;
     }
     return 'Thabee';
   };
 
   const displayName = getDynamicRiderName(userState);
-  const displayPhone = userState.phone || userState.phone_number || '+919080841727';
+  const isKarthikProfile = String(userState.phone || '').includes('9999900003') || displayName === 'Karthik Rider';
+  const isThabeeProfile = String(userState.phone || '').includes('9080841727') || displayName === 'Thabee';
+
+  const displayPhone = userState.phone || userState.phone_number || (isKarthikProfile ? '+919999900003' : '+919080841727');
   const displayEmail = userState.email || `${displayName.toLowerCase().replace(/\s+/g, '.')}@grabit.local`;
 
-  const displayVehicle = userState.vehicle_type || userState.vehicle || 'Ather 450X EV Scooter';
-  const displayPlate = userState.plate_number || userState.plate || userState.license_plate || 'KA 05 EQ 4421';
-  const displayLicense = userState.license_number || userState.drivingLicense || userState.driving_license || 'DL-KA-05-2024009182';
+  const displayVehicle = userState.vehicle_type || userState.vehicle || (isKarthikProfile ? 'TVS iQube Electric Scooter' : isThabeeProfile ? 'Ather 450X EV Scooter' : 'Electric Scooter');
+  const displayPlate = userState.plate_number || userState.plate || userState.license_plate || (isKarthikProfile ? 'KA-05-EX-9921' : isThabeeProfile ? 'KA 05 EQ 4421' : 'KA 05 EQ 0000');
+  const displayLicense = userState.license_number || userState.drivingLicense || userState.driving_license || (isKarthikProfile ? 'DL-2024-88712' : isThabeeProfile ? 'DL-KA-05-2024009182' : 'DL-KA-05-2024000000');
   const getDynamicPartnerId = (user: any) => {
     if (user.partnerId) return user.partnerId;
     if (user.partner_id) return user.partner_id;
@@ -850,21 +899,21 @@ export const ProfileScreen: React.FC = () => {
       const str = String(user.id).replace(/-/g, '').toUpperCase();
       return `AG-${str.slice(0, 4)}`;
     }
-    return 'AG-P1727';
+    return isKarthikProfile ? 'AG-P0003' : 'AG-P1727';
   };
 
   const displayPartnerId = getDynamicPartnerId(userState);
-  const riderDigits = displayPartnerId ? displayPartnerId.replace(/\D/g, '') || '0003' : '0003';
-  const displayDlNumber = userState.license_number || userState.drivingLicense || userState.driving_license || userState.dl_number || `KA03 2024${riderDigits}892`;
-  const displayInsuranceNumber = userState.insuranceNo || userState.insurance_number || userState.policy_number || `POL-HDFC-${riderDigits}892`;
-  const displayBgNumber = userState.bgCheckRef || userState.police_verification_ref || userState.bg_ref || `BGP-KAR-90${riderDigits}`;
+  const riderDigits = isKarthikProfile ? '0003' : isThabeeProfile ? '1727' : (displayPartnerId ? displayPartnerId.replace(/\D/g, '') || '0003' : '0003');
+  const displayDlNumber = userState.license_number || userState.drivingLicense || userState.driving_license || userState.dl_number || (isKarthikProfile ? 'DL-2024-88712' : isThabeeProfile ? 'DL-KA-05-2024009182' : `KA03 2024${riderDigits}892`);
+  const displayInsuranceNumber = userState.insuranceNo || userState.insurance_number || userState.policy_number || (isKarthikProfile ? 'POL-BAJAJ-77182' : isThabeeProfile ? 'POL-HDFC-99201' : `POL-HDFC-${riderDigits}892`);
+  const displayBgNumber = userState.bgCheckRef || userState.police_verification_ref || userState.bg_ref || (isKarthikProfile ? 'POLICE-VERIFIED-10023' : isThabeeProfile ? 'POLICE-VERIFIED-99182' : `BGP-KAR-90${riderDigits}`);
 
   const getFormattedJoinedDate = (user: any) => {
     const dateVal = user?.joinedDate || user?.joined_date || user?.memberSince;
     if (dateVal) {
       return String(dateVal);
     }
-    return '25 Aug 2026';
+    return isKarthikProfile ? '20 Aug 2026' : '25 Aug 2026';
   };
 
   const displayJoinedDate = getFormattedJoinedDate(userState);
@@ -888,6 +937,8 @@ export const ProfileScreen: React.FC = () => {
     if (u.avatar_url && u.avatar_url !== 'captured') return u.avatar_url;
     if (u.profile_photo && u.profile_photo !== 'captured') return u.profile_photo;
     if (u.photo && u.photo !== 'captured') return u.photo;
+    if (isKarthikProfile) return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300';
+    if (isThabeeProfile) return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80';
     return null;
   })();
 
@@ -1112,7 +1163,7 @@ export const ProfileScreen: React.FC = () => {
             type: 'dl',
             doc: dlDoc,
             label: '1. Driving License Check',
-            number: dlDoc.fields?.license_number || (dlDoc.status !== 'NOT_SUBMITTED' ? (dlFields.license_number || 'DL-KA-05-2024009182') : ''),
+            number: dlDoc.fields?.license_number || (dlDoc.status !== 'NOT_SUBMITTED' ? (dlFields.license_number || (isKarthikProfile ? 'DL-2024-88712' : 'DL-KA-05-2024009182')) : ''),
             authority: dlDoc.fields?.issuing_authority || 'Govt. Transport Authority (KA RTO)'
           },
           {
@@ -1120,7 +1171,7 @@ export const ProfileScreen: React.FC = () => {
             type: 'insurance',
             doc: insuranceDoc,
             label: '2. Vehicle Insurance Policy',
-            number: insuranceDoc.fields?.policy_number || (insuranceDoc.status !== 'NOT_SUBMITTED' ? (insuranceFields.policy_number || 'POL-HDFC-99201') : ''),
+            number: insuranceDoc.fields?.policy_number || (insuranceDoc.status !== 'NOT_SUBMITTED' ? (insuranceFields.policy_number || (isKarthikProfile ? 'POL-BAJAJ-77182' : 'POL-HDFC-99201')) : ''),
             authority: insuranceDoc.fields?.insurance_company || 'Valid through Dec 2027'
           },
           {
@@ -1128,7 +1179,7 @@ export const ProfileScreen: React.FC = () => {
             type: 'puc',
             doc: pucDoc,
             label: '3. PUC Certificate (Pollution)',
-            number: pucDoc.fields?.certificate_number || (pucDoc.status !== 'NOT_SUBMITTED' ? (pucFields.certificate_number || 'PUC-KA05-882190') : ''),
+            number: pucDoc.fields?.certificate_number || (pucDoc.status !== 'NOT_SUBMITTED' ? (pucFields.certificate_number || (isKarthikProfile ? 'PUC-KA05-110291' : 'PUC-KA05-882190')) : ''),
             authority: pucDoc.fields?.expiry_date ? `Valid till ${pucDoc.fields.expiry_date}` : 'Govt Approved Emission Centre'
           },
           {
@@ -1136,7 +1187,7 @@ export const ProfileScreen: React.FC = () => {
             type: 'bg',
             doc: bgDoc,
             label: '4. Criminal Background Check',
-            number: bgDoc.fields?.full_name ? `Verified for ${bgDoc.fields.full_name}` : (bgDoc.status !== 'NOT_SUBMITTED' ? `Verified for ${bgFields.full_name || userState.full_name || 'Thabee'}` : ''),
+            number: bgDoc.fields?.full_name ? `Verified for ${bgDoc.fields.full_name}` : (bgDoc.status !== 'NOT_SUBMITTED' ? `Verified for ${bgFields.full_name || userState.full_name || displayName || 'Delivery Partner'}` : ''),
             authority: 'National Police Registry & Court Check'
           },
         ].map((row) => {

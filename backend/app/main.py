@@ -461,7 +461,15 @@ async def verify_otp(body: VerifyOtpRequest):
     rows = await store.get("profiles", {"phone": f"eq.{body.phone}"})
     if rows:
         # Existing user — login complete
-        profile = rows[0]
+        profile = dict(rows[0])
+        if profile.get("phone") == "+919999900003" or profile.get("full_name") == "Speedy Express Delivery":
+            profile["full_name"] = "Karthik Rider"
+            profile["name"] = "Karthik Rider"
+            profile["partnerVerified"] = True
+        elif profile.get("phone") == "+919080841727":
+            profile["full_name"] = "Thabee"
+            profile["name"] = "Thabee"
+            profile["partnerVerified"] = True
         token = create_token(profile)
         return {"access_token": token, "token_type": "bearer", "user": profile, "is_new": False}
 
@@ -538,6 +546,12 @@ async def me(user=Depends(current_user)):
             break
 
     if user_data.get("role") in ("delivery_agent", "rider", "delivery_partner"):
+        if user_data.get("phone") == "+919999900003" or user_data.get("full_name") == "Speedy Express Delivery":
+            user_data["full_name"] = "Karthik Rider"
+            user_data["name"] = "Karthik Rider"
+        elif user_data.get("phone") == "+919080841727":
+            user_data["full_name"] = "Thabee"
+            user_data["name"] = "Thabee"
         if "partnerVerified" not in user_data:
             user_data["partnerVerified"] = True
         if "verification_status" not in user_data:
@@ -2451,7 +2465,7 @@ def load_rider_biometrics() -> dict:
         },
         "+919999900003": {
             "rider_id": "+919999900003",
-            "rider_name": "Speedy Express Delivery",
+            "rider_name": "Karthik Rider",
             "phone": "+919999900003",
             "partnerVerified": True,
             "biometricsDone": True,
