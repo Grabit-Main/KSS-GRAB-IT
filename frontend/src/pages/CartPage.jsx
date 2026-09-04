@@ -16,7 +16,7 @@ import {
 
 export default function CartPage() {
   const {
-    items, updateQty, removeItem, itemTotal, discount, deliveryFee, toPay, totalItems,
+    items, updateQty, removeItem, itemTotal, mrpTotal, discount, deliveryFee, toPay, totalItems,
     appliedCoupon, couponDiscount, applyCoupon, removeCoupon, AVAILABLE_COUPONS
   } = useCart();
   
@@ -519,10 +519,17 @@ export default function CartPage() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#4B5563', fontWeight: 600 }}>
               <span>Item Total</span>
-              <span style={{ fontWeight: 900, color: '#111827' }}>₹{itemTotal}</span>
+              <span style={{ fontWeight: 900, color: '#111827' }}>₹{mrpTotal || itemTotal}</span>
             </div>
 
-            {appliedCoupon && (
+            {discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#10B981', fontWeight: 700 }}>
+                <span>Product Discount</span>
+                <span style={{ fontWeight: 900 }}>-₹{discount}</span>
+              </div>
+            )}
+
+            {appliedCoupon && couponDiscount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#10B981', fontWeight: 700 }}>
                 <span>Coupon Discount ({appliedCoupon.code})</span>
                 <span style={{ fontWeight: 900 }}>-₹{couponDiscount}</span>

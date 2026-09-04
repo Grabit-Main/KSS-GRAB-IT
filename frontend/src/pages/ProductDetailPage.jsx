@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Star, Heart, ChevronLeft, ChevronRight, Zap, MapPin, Plus, Minus, ShoppingCart, Tag, Shield, ShoppingBag, Truck, CheckCircle2, Clock, Share2, ThumbsUp, HelpCircle, Award, Check } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
@@ -60,7 +60,15 @@ const getProductVariants = (p) => {
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = getProductById(id) || products[0];
+
+  const [syncedVersion, setSyncedVersion] = useState(0);
+  useEffect(() => {
+    const handleSync = () => setSyncedVersion(v => v + 1);
+    window.addEventListener('grabit_products_synced', handleSync);
+    return () => window.removeEventListener('grabit_products_synced', handleSync);
+  }, []);
+
+  const product = useMemo(() => getProductById(id) || products[0], [id, syncedVersion]);
 
   useEffect(() => {
     if (product) {
@@ -355,7 +363,13 @@ export default function ProductDetailPage() {
   const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, isMobile ? 4 : 6);
   const sidebarRecommendations = products.filter(p => p.id !== product.id).slice(0, 5);
 
+  const isOutOfStock = product.inStock === false || (product.stock_quantity !== undefined && product.stock_quantity <= 0);
+
   const handleAddToCart = () => {
+    if (isOutOfStock) {
+      showToast('This item is currently out of stock.');
+      return;
+    }
     const itemToAdd = {
       ...product,
       id: cartItemId,
@@ -365,6 +379,24 @@ export default function ProductDetailPage() {
       name: selectedVariantIdx === 0 ? product.name : `${product.name} (${activeWeight})`
     };
     addItem(itemToAdd);
+    showToast(`Added ${itemToAdd.name} to cart!`);
+  };
+
+  const handleBuyNow = () => {
+    if (isOutOfStock) {
+      showToast('This item is currently out of stock.');
+      return;
+    }
+    const itemToAdd = {
+      ...product,
+      id: cartItemId,
+      price: activePrice,
+      mrp: activeMrp,
+      weight: activeWeight,
+      name: selectedVariantIdx === 0 ? product.name : `${product.name} (${activeWeight})`
+    };
+    addItem(itemToAdd);
+    navigate('/checkout');
   };
 
   const handleAddBundle = () => {
@@ -699,48 +731,94 @@ export default function ProductDetailPage() {
             <ChevronRight size={18} color="#0F9D58" />
           </div>
 
-          {/* Action Add to Cart Controls */}
+          {/* Action Add to Cart & Buy Now Controls */}
           <div style={{ marginBottom: '24px' }}>
-            {qty === 0 ? (
-              <button
-                className="animate-cta-swap"
-                onClick={handleAddToCart}
+            {isOutOfStock ? (
+              <div
                 style={{
                   width: '100%', height: '54px',
-                  background: 'linear-gradient(135deg, #0071E3 0%, #0057B8 100%)',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  background: '#F1F5F9',
+                  color: '#94A3B8',
+                  border: '1px solid #CBD5E1',
                   borderRadius: '16px',
-                  padding: '0 20px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '12px',
-                  boxShadow: '0 10px 28px rgba(0, 113, 227, 0.35), 0 2px 8px rgba(0, 0, 0, 0.06)',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxSizing: 'border-box'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(0, 113, 227, 0.45)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 10px 28px rgba(0, 113, 227, 0.35)';
+                  fontWeight: 900,
+                  fontSize: '15px',
+                  letterSpacing: '0.5px'
                 }}
               >
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <ShoppingBag size={19} color="#FFFFFF" strokeWidth={2.2} />
-                </div>
-                <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '0.5px', color: '#FFFFFF' }}>
-                  ADD TO CART
-                </span>
-              </button>
+                OUT OF STOCK
+              </div>
+            ) : qty === 0 ? (
+              <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                <button
+                  className="animate-cta-swap"
+                  onClick={handleAddToCart}
+                  style={{
+                    flex: 1, height: '54px',
+                    background: 'linear-gradient(135deg, #0071E3 0%, #0057B8 100%)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    padding: '0 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 10px 28px rgba(0, 113, 227, 0.35)',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 14px 34px rgba(0, 113, 227, 0.45)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 10px 28px rgba(0, 113, 227, 0.35)';
+                  }}
+                >
+                  <ShoppingBag size={18} color="#FFFFFF" strokeWidth={2.2} />
+                  <span style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '0.5px', color: '#FFFFFF' }}>
+                    ADD TO CART
+                  </span>
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  style={{
+                    flex: 1, height: '54px',
+                    background: '#10B981',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '0 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 28px rgba(16, 185, 129, 0.4)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.3)';
+                  }}
+                >
+                  <Zap size={18} color="#FFFFFF" fill="#FFFFFF" />
+                  <span style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '0.5px', color: '#FFFFFF' }}>
+                    BUY NOW
+                  </span>
+                </button>
+              </div>
             ) : (
               /* Clean Full-Width Blue Quantity Selector */
               <div

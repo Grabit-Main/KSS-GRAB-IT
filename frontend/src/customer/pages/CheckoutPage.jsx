@@ -22,7 +22,7 @@ import { forceScrollToTop } from '../../utils/scrollToTop';
 import { addUserNotification } from '../../utils/userNotifications';
 
 export default function CheckoutPage() {
-  const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
+  const { items, itemTotal, mrpTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -36,8 +36,8 @@ export default function CheckoutPage() {
 
   // Enforce login for checkout: if user is not logged in, proceed to login page first
   useEffect(() => {
-    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('grabit_token');
-    if (!token) {
+    const session = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_jwt') || localStorage.getItem('grabit_auth_token');
+    if (!session) {
       sessionStorage.setItem('grabit_intended_path', '/checkout');
       navigate('/login', { replace: true });
     }
@@ -310,8 +310,15 @@ export default function CheckoutPage() {
       setIsLocationModalOpen(true);
       return;
     }
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const newOrderId = `GB-${randomNum}`;
+
+    // Pre-validate stock availability
+    const outOfStockItem = items.find(i => i.inStock === false || (i.stock_quantity !== undefined && i.stock_quantity <= 0));
+    if (outOfStockItem) {
+      showToast(`Item "${outOfStockItem.name}" is currently out of stock. Please remove it from your cart.`);
+      return;
+    }
+
+    const newOrderId = `GB-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const rawId = `ord-${Date.now()}`;
     const orderItems = items.map((i) => ({
       id: i.id,
@@ -327,20 +334,25 @@ export default function CheckoutPage() {
     const rawPhoneDigits = (selectedAddress.phone || currentPhone || '').replace(/\D/g, '');
     const validPhoneDigits = rawPhoneDigits.length >= 10 ? rawPhoneDigits.slice(-10) : (rawPhoneDigits || '9876543210');
     const fullAddrStr = selectedAddress.address + (selectedAddress.city ? `, ${selectedAddress.city}` : '');
+    const targetStoreId = items.find(i => i.store_id)?.store_id || 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb';
+    const targetLat = Number(selectedAddress.lat || selectedAddress.latitude) || 12.9716;
+    const targetLng = Number(selectedAddress.lng || selectedAddress.longitude) || 77.5946;
 
     const newOrderObj = {
       id: newOrderId,
       orderNumber: newOrderId,
       rawId: rawId,
-      store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+      store_id: targetStoreId,
       store_name: 'GrabIt Supermarket',
       customer_name: custName,
       customer_phone: `+91${validPhoneDigits}`,
       total_amount: Number(toPay) || 0,
       total: Number(toPay) || 0,
       subtotal: Number(itemTotal) || 0,
+      mrp_total: Number(mrpTotal) || Number(itemTotal) || 0,
       delivery_fee: Number(deliveryFee) || 0,
       discount: Number(discount) || 0,
+      coupon_discount: Number(couponDiscount) || 0,
       status: 'placed',
       item_count: totalItems,
       items: orderItems,
@@ -357,25 +369,28 @@ export default function CheckoutPage() {
 
     try {
       const apiRes = await post('/orders/', {
-        store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+        store_id: targetStoreId,
         total_amount: Number(toPay) || 0,
         delivery_address: fullAddrStr,
         items: orderItems,
         customer_name: newOrderObj.customer_name,
         customer_phone: newOrderObj.customer_phone,
         payment_method: newOrderObj.payment_method,
-        latitude: 12.9716,
-        longitude: 77.5946,
+        latitude: targetLat,
+        longitude: targetLng,
         status: 'placed',
-      }).catch(() => null);
+      });
 
-      if (apiRes && apiRes.id) {
-        finalOrder.id = apiRes.id;
-        finalOrder.rawId = apiRes.id;
-        finalOrder.orderNumber = apiRes.id;
+      if (!apiRes || (!apiRes.id && !apiRes.rawId)) {
+        throw new Error('Server did not return a valid order acknowledgement.');
       }
+      finalOrder.id = apiRes.id || apiRes.rawId;
+      finalOrder.rawId = apiRes.id || apiRes.rawId;
+      finalOrder.orderNumber = apiRes.id || apiRes.rawId;
     } catch (e) {
-      console.warn('Live order save fallback:', e);
+      console.error('Order placement failed:', e);
+      showToast(e?.message || 'Failed to place order. Please check your connection and try again.');
+      return;
     }
 
     try {
@@ -678,17 +693,34 @@ export default function CheckoutPage() {
         ))}
       </div>
       <div className="divider" style={{ margin: '12px 0', borderColor: '#E2E8F0' }} />
-      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Item Total ({totalItems} items)</span><span style={{ fontWeight: 800, color: '#0F172A' }}>₹{itemTotal}</span></div>
-      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Discount</span><span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span></div>
+      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+        <span>Item Total ({totalItems} items)</span>
+        <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{mrpTotal || itemTotal}</span>
+      </div>
+      {discount > 0 && (
+        <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+          <span>Product Discount</span>
+          <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span>
+        </div>
+      )}
+      {appliedCoupon && couponDiscount > 0 && (
+        <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+          <span>Coupon Discount ({appliedCoupon.code})</span>
+          <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{couponDiscount}</span>
+        </div>
+      )}
       <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
         <span>Delivery Fee</span>
         <span>{deliveryFee > 0 ? <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{deliveryFee}</span> : <><span style={{ textDecoration: 'line-through', color: '#94A3B8', marginRight: '4px' }}>₹30</span> <span style={{ color: '#10B981', fontWeight: 900 }}>FREE</span></>}</span>
       </div>
-      <div className="bill-row total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 900, paddingTop: '8px', color: '#0F172A' }}><span>To Pay</span><span style={{ color: '#0071E3' }}>₹{toPay}</span></div>
+      <div className="bill-row total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 900, paddingTop: '8px', color: '#0F172A' }}>
+        <span>To Pay</span>
+        <span style={{ color: '#0071E3' }}>₹{toPay}</span>
+      </div>
       
       <div className="savings-banner" style={{ marginTop: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '10px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Tag size={14} color="#10B981" />
-        You're saving ₹{discount} on this order
+        You're saving ₹{discount + (couponDiscount || 0)} on this order
       </div>
       
       <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px', marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1108,6 +1140,8 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+      )}
+
       {/* ── COUPON BACK NAVIGATION WARNING MODAL ── */}
       {showCouponBackWarningModal && (
         <div style={{

@@ -124,6 +124,9 @@ export function LocationProvider({ children }) {
 
   const handleDeleteLocation = (e, locId) => {
     e.stopPropagation();
+    if (typeof window !== 'undefined' && !window.confirm('Are you sure you want to delete this saved address?')) {
+      return;
+    }
     const updated = locations.filter(l => l.id !== locId);
     setLocations(updated);
     if (selectedId === locId) {
@@ -234,7 +237,10 @@ export function LocationProvider({ children }) {
             radius: '5 km'
           };
 
-          const updated = [newGpsLocation, ...locations.filter(l => l.tag !== 'Current Location')];
+          const updated = [
+            newGpsLocation,
+            ...locations.filter(l => l.tag !== 'Current Location').map(l => ({ ...l, isDefault: false }))
+          ];
           setLocations(updated);
           setSelectedId(newGpsLocation.id);
           saveCustomerAddresses(updated);
@@ -259,7 +265,10 @@ export function LocationProvider({ children }) {
             time: '15-25 min delivery',
             radius: '5 km'
           };
-          const updated = [fallbackLoc, ...locations.filter(l => l.tag !== 'Current Location')];
+          const updated = [
+            fallbackLoc,
+            ...locations.filter(l => l.tag !== 'Current Location').map(l => ({ ...l, isDefault: false }))
+          ];
           setLocations(updated);
           setSelectedId(fallbackLoc.id);
           saveCustomerAddresses(updated);

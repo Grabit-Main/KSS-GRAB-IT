@@ -117,14 +117,10 @@ export default function OrderTrackingPage() {
     const finalReason = cancelReason || 'Cancelled by customer';
 
     try {
-      try {
-        await patch(`/orders/${targetId}/status`, {
-          status: 'cancelled',
-          cancellation_reason: finalReason
-        });
-      } catch (err) {
-        console.warn('Backend patch error in tracking page:', err);
-      }
+      await patch(`/orders/${targetId}/status`, {
+        status: 'cancelled',
+        cancellation_reason: finalReason
+      });
 
       const updateList = (list) => {
         if (!Array.isArray(list)) return [];
@@ -231,11 +227,26 @@ export default function OrderTrackingPage() {
             address: found.delivery_address || found.address || 'Delivery Address',
             paymentMethod: found.payment_method || 'UPI',
             deliverySlot: found.estimated_time || '10-15 min express delivery',
-            discount: Number(found.discount) || 0
+            subtotal: Number(found.subtotal) || 0,
+            mrp_total: Number(found.mrp_total) || 0,
+            delivery_fee: Number(found.delivery_fee) || 0,
+            discount: Number(found.discount) || 0,
+            coupon_discount: Number(found.coupon_discount) || 0
           };
           setOrder(formatted);
+          return;
         }
       }
+
+      // Fallback: check local storage orders if backend has not yet persisted
+      try {
+        const localList = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+        const fastCache = JSON.parse(sessionStorage.getItem('grabit_fast_orders_cache') || '[]');
+        const localFound = [...fastCache, ...localList].find(o => matchesOrder(o, orderId));
+        if (localFound) {
+          setOrder(prev => prev || localFound);
+        }
+      } catch {}
     } catch (err) {
       console.warn('Live order fetch error:', err);
     } finally {
@@ -258,12 +269,25 @@ export default function OrderTrackingPage() {
 
     setTimeout(() => {
       let replyText = "Our customer support team has logged your query. An agent will contact you shortly if needed!";
+      const riderName = order?.delivery_agent_name || order?.rider_name || 'Your delivery partner';
+      const orderStatus = (order?.status || '').toLowerCase();
+
       if (inputClean.includes('rider') || inputClean.includes('driver') || inputClean.includes('location')) {
-        replyText = "🛵 Your rider Karthik is currently 1.2 km away and moving towards your delivery location. Estimated arrival in ~8 mins.";
+        if (orderStatus === 'out_for_delivery' || orderStatus === 'assigned') {
+          replyText = `🛵 ${riderName} is on the way with your order. You can track live updates right here on the status card.`;
+        } else if (orderStatus === 'delivered') {
+          replyText = `✅ Your order has already been marked as delivered by ${riderName}. If you have not received it, please tap "Report Issue".`;
+        } else {
+          replyText = `📦 Your order is currently being prepared at the store. A delivery partner will be assigned as soon as packing is complete.`;
+        }
       } else if (inputClean.includes('cancel')) {
-        replyText = "⚠️ Orders currently out for delivery cannot be cancelled automatically. Please call our toll-free support at +91 1800-419-4722 for immediate cancellation help.";
-      } else if (inputClean.includes('item') || inputClean.includes('missing') || inputClean.includes('wrong')) {
-        replyText = "📦 We're sorry for any issue! We've flagged item inspection for your order. If any item is damaged or missing upon delivery, full instant refund will be issued to your wallet.";
+        if (orderStatus === 'out_for_delivery' || orderStatus === 'delivered') {
+          replyText = "⚠️ Orders currently out for delivery or delivered cannot be cancelled automatically. Please reach out to customer support if you need urgent assistance.";
+        } else {
+          replyText = 'ℹ️ You can cancel your order directly using the "Cancel Order" button below before the store finishes packing.';
+        }
+      } else if (inputClean.includes('item') || inputClean.includes('missing') || inputClean.includes('wrong') || inputClean.includes('damage')) {
+        replyText = "📦 We're very sorry for any trouble with your items! Our support team has logged your query and an agent will review your order details shortly to resolve this.";
       }
       setChatMessages(prev => [...prev, { id: Date.now() + 1, sender: 'agent', text: replyText, time: 'Just now' }]);
     }, 800);
@@ -700,12 +724,28 @@ export default function OrderTrackingPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#64748B' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Item Subtotal</span>
-                  <span style={{ color: '#0F172A', fontWeight: 700 }}>₹{order?.total || 0}</span>
+                  <span>Item Total</span>
+                  <span style={{ color: '#0F172A', fontWeight: 700 }}>
+                    ₹{order?.mrp_total || (Number(order?.total || 0) + Number(order?.discount || 0) + Number(order?.coupon_discount || 0) - Number(order?.delivery_fee || 0))}
+                  </span>
                 </div>
+                {Number(order?.discount) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Product Discount</span>
+                    <span style={{ color: '#16A34A', fontWeight: 800 }}>-₹{order.discount}</span>
+                  </div>
+                )}
+                {Number(order?.coupon_discount) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Coupon Discount</span>
+                    <span style={{ color: '#16A34A', fontWeight: 800 }}>-₹{order.coupon_discount}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Delivery Fee</span>
-                  <span style={{ color: '#16A34A', fontWeight: 800 }}>FREE</span>
+                  <span style={{ color: (Number(order?.delivery_fee) || 0) === 0 ? '#16A34A' : '#0F172A', fontWeight: 800 }}>
+                    {(Number(order?.delivery_fee) || 0) === 0 ? 'FREE' : `₹${order.delivery_fee}`}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9', fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
                   <span>Total Amount Paid</span>

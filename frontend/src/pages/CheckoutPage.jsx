@@ -28,7 +28,7 @@ import { forceScrollToTop } from '../utils/scrollToTop';
 import { addUserNotification } from '../utils/userNotifications';
 
 export default function CheckoutPage() {
-  const { items, itemTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
+  const { items, itemTotal, mrpTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
   const { showToast } = useToast();
   const [step, setStep] = useState(0);
   const [selectedPayment, setSelectedPayment] = useState('upi');
@@ -382,8 +382,15 @@ export default function CheckoutPage() {
       setIsLocationModalOpen(true);
       return;
     }
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `GB-${randomNum}`;
+
+    // Pre-validate stock availability
+    const outOfStockItem = items.find(i => i.inStock === false || (i.stock_quantity !== undefined && i.stock_quantity <= 0));
+    if (outOfStockItem) {
+      showToast(`Item "${outOfStockItem.name}" is currently out of stock. Please remove it from your cart.`);
+      return;
+    }
+
+    const orderNumber = `GB-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const rawId = `ord-${Date.now()}`;
     const orderItems = items.map((item) => ({
       id: item.id,
@@ -399,12 +406,15 @@ export default function CheckoutPage() {
     const rawPhoneDigits = (selectedAddress.phone || currentPhone || '').replace(/\D/g, '');
     const validPhoneDigits = rawPhoneDigits.length >= 10 ? rawPhoneDigits.slice(-10) : (rawPhoneDigits || '9876543210');
     const fullAddrStr = selectedAddress.address + (selectedAddress.city ? `, ${selectedAddress.city}` : '');
+    const targetStoreId = items.find(i => i.store_id)?.store_id || 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb';
+    const targetLat = Number(selectedAddress.lat || selectedAddress.latitude) || 12.9716;
+    const targetLng = Number(selectedAddress.lng || selectedAddress.longitude) || 77.5946;
 
     const newOrder = {
       id: orderNumber,
       orderNumber: orderNumber,
       rawId: rawId,
-      store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+      store_id: targetStoreId,
       store_name: storeHubName || 'GrabIt Supermarket',
       customer_name: custName,
       customer_phone: `+91${validPhoneDigits}`,
@@ -414,8 +424,10 @@ export default function CheckoutPage() {
       total_amount: Number(toPay) || 0,
       total: Number(toPay) || 0,
       subtotal: Number(itemTotal) || 0,
+      mrp_total: Number(mrpTotal) || Number(itemTotal) || 0,
       delivery_fee: Number(deliveryFee) || 0,
       discount: Number(discount) || 0,
+      coupon_discount: Number(couponDiscount) || 0,
       status: 'placed',
       payment_method: (selectedPayment || 'upi').toUpperCase(),
       estimated_time: selectedAddress.time || '15-25 min delivery',
@@ -428,24 +440,29 @@ export default function CheckoutPage() {
 
     try {
       const apiRes = await post('/orders/', {
-        store_id: 'b5c9ff6b-1f64-405f-a25d-54dc6ea77bbb',
+        store_id: targetStoreId,
         delivery_address: fullAddrStr,
         items: orderItems,
         total_amount: Number(toPay) || 0,
         customer_name: newOrder.customer_name,
         customer_phone: newOrder.customer_phone,
         payment_method: newOrder.payment_method,
-        latitude: 12.9716,
-        longitude: 77.5946,
+        latitude: targetLat,
+        longitude: targetLng,
         status: 'placed'
-      }).catch(() => null);
+      });
 
-      if (apiRes && apiRes.id) {
-        finalOrder.id = apiRes.id;
-        finalOrder.rawId = apiRes.id;
-        finalOrder.orderNumber = apiRes.id;
+      if (!apiRes || (!apiRes.id && !apiRes.rawId)) {
+        throw new Error('Server did not return a valid order acknowledgement.');
       }
-    } catch {}
+      finalOrder.id = apiRes.id || apiRes.rawId;
+      finalOrder.rawId = apiRes.id || apiRes.rawId;
+      finalOrder.orderNumber = apiRes.id || apiRes.rawId;
+    } catch (err) {
+      console.error('Order placement failed:', err);
+      showToast(err?.message || 'Failed to place order. Please check your connection and try again.');
+      return;
+    }
 
     try {
       const storageKey = validPhoneDigits ? `grabit_orders_${validPhoneDigits}` : 'grabit_orders_guest';
@@ -705,7 +722,7 @@ export default function CheckoutPage() {
               {[
                 { emoji: '🛍️', label: 'Items', value: `${totalItems}` },
                 { emoji: '💳', label: 'Payment', value: (selectedPayment || 'UPI').toUpperCase().slice(0, 4) },
-                { emoji: '💰', label: 'Saved', value: `₹${discount + (appliedCoupon ? Math.round(itemTotal * (appliedCoupon.discount / 100)) : 0)}` },
+                { emoji: '💰', label: 'Saved', value: `₹${discount + (couponDiscount || 0)}` },
               ].map(({ emoji, label, value }) => (
                 <div key={label} className="success-stat-card" style={{
                   background: 'rgba(255,255,255,0.05)',
@@ -804,9 +821,17 @@ export default function CheckoutPage() {
         ))}
       </div>
       <div className="divider" style={{ margin: '12px 0', borderColor: '#E2E8F0' }} />
-      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Item Total ({totalItems} items)</span><span style={{ fontWeight: 800, color: '#0F172A' }}>₹{itemTotal}</span></div>
-      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}><span>Discount</span><span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span></div>
-      {appliedCoupon && (
+      <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+        <span>Item Total ({totalItems} items)</span>
+        <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{mrpTotal || itemTotal}</span>
+      </div>
+      {discount > 0 && (
+        <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
+          <span>Product Discount</span>
+          <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span>
+        </div>
+      )}
+      {appliedCoupon && couponDiscount > 0 && (
         <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', color: '#64748B' }}>
           <span>Coupon Discount ({appliedCoupon.code})</span>
           <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{couponDiscount}</span>
@@ -816,11 +841,14 @@ export default function CheckoutPage() {
         <span>Delivery Fee</span>
         <span>{deliveryFee > 0 ? <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{deliveryFee}</span> : <><span style={{ textDecoration: 'line-through', color: '#94A3B8', marginRight: '4px' }}>₹30</span> <span style={{ color: '#10B981', fontWeight: 900 }}>FREE</span></>}</span>
       </div>
-      <div className="bill-row total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 900, paddingTop: '8px', color: '#0F172A' }}><span>To Pay</span><span style={{ color: '#0071E3' }}>₹{toPay}</span></div>
+      <div className="bill-row total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 900, paddingTop: '8px', color: '#0F172A' }}>
+        <span>To Pay</span>
+        <span style={{ color: '#0071E3' }}>₹{toPay}</span>
+      </div>
       
       <div className="savings-banner" style={{ marginTop: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '10px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Tag size={14} color="#10B981" />
-        You're saving ₹{discount + couponDiscount} on this order
+        You're saving ₹{discount + (couponDiscount || 0)} on this order
       </div>
       
       <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px', marginTop: '14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1071,15 +1099,25 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Items ({totalItems})</span>
-                <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{itemTotal}</span>
+                <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{mrpTotal || itemTotal}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Discount</span>
-                <span style={{ color: '#10B981', fontWeight: 800 }}>-₹{discount}</span>
-              </div>
+              {discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Product Discount</span>
+                  <span style={{ color: '#10B981', fontWeight: 800 }}>-₹{discount}</span>
+                </div>
+              )}
+              {appliedCoupon && couponDiscount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Coupon Discount ({appliedCoupon.code})</span>
+                  <span style={{ color: '#10B981', fontWeight: 800 }}>-₹{couponDiscount}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Delivery Fee</span>
-                <span style={{ color: '#10B981', fontWeight: 800 }}>FREE</span>
+                <span style={{ color: '#10B981', fontWeight: 800 }}>
+                  {deliveryFee > 0 ? `₹${deliveryFee}` : 'FREE'}
+                </span>
               </div>
               <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
                 <span>Total Amount</span>

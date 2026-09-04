@@ -28,8 +28,8 @@ export function AuthGuard({ children, allowedRoles }) {
       const user = JSON.parse(userStr);
       const userRole = user?.role;
 
-      // If user has no role or role is not in allowedRoles list
-      if (!userRole || !allowedRoles.includes(userRole)) {
+      // If user has no role set in profile, assign default customer role
+      if (!userRole) {
         if (allowedRoles.includes('customer')) {
           const customerUser = {
             ...user,
@@ -40,12 +40,14 @@ export function AuthGuard({ children, allowedRoles }) {
           localStorage.setItem('grabit_user', JSON.stringify(customerUser));
           return children;
         }
+        return <Navigate to="/login" state={{ from: location }} replace />;
+      }
 
-        // Redirect strictly to their authorized home/portal
+      // If user role is not permitted on this route, redirect strictly to their authorized portal
+      if (!allowedRoles.includes(userRole)) {
         if (userRole === 'admin') return <Navigate to="/admin" replace />;
         if (userRole === 'seller') return <Navigate to="/seller/dashboard" replace />;
         if (userRole === 'delivery_agent') return <Navigate to="/delivery/dashboard" replace />;
-        // Default customer or unauthorized role
         return <Navigate to="/" replace />;
       }
     } catch {

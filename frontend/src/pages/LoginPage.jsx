@@ -72,14 +72,15 @@ export function LoginPage() {
   const requestOtpFor = async (phone) => {
     try {
       const res = await post('/auth/send-otp', { phone });
-      setDebugOtp(res?.debug_otp ? String(res.debug_otp) : '');
+      const code = res?.debug_otp ? String(res.debug_otp) : '';
+      setDebugOtp(code);
       setResendCooldown(30);
       setError('');
-      return true;
+      return { ok: true, debugOtp: code };
     } catch (err) {
       setDebugOtp('');
       setError(err?.message || 'Unable to send verification code. Please check your connection and try again.');
-      return false;
+      return { ok: false, debugOtp: '' };
     }
   };
 
@@ -128,9 +129,10 @@ export function LoginPage() {
         phone: fullPhone, email: `${demoUser.role}@grabit.local`,
       };
       try {
-        const sent = await requestOtpFor(fullPhone);
-        if (sent) {
-          const v = await post('/auth/verify', { phone: fullPhone, otp: debugOtp || '123456' });
+        const otpRes = await requestOtpFor(fullPhone);
+        if (otpRes.ok) {
+          const otpToVerify = otpRes.debugOtp || '123456';
+          const v = await post('/auth/verify', { phone: fullPhone, otp: otpToVerify });
           if (v?.access_token) { token = v.access_token; if (v.user) userObj = { ...userObj, ...v.user }; }
         }
       } catch {}
@@ -151,9 +153,9 @@ export function LoginPage() {
     }
 
     // Regular login: just send OTP, no pre-check
-    const sent = await requestOtpFor(fullPhone);
+    const otpRes = await requestOtpFor(fullPhone);
     setBusy(false);
-    if (sent) {
+    if (otpRes.ok) {
       setOtp('');
       setStep('otp');
     }

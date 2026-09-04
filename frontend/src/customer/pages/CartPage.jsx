@@ -9,7 +9,7 @@ import { products } from '../data/products';
 import useWindowWidth from '../hooks/useWindowWidth';
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, itemTotal, discount, deliveryFee, toPay, totalItems } = useCart();
+  const { items, updateQty, removeItem, itemTotal, mrpTotal, discount, deliveryFee, toPay, totalItems, appliedCoupon, couponDiscount } = useCart();
   const { showToast } = useToast();
   const recommended = products.slice(0, 6);
   const w = useWindowWidth();
@@ -61,6 +61,11 @@ export default function CartPage() {
 
   const handleSelectAddress = (addr) => {
     setSelectedAddress(addr);
+    try {
+      localStorage.setItem('grabit_selected_address', JSON.stringify(addr));
+      window.dispatchEvent(new Event('grabit_selected_address_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
     setIsLocationModalOpen(false);
     showToast(`Delivery location updated to ${addr.title}!`);
   };
@@ -76,6 +81,11 @@ export default function CartPage() {
       isDefault: false
     };
     setSelectedAddress(newAddr);
+    try {
+      localStorage.setItem('grabit_selected_address', JSON.stringify(newAddr));
+      window.dispatchEvent(new Event('grabit_selected_address_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
     setCustomAddressInput('');
     setIsLocationModalOpen(false);
     showToast(`Delivery location updated to "${newAddr.address}"!`);
@@ -222,15 +232,25 @@ export default function CartPage() {
               </div>
               <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', color: '#475569' }}>
                 <span>Item Total ({totalItems} items)</span>
-                <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{itemTotal}</span>
+                <span style={{ fontWeight: 800, color: '#0F172A' }}>₹{mrpTotal || itemTotal}</span>
               </div>
-              <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', color: '#475569' }}>
-                <span>Discount</span>
-                <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span>
-              </div>
+              {discount > 0 && (
+                <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', color: '#475569' }}>
+                  <span>Product Discount</span>
+                  <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{discount}</span>
+                </div>
+              )}
+              {appliedCoupon && couponDiscount > 0 && (
+                <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', color: '#475569' }}>
+                  <span>Coupon Discount ({appliedCoupon.code})</span>
+                  <span style={{ color: '#10B981', fontWeight: 900 }}>-₹{couponDiscount}</span>
+                </div>
+              )}
               <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', color: '#475569' }}>
                 <span>Delivery Fee</span>
-                <span style={{ color: '#10B981', fontWeight: 900 }}>FREE</span>
+                <span style={{ color: deliveryFee > 0 ? '#0F172A' : '#10B981', fontWeight: 900 }}>
+                  {deliveryFee > 0 ? `₹${deliveryFee}` : 'FREE'}
+                </span>
               </div>
               <div className="divider" style={{ margin: '10px 0', borderColor: '#E2E8F0' }} />
               <div className="bill-row total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 900, paddingTop: '4px', color: '#0F172A' }}>
