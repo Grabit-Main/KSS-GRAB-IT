@@ -35,6 +35,7 @@ import SellerPortalApp from './seller/SellerPortalApp';
 import DeliveryPortalApp from './delivery/DeliveryPortalApp';
 import AdminPortalApp from './admin/AdminPortalApp';
 import LoginPage from './pages/LoginPage';
+import SplashScreen from './components/SplashScreen';
 import { forceScrollToTop } from './utils/scrollToTop';
 
 // Automatically scroll to top synchronously BEFORE paint on route change
@@ -139,6 +140,7 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SplashScreen />
       <ScrollToTop />
       <InitialLoginCheck />
       <ToastProvider>
