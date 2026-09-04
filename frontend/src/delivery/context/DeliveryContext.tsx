@@ -2476,17 +2476,23 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             myRiderKeys.add(`+${digits}`);
           }
         }
-        // Standard aliases for active delivery partners
-        myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b');
-        myRiderKeys.add('+919080841727');
-        myRiderKeys.add('9080841727');
-        myRiderKeys.add('thabee');
-        myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a');
-        myRiderKeys.add('700b1d05-e6f5-4be0-9e57-1d05137b5487');
-        myRiderKeys.add('+919999900003');
-        myRiderKeys.add('9999900003');
-        if (loggedRiderName) {
-          myRiderKeys.add(loggedRiderName.toLowerCase());
+        // Add aliases strictly for the currently logged in rider
+        const isCurrentKarthik = (loggedRiderPhone && loggedRiderPhone.includes('9999900003')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('karthik'));
+        const isCurrentThabee = (loggedRiderPhone && loggedRiderPhone.includes('9080841727')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('thabee'));
+
+        if (isCurrentKarthik) {
+          myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a');
+          myRiderKeys.add('700b1d05-e6f5-4be0-9e57-1d05137b5487');
+          myRiderKeys.add('+919999900003');
+          myRiderKeys.add('9999900003');
+          myRiderKeys.add('karthik rider');
+          myRiderKeys.add('karthik');
+        } else if (isCurrentThabee) {
+          myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b');
+          myRiderKeys.add('19c315f7-401b-46f9-8ea6-6796323f0260');
+          myRiderKeys.add('+919080841727');
+          myRiderKeys.add('9080841727');
+          myRiderKeys.add('thabee');
         }
 
         const assignedRaw: any[] = [];

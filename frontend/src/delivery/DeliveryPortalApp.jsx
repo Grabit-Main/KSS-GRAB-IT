@@ -53,13 +53,86 @@ function DeliveryAppLayout() {
       const userStr = localStorage.getItem('grabit_user');
       const sessionStr = localStorage.getItem('grabit_session');
       const user = userStr ? JSON.parse(userStr) : null;
-      const isKarthikDemo = user?.phone === '+919999900003' || user?.name === 'Karthik Rider';
-      if (!user || (user.role !== 'delivery_agent' && user.role !== 'delivery_partner' && user.role !== 'rider') || !user.phone || user.partnerVerified !== true || isKarthikDemo) {
-        const riderUser = {
-          id: (user?.phone === '+919080841727' ? user?.id : null) || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+      
+      if (user && (user.role === 'delivery_agent' || user.role === 'delivery_partner' || user.role === 'rider')) {
+        const isKarthik = user.phone === '+919999900003' || user.name === 'Karthik Rider' || user.full_name === 'Karthik Rider' || user.name === 'Speedy Express Delivery';
+        const isThabee = user.phone === '+919080841727' || user.name === 'Thabee' || user.full_name === 'Thabee';
+
+        if (isKarthik) {
+          const updatedKarthik = {
+            id: user.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
+            role: 'delivery_agent',
+            name: 'Karthik Rider',
+            full_name: 'Karthik Rider',
+            phone: '+919999900003',
+            email: user.email || 'karthik.rider@grabit.local',
+            partnerVerified: true,
+            biometricsDone: true,
+            verification_status: 'ADMIN_VERIFIED',
+            verified_by_admin: true,
+            vehicle_type: user.vehicle_type || 'TVS iQube Electric Scooter',
+            plate_number: user.plate_number || 'KA-05-EX-9921',
+            license_number: user.license_number || 'DL-2024-88712',
+            insuranceNo: user.insuranceNo || 'POL-BAJAJ-77182',
+            pucNo: user.pucNo || 'PUC-KA05-110291',
+            clearances: {
+              dlVerified: true,
+              insuranceVerified: true,
+              pucVerified: true,
+              bgCheckVerified: true,
+              ...(user.clearances || {})
+            }
+          };
+          localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
+          localStorage.setItem('grabit_user', JSON.stringify({ ...user, ...updatedKarthik }));
+          return;
+        }
+
+        if (isThabee) {
+          const updatedThabee = {
+            id: user.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+            role: 'delivery_agent',
+            name: 'Thabee',
+            full_name: 'Thabee',
+            phone: '+919080841727',
+            email: user.email || 'thabee@grabit.local',
+            partnerVerified: true,
+            biometricsDone: true,
+            verification_status: 'ADMIN_VERIFIED',
+            verified_by_admin: true,
+            vehicle_type: user.vehicle_type || 'Ather 450X EV Scooter',
+            plate_number: user.plate_number || 'KA 05 EQ 4421',
+            license_number: user.license_number || 'DL-KA-05-2024009182',
+            insuranceNo: user.insuranceNo || 'POL-HDFC-99201',
+            pucNo: user.pucNo || 'PUC-KA05-882190',
+            clearances: {
+              dlVerified: true,
+              insuranceVerified: true,
+              pucVerified: true,
+              bgCheckVerified: true,
+              ...(user.clearances || {})
+            }
+          };
+          localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
+          localStorage.setItem('grabit_user', JSON.stringify({ ...user, ...updatedThabee }));
+          return;
+        }
+
+        // Any other rider user
+        if (!user.partnerVerified) {
+          user.partnerVerified = true;
+          localStorage.setItem('grabit_user', JSON.stringify(user));
+        }
+        return;
+      }
+
+      // No user session at all: default fallback to Thabee
+      if (!user) {
+        const fallbackRider = {
+          id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
           role: 'delivery_agent',
-          name: (user?.phone === '+919080841727' ? user?.name : null) || 'Thabee',
-          full_name: (user?.phone === '+919080841727' ? user?.full_name : null) || 'Thabee',
+          name: 'Thabee',
+          full_name: 'Thabee',
           phone: '+919080841727',
           email: 'thabee@grabit.local',
           partnerVerified: true,
@@ -75,12 +148,11 @@ function DeliveryAppLayout() {
             dlVerified: true,
             insuranceVerified: true,
             pucVerified: true,
-            bgCheckVerified: true,
-            ...(user?.clearances || {})
+            bgCheckVerified: true
           }
         };
         localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
-        localStorage.setItem('grabit_user', JSON.stringify(riderUser));
+        localStorage.setItem('grabit_user', JSON.stringify(fallbackRider));
       }
     } catch {}
   }, []);
