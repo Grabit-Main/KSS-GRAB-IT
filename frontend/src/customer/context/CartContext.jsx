@@ -3,6 +3,9 @@ import { get, post } from '../../api';
 
 const CartContext = createContext();
 
+const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://grabit-api.vercel.app')).replace(/\/api\/?$/, '');
+
+
 export const AVAILABLE_COUPONS = [
   {
     code: 'GRABIT50',

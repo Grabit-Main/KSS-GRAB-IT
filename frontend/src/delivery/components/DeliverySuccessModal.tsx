@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDelivery } from '../context/DeliveryContext';
 import { CheckCircle2, PackageCheck, MapPin, Store, Navigation2, ArrowRight } from 'lucide-react';
 
 export const DeliverySuccessModal: React.FC = () => {
   const { state, closeModal } = useDelivery();
   const { successOrderSummary } = state;
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState(4);
+
+  const handleDone = () => {
+    closeModal();
+    navigate('/delivery/dashboard');
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          closeModal();
+          handleDone();
           return 0;
         }
         return prev - 1;
@@ -112,7 +119,7 @@ export const DeliverySuccessModal: React.FC = () => {
           </p>
 
           <button
-            onClick={closeModal}
+            onClick={handleDone}
             className="btn-primary"
             style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: '700' }}
           >

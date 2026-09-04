@@ -15,6 +15,7 @@ import { NotificationsScreen } from './components/screens/NotificationsScreen';
 import { SupportScreen } from './components/screens/SupportScreen';
 import { ProfileScreen } from './components/screens/ProfileScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { AttendanceScreen } from './components/screens/AttendanceScreen';
 
 // Modals
 import { ProofOfDeliveryModal } from './components/ProofOfDeliveryModal';
@@ -24,44 +25,150 @@ import { MockChatModal } from './components/MockChatModal';
 import { SOSModal } from './components/SOSModal';
 import { DeliverySuccessModal } from './components/DeliverySuccessModal';
 import { IncentiveDetailsModal } from './components/IncentiveDetailsModal';
+import { ShiftSummaryModal } from './components/ShiftSummaryModal';
 import { NewOrderPopup } from './components/NewOrderPopup';
+import { NotificationsModal } from './components/NotificationsModal';
+import { AlertModal } from './components/AlertModal';
 
 import './index.css';
 import './App.css';
 import { forceScrollToTop } from '../utils/scrollToTop';
 
 function DeliveryAppLayout() {
-  const { state, unreadCount } = useDelivery();
+  const { state, unreadCount, confirmGoOffline } = useDelivery();
   const { activeModal } = state;
   const navigate = useNavigate();
   const location = useLocation();
   const [showPortalModal, setShowPortalModal] = React.useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = React.useState(false);
 
   // Scroll to top on every delivery sub-route change
   useLayoutEffect(() => {
     forceScrollToTop();
   }, [location.pathname, location.search, location.hash]);
 
-  React.useEffect(() => {
+  // Self-heal and ensure verified rider session
+  const ensureRiderSession = React.useCallback(() => {
     try {
       const userStr = localStorage.getItem('grabit_user');
+      const sessionStr = localStorage.getItem('grabit_session');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || user.role !== 'delivery_agent') {
-        const riderUser = {
-          id: 'thabee-rider-1',
+      
+      if (user && (user.role === 'delivery_agent' || user.role === 'delivery_partner' || user.role === 'rider')) {
+        const isKarthik = user.phone === '+919999900003' || user.name === 'Karthik Rider' || user.full_name === 'Karthik Rider' || user.name === 'Speedy Express Delivery';
+        const isThabee = user.phone === '+919080841727' || user.name === 'Thabee' || user.full_name === 'Thabee';
+
+        if (isKarthik) {
+          const updatedKarthik = {
+            id: user.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
+            role: 'delivery_agent',
+            name: 'Karthik Rider',
+            full_name: 'Karthik Rider',
+            phone: '+919999900003',
+            email: user.email || 'karthik.rider@grabit.local',
+            partnerVerified: true,
+            biometricsDone: true,
+            verification_status: 'ADMIN_VERIFIED',
+            verified_by_admin: true,
+            vehicle_type: user.vehicle_type || 'TVS iQube Electric Scooter',
+            plate_number: user.plate_number || 'KA-05-EX-9921',
+            license_number: user.license_number || 'DL-2024-88712',
+            insuranceNo: user.insuranceNo || 'POL-BAJAJ-77182',
+            pucNo: user.pucNo || 'PUC-KA05-110291',
+            clearances: {
+              dlVerified: true,
+              insuranceVerified: true,
+              pucVerified: true,
+              bgCheckVerified: true,
+              ...(user.clearances || {})
+            }
+          };
+          localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
+          localStorage.setItem('grabit_user', JSON.stringify({ ...user, ...updatedKarthik }));
+          return;
+        }
+
+        if (isThabee) {
+          const updatedThabee = {
+            id: user.id || 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+            role: 'delivery_agent',
+            name: 'Thabee',
+            full_name: 'Thabee',
+            phone: '+919080841727',
+            email: user.email || 'thabee@grabit.local',
+            partnerVerified: true,
+            biometricsDone: true,
+            verification_status: 'ADMIN_VERIFIED',
+            verified_by_admin: true,
+            vehicle_type: user.vehicle_type || 'Ather 450X EV Scooter',
+            plate_number: user.plate_number || 'KA 05 EQ 4421',
+            license_number: user.license_number || 'DL-KA-05-2024009182',
+            insuranceNo: user.insuranceNo || 'POL-HDFC-99201',
+            pucNo: user.pucNo || 'PUC-KA05-882190',
+            clearances: {
+              dlVerified: true,
+              insuranceVerified: true,
+              pucVerified: true,
+              bgCheckVerified: true,
+              ...(user.clearances || {})
+            }
+          };
+          localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
+          localStorage.setItem('grabit_user', JSON.stringify({ ...user, ...updatedThabee }));
+          return;
+        }
+
+        // Any other rider user
+        if (!user.partnerVerified) {
+          user.partnerVerified = true;
+          localStorage.setItem('grabit_user', JSON.stringify(user));
+        }
+        return;
+      }
+
+      // No user session at all: default fallback to Thabee
+      if (!user) {
+        const fallbackRider = {
+          id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
           role: 'delivery_agent',
           name: 'Thabee',
           full_name: 'Thabee',
           phone: '+919080841727',
-          email: 'thabee.partner@grabit.com'
+          email: 'thabee@grabit.local',
+          partnerVerified: true,
+          biometricsDone: true,
+          verification_status: 'ADMIN_VERIFIED',
+          verified_by_admin: true,
+          vehicle_type: 'Ather 450X EV Scooter',
+          plate_number: 'KA 05 EQ 4421',
+          license_number: 'DL-KA-05-2024009182',
+          insuranceNo: 'POL-HDFC-99201',
+          pucNo: 'PUC-KA05-882190',
+          clearances: {
+            dlVerified: true,
+            insuranceVerified: true,
+            pucVerified: true,
+            bgCheckVerified: true
+          }
         };
-        localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
-        localStorage.setItem('grabit_user', JSON.stringify(riderUser));
+        localStorage.setItem('grabit_session', sessionStr || 'demo-delivery-token');
+        localStorage.setItem('grabit_user', JSON.stringify(fallbackRider));
       }
-    } catch {
-      // safe fallback
-    }
-  }, [navigate]);
+    } catch {}
+  }, []);
+
+  // Run synchronously before render & on mount/storage
+  ensureRiderSession();
+
+  React.useEffect(() => {
+    ensureRiderSession();
+    window.addEventListener('storage', ensureRiderSession);
+    window.addEventListener('focus', ensureRiderSession);
+    return () => {
+      window.removeEventListener('storage', ensureRiderSession);
+      window.removeEventListener('focus', ensureRiderSession);
+    };
+  }, [ensureRiderSession]);
 
   return (
     <div className="portal-layout">
@@ -89,34 +196,9 @@ function DeliveryAppLayout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AgentStatusPill />
 
-            {/* Portal Switcher / Exit Button */}
             <button
               type="button"
-              onClick={() => setShowPortalModal(true)}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: '#EFF6FF',
-                border: '1.5px solid #BFDBFE',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(0, 113, 227, 0.1)',
-                cursor: 'pointer',
-                color: '#0071E3',
-                padding: 0,
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
-              }}
-              title="Switch Portals & Login"
-            >
-              <LogIn size={17} color="#0071E3" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/delivery/notifications')}
+              onClick={() => setShowNotificationsModal(true)}
               style={{
                 position: 'relative',
                 width: '36px',
@@ -172,6 +254,7 @@ function DeliveryAppLayout() {
             <Route path="performance" element={<Navigate to="/delivery/dashboard" replace />} />
             <Route path="notifications" element={<NotificationsScreen />} />
             <Route path="support" element={<Navigate to="/delivery/dashboard" replace />} />
+            <Route path="attendance" element={<AttendanceScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
             <Route path="settings" element={<SettingsScreen />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
@@ -191,9 +274,16 @@ function DeliveryAppLayout() {
       {activeModal === 'SOS' && <SOSModal />}
       {activeModal === 'DELIVERY_SUCCESS' && <DeliverySuccessModal />}
       {activeModal === 'INCENTIVE_DETAILS' && <IncentiveDetailsModal />}
+      {activeModal === 'SHIFT_SUMMARY' && <ShiftSummaryModal onConfirmGoOffline={confirmGoOffline} />}
 
       {/* New Order Assigned Popup */}
       <NewOrderPopup />
+
+      {/* Mobile Responsive Alert & Warning Modal */}
+      <AlertModal />
+
+      {/* Top Right Notifications Glass Modal */}
+      <NotificationsModal isOpen={showNotificationsModal} onClose={() => setShowNotificationsModal(false)} />
 
       {/* 🔐 CONFIRMATION MODAL BEFORE REDIRECTING TO LOGIN */}
       {showPortalModal && (

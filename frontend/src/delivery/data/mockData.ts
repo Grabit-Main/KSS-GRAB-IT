@@ -61,13 +61,13 @@ export const initialSettings: AppSettings = {
 };
 
 export const agentProfile = {
-  name: 'Thabee',
-  agentId: 'AG-P1727',
+  name: 'Delivery Partner',
+  agentId: 'AG-P0000',
   rating: 5.00,
   totalDeliveries: 0,
   completedDeliveries: 0,
-  phone: '+91 90808 41727',
-  email: 'thabee.partner@grabit.com',
+  phone: '',
+  email: '',
   hub: 'GrabIt Supermarket (Koramangala Hub)',
   vehicle: '',
   plate: '',

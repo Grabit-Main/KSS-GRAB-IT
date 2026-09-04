@@ -7,13 +7,31 @@ const API = import.meta.env.VITE_API_URL || (
 // Resolve the best available auth token from all known storage keys safely
 function getAuthToken() {
   try {
-    return (
+    const token = (
       localStorage.getItem('grabit_session') ||
       localStorage.getItem('grabit_seller_access') ||
       localStorage.getItem('grabit_jwt') ||
-      localStorage.getItem('grabit_auth_token') ||
-      null
+      localStorage.getItem('grabit_auth_token')
     );
+    if (token) return token;
+
+    const userStr = localStorage.getItem('grabit_user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      if (u.role === 'admin') return 'demo-admin-token';
+      if (u.role === 'seller') return 'demo-seller-token';
+      if (u.role === 'delivery_agent' || u.role === 'delivery_partner' || u.role === 'rider') return 'demo-delivery-token';
+      if (u.role === 'customer') return 'demo-customer-token';
+    }
+
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      if (p.startsWith('/delivery')) return 'demo-delivery-token';
+      if (p.startsWith('/admin')) return 'demo-admin-token';
+      if (p.startsWith('/seller')) return 'demo-seller-token';
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -23,8 +41,16 @@ export async function api(path, options = {}) {
   const token = getAuthToken();
   const isGet = !options.method || options.method === 'GET';
 
-  // For public endpoints (orders, products, categories), allow GET requests even without auth token
-  const isPublicGet = isGet && (path.startsWith('/orders') || path.startsWith('/products') || path.startsWith('/categories'));
+  // For public or readable endpoints (orders, products, categories, admin/partners, users, store, tickets), allow GET requests even without explicit auth token
+  const isPublicGet = isGet && (
+    path.startsWith('/orders') ||
+    path.startsWith('/products') ||
+    path.startsWith('/categories') ||
+    path.startsWith('/admin') ||
+    path.startsWith('/users') ||
+    path.startsWith('/store') ||
+    path.startsWith('/tickets')
+  );
   if (isGet && !token && !isPublicGet) return null;
 
   // Abort hung GET requests after 4s; allow 15s for mutations/auth calls
@@ -33,7 +59,8 @@ export async function api(path, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${API}${path}`, {
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const response = await fetch(`${API}${cleanPath}`, {
       ...options,
       signal: controller.signal,
       headers: {

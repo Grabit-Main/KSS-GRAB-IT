@@ -127,6 +127,24 @@ export const IncentiveCard: React.FC = () => {
             height: 165px !important;
           }
         }
+
+        @media (max-width: 420px) {
+          .incentive-left-content {
+            padding-right: 120px !important;
+          }
+          .incentive-headline-text {
+            font-size: 14.5px !important;
+          }
+          .incentive-graphic-container {
+            width: 130px !important;
+            height: 130px !important;
+            right: -12px !important;
+          }
+          .incentive-graphic-container img {
+            width: 125px !important;
+            height: 125px !important;
+          }
+        }
       `}</style>
 
       <div className="grabit-incentive-banner">

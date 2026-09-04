@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDelivery } from '../context/DeliveryContext';
+import { useDelivery, formatActiveTime, isTodayHistoryEntry } from '../context/DeliveryContext';
 import { AgentStatusPill } from './AgentStatusPill';
 import { IncentiveCard } from './IncentiveCard';
 import {
@@ -22,22 +22,43 @@ import {
 } from 'lucide-react';
 
 export const DashboardAvailable: React.FC = () => {
-  const { state, forceDispatchNow, toggleAvailability, acceptOrder, dispatch } = useDelivery();
-  const { stats, history, agentStatus, orderPool, currentOrder, queuedOrders } = state;
+  const { state, forceDispatchNow, toggleAvailability, acceptOrder, dispatch, isStoreOpen, storeHours } = useDelivery();
+  const { stats, history, agentStatus, orderPool, currentOrder, queuedOrders, activeShiftSeconds } = state;
   const navigate = useNavigate();
+
+  const todayHistory = React.useMemo(() => {
+    return (history || []).filter(isTodayHistoryEntry);
+  }, [history]);
 
   const [visibleCount, setVisibleCount] = React.useState(6);
 
   const loggedInUser = (() => {
     try {
-      return JSON.parse(localStorage.getItem('grabit_user') || '{}');
+      const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+      if (u && (u.role === 'delivery_agent' || u.role === 'rider' || u.phone)) return u;
+      return u || {};
     } catch {
       return {};
     }
   })();
-  const agentName = loggedInUser.full_name || loggedInUser.name || loggedInUser.username || 'Delivery Partner';
+  const isKarthik = (loggedInUser?.phone && String(loggedInUser.phone).includes('9999900003')) || loggedInUser?.name === 'Karthik Rider' || loggedInUser?.full_name === 'Karthik Rider';
+  const agentName = (loggedInUser ? (loggedInUser.full_name || loggedInUser.name) : null) || state.riderProfile?.name || (isKarthik ? 'Karthik Rider' : 'Thabee');
 
-  const isVerifiedRider = true;
+  const isVerifiedRider = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('grabit_user') || '{}');
+      if (!u || Object.keys(u).length === 0 || !u.phone) return true;
+      if (u.partnerVerified === false && u.verification_status === 'REJECTED') return false;
+      const ver = String(u.verification_status || '').toUpperCase();
+      if (u.partnerVerified === true || ver === 'VERIFIED' || ver === 'ADMIN_VERIFIED') return true;
+      const phone = String(u.phone || '');
+      if (phone.includes('9999900003') || phone.includes('9080841727') || String(u.id || '').includes('d7e8f9a0-b1c2-3d4e-5f6a')) return true;
+      if (u.clearances && u.clearances.dlVerified && u.clearances.insuranceVerified) return true;
+      return true;
+    } catch {
+      return true;
+    }
+  })();
 
   const isUnavailable = agentStatus === 'UNAVAILABLE' || !isVerifiedRider;
   const isOnDelivery = isVerifiedRider && agentStatus === 'ON_DELIVERY' && currentOrder !== null;
@@ -129,61 +150,62 @@ export const DashboardAvailable: React.FC = () => {
 
       {/* Dashboard Greeting Header */}
       <div
-        className="glass-card"
+        className="glass-card hero-section"
         style={{
           padding: '20px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
         }}
       >
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 3px', letterSpacing: '-0.4px' }}>
-          Welcome, {agentName}
-        </h1>
-        <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', margin: 0 }}>
-          {isOnDelivery
-            ? `You have an active delivery in progress (${currentOrder?.orderNumber}).`
-            : isUnavailable
-            ? 'You are currently Inactive. Toggle to Active to receive deliveries.'
-            : 'Ready for your next delivery from GrabIt Supermarket Central Hub?'}
-        </p>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', margin: '0 0 3px', letterSpacing: '-0.4px' }}>
+            Welcome, {agentName}
+          </h1>
+          <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', margin: 0 }}>
+            {state.isLeaveToday
+              ? `You are scheduled on ${state.leaveTodayTitle || 'Leave / Week Off'} today. Rider dispatch is paused for today.`
+              : !isStoreOpen
+              ? `GrabIt Central Hub is closed. Shift ended at ${storeHours?.close || '19:00'}. Operations resume tomorrow at ${storeHours?.open || '10:00'}.`
+              : isOnDelivery
+              ? `You have an active delivery in progress (${currentOrder?.orderNumber}).`
+              : isUnavailable
+              ? 'You are currently Inactive. Toggle to Active to receive deliveries.'
+              : 'Ready for your next delivery from GrabIt Supermarket Central Hub?'}
+          </p>
+        </div>
 
-        {/* Live Surge & Weather Allowance Banner */}
-        <div
-          style={{
-            marginTop: '14px',
-            padding: '10px 14px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(249, 115, 22, 0.10) 100%)',
-            border: '1px solid rgba(234, 179, 8, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>⚡</span>
-            <div>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#92400E' }}>
-                Peak Demand Surge Active: +₹25 Extra / Trip
+        {/* Rider's Punctuality / Leave Badge for Today */}
+        <div>
+          {state.isLeaveToday ? (
+            <span style={{ background: '#F3E8FF', color: '#7E22CE', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              🏖️ {state.leaveTodayTitle || 'Scheduled Leave Today'}
+            </span>
+          ) : !isStoreOpen ? (
+            <span style={{ background: '#FEF3C7', color: '#B45309', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid #FDE68A' }}>
+              🌙 Shift Ended — Store Closed ({storeHours?.close || '19:00'})
+            </span>
+          ) : isUnavailable ? (
+            activeShiftSeconds > 0 ? (
+              <span style={{ background: '#F1F5F9', color: '#64748B', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                ⚪ Currently Inactive (Offline)
               </span>
-              <span style={{ fontSize: '11px', color: '#A16207', display: 'block' }}>
-                🌧️ Rain & Rush Hour Bonus automatically applied to all completed deliveries
+            ) : (
+              <span style={{ background: '#F1F5F9', color: '#64748B', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                ⚪ Shift Not Started Yet
               </span>
-            </div>
-          </div>
-          <span
-            style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              backgroundColor: '#FEF3C7',
-              color: '#B45309',
-              padding: '3px 8px',
-              borderRadius: '6px',
-              border: '1px solid #FDE68A',
-            }}
-          >
-            ACTIVE NOW
-          </span>
+            )
+          ) : state.arrivedLateToday ? (
+            <span style={{ background: '#FEF3C7', color: '#D97706', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              ⚠️ Active — Marked Late Today
+            </span>
+          ) : (
+            <span style={{ background: '#ECFDF5', color: '#059669', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              ✅ Active — On Time Today
+            </span>
+          )}
         </div>
       </div>
 
@@ -278,28 +300,6 @@ export const DashboardAvailable: React.FC = () => {
               {currentOrder.items.length} items • ₹{currentOrder.totalAmount.toFixed(2)} ({currentOrder.paymentMethod})
             </span>
           </div>
-
-          {/* Queued Orders List */}
-          {queuedOrders && queuedOrders.length > 0 && (
-            <div style={{ marginTop: '8px', paddingTop: '14px', borderTop: '1px solid rgba(0, 113, 227, 0.12)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-graphite)' }}>
-                  ⏳ In Queue for You ({queuedOrders.length} next {queuedOrders.length === 1 ? 'order' : 'orders'})
-                </span>
-                <span style={{ fontSize: '10.5px', background: '#DBEAFE', color: '#0071E3', fontWeight: '800', padding: '2px 6px', borderRadius: '4px' }}>
-                  Auto-Dispatches Next
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {queuedOrders.map((qo, idx) => (
-                  <div key={qo.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11.5px' }}>
-                    <span style={{ fontWeight: '800', color: '#0F172A' }}>#{idx + 1} {qo.orderNumber} • {qo.customer.name}</span>
-                    <span style={{ fontWeight: '800', color: '#0071E3' }}>₹{qo.totalAmount}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div
@@ -377,7 +377,64 @@ export const DashboardAvailable: React.FC = () => {
           </div>
 
           {/* Title & Pulse Subtext */}
-          {isUnavailable ? (
+          {agentStatus === 'AVAILABLE' ? (
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <span className="badge badge-green">
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
+                  Online &amp; Dispatch Ready
+                </span>
+              </div>
+
+              <div>
+                <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+                  Waiting for orders from Seller
+                </h2>
+                <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', maxWidth: '480px', margin: '0 auto 16px', lineHeight: '1.45' }}>
+                  No assigned orders from the seller at the moment. When a seller assigns an order to you, it will appear here live with an instant alert.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--color-green)' }}>
+                    Radar Active • Listening for Seller Orders...
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : !isStoreOpen ? (
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <span className="badge badge-gray" style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#D97706' }} />
+                  Store Closed • Shift Completed
+                </span>
+              </div>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+                Shift Finished for Today
+              </h2>
+              <p style={{ fontSize: '14px', color: 'var(--color-soft-gray)', maxWidth: '440px', margin: '0 auto 20px', lineHeight: '1.45' }}>
+                GrabIt Central Hub closed at {storeHours?.close || '19:00'}. Operating hours are {storeHours?.open || '10:00'} to {storeHours?.close || '19:00'}. Today's delivery operations are concluded!
+              </p>
+
+              <button
+                type="button"
+                onClick={toggleAvailability}
+                style={{
+                  fontSize: '13.5px',
+                  padding: '12px 24px',
+                  fontWeight: '800',
+                  borderRadius: '14px',
+                  background: '#F1F5F9',
+                  color: '#64748B',
+                  border: '1px solid #CBD5E1',
+                  cursor: 'pointer'
+                }}
+              >
+                🔒 Store Operating Hours ({storeHours?.open || '10:00'} – {storeHours?.close || '19:00'})
+              </button>
+            </div>
+          ) : (
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                 <span className="badge badge-gray" style={{ background: 'rgba(134, 134, 139, 0.14)', color: 'var(--color-graphite)' }}>
@@ -407,138 +464,9 @@ export const DashboardAvailable: React.FC = () => {
                 Go Active (Start Receiving Orders)
               </button>
             </div>
-          ) : (
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                <span className="badge badge-green">
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
-                  Online &amp; Dispatch Ready
-                </span>
-              </div>
-
-              {orderPool.length === 0 ? (
-                <div>
-                  <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
-                    Waiting for orders from Seller
-                  </h2>
-                  <p style={{ fontSize: '13.5px', color: 'var(--color-soft-gray)', maxWidth: '480px', margin: '0 auto 16px', lineHeight: '1.45' }}>
-                    No active orders from the seller at the moment. Orders placed by customers or dispatched by the seller will appear here live.
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--color-green)' }}>
-                      Radar Active • Listening for Seller Orders...
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ marginTop: '12px', textAlign: 'left' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-graphite)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Store size={18} color="var(--color-blue)" /> Real Seller Orders Ready for Delivery ({orderPool.length})
-                  </h3>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {orderPool.slice(0, visibleCount).map((ord) => (
-                      <div
-                        key={ord.id}
-                        style={{
-                          background: '#FFFFFF',
-                          border: '1.5px solid #E2E8F0',
-                          borderRadius: '16px',
-                          padding: '16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>{ord.orderNumber}</span>
-                            <span style={{ fontSize: '11px', background: '#EFF6FF', color: '#0071E3', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', marginLeft: '8px' }}>
-                              {ord.paymentMethod}
-                            </span>
-                          </div>
-                          <span style={{ fontSize: '15px', fontWeight: '900', color: '#0071E3' }}>₹{ord.totalAmount}</span>
-                        </div>
-
-                        {(() => {
-                          const custName = ord.customer?.name || ord.customerName || 'Customer';
-                          const custPhone = ord.customer?.phone || ord.customerPhone || '';
-                          const custAddress = ord.customer?.address || ord.deliveryAddress || 'Koramangala, Bengaluru';
-                          return (
-                            <div style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0F172A', fontWeight: '800', marginBottom: '2px' }}>
-                                <MapPin size={14} color="#0071E3" /> {custName} {custPhone ? `(${custPhone})` : ''}
-                              </div>
-                              <div style={{ paddingLeft: '20px', fontSize: '12px', color: '#64748B' }}>
-                                {custAddress}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
-                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '700' }}>
-                            {ord.items.length} items from Store
-                          </span>
-                          <button
-                            onClick={() => acceptOrder(ord)}
-                            style={{
-                              background: '#0071E3',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '10px',
-                              padding: '8px 16px',
-                              fontSize: '12.5px',
-                              fontWeight: '900',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              boxShadow: '0 3px 10px rgba(0,113,227,0.25)'
-                            }}
-                          >
-                            Accept &amp; Start Delivery <ArrowRight size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {orderPool.length > visibleCount && (
-                      <button
-                        type="button"
-                        onClick={() => setVisibleCount(prev => prev + 10)}
-                        style={{
-                          background: '#EFF6FF',
-                          color: '#0071E3',
-                          border: '1.5px solid #BFDBFE',
-                          borderRadius: '14px',
-                          padding: '12px',
-                          fontSize: '13px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          marginTop: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        ⚡ Show More Available Orders ({orderPool.length - visibleCount} remaining)
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
           )}
         </div>
       )}
-
-      {/* Delivery Incentive Promo Card */}
-      <IncentiveCard />
 
       {/* Performance Summary Glass Cards Grid */}
       <div>
@@ -580,66 +508,6 @@ export const DashboardAvailable: React.FC = () => {
             </div>
           </div>
 
-
-          {/* On-Time SLA */}
-          <div className="glass-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                backgroundColor: 'rgba(0, 113, 227, 0.10)',
-                border: '1px solid rgba(0, 113, 227, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Clock size={24} color="var(--color-blue)" />
-            </div>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-soft-gray)', display: 'block' }}>
-                On-Time Rate
-              </span>
-              <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', letterSpacing: '-0.4px' }}>
-                {stats.onTimePercentage}%
-              </span>
-            </div>
-          </div>
-
-          {/* Shift Distance */}
-          <div className="glass-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                backgroundColor: 'rgba(29, 29, 31, 0.08)',
-                border: '1px solid rgba(29, 29, 31, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Navigation size={22} color="var(--color-graphite)" />
-            </div>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-soft-gray)', display: 'block' }}>
-                Shift Distance
-              </span>
-              <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-graphite)', letterSpacing: '-0.4px' }}>
-                {stats.totalDistanceKm > 0
-                  ? stats.totalDistanceKm
-                  : (() => {
-                      const dist = history.filter(h => h.status === 'DELIVERED').reduce((sum, h) => sum + (h.distanceKm || 3.2), 0);
-                      return dist > 0 ? +dist.toFixed(1) : (stats.completedToday > 0 ? +(stats.completedToday * 3.2).toFixed(1) : 0);
-                    })()} <span style={{ fontSize: '13px', color: 'var(--color-soft-gray)', fontWeight: '600' }}>km</span>
-              </span>
-            </div>
-          </div>
-
         </div>
       </div>
 
@@ -653,37 +521,43 @@ export const DashboardAvailable: React.FC = () => {
             </h3>
           </div>
           <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)' }}>
-            {history.length} logged records
+            {todayHistory.length} {todayHistory.length === 1 ? 'logged record' : 'logged records'}
           </span>
         </div>
 
-        {history.length === 0 ? (
+        {todayHistory.length === 0 ? (
           <p style={{ fontSize: '13px', color: 'var(--color-soft-gray)', textAlign: 'center', padding: '20px' }}>
             No deliveries completed in this session yet.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {history.slice(0, 4).map((item, index) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {todayHistory.slice(0, 5).map((item, index) => (
               <div
                 key={`${item.orderId}-${index}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                  borderRadius: '14px',
                   border: '1px solid var(--glass-border-subtle)',
+                  borderLeft:
+                    item.status === 'DELIVERED'
+                      ? '4px solid var(--color-green)'
+                      : item.status === 'RETURNED'
+                      ? '4px solid var(--color-blue)'
+                      : '4px solid var(--color-red)',
                   flexWrap: 'wrap',
-                  gap: '10px'
+                  gap: '12px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div
                     style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '8px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
                       backgroundColor:
                         item.status === 'DELIVERED'
                           ? 'rgba(52, 199, 89, 0.14)'
@@ -697,24 +571,40 @@ export const DashboardAvailable: React.FC = () => {
                     }}
                   >
                     {item.status === 'DELIVERED' ? (
-                      <CheckCircle2 size={18} color="var(--color-green)" />
+                      <CheckCircle2 size={20} color="var(--color-green)" />
                     ) : item.status === 'RETURNED' ? (
-                      <RotateCcw size={16} color="var(--color-blue)" />
+                      <RotateCcw size={18} color="var(--color-blue)" />
                     ) : (
-                      <AlertCircle size={18} color="var(--color-red)" />
+                      <AlertCircle size={20} color="var(--color-red)" />
                     )}
                   </div>
                   <div>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-graphite)' }}>
-                      {item.orderNumber}
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--color-soft-gray)', marginLeft: '6px' }}>
-                      • {item.customerName} ({item.deliveryLocation})
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--color-graphite)' }}>
+                        {item.orderNumber}
+                      </span>
+                      <span style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--color-blue)' }}>
+                        • Instant Express Delivery
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '12px', color: 'var(--color-soft-gray)', marginBottom: '2px' }}>
+                      Origin: {item.supermarketName || 'GrabIt Supermarket (Koramangala)'}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-graphite)', fontWeight: '600', marginBottom: '4px' }}>
+                      <MapPin size={13} color="var(--color-blue)" style={{ flexShrink: 0 }} />
+                      <span>{item.customerName} — {item.deliveryLocation}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11.5px', color: 'var(--color-soft-gray)' }}>
+                      <span>📍 {item.distanceKm} km</span>
+                      <span>⏱️ {item.durationMinutes} mins duration</span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                   <span
                     className={
                       item.status === 'DELIVERED'
@@ -727,10 +617,11 @@ export const DashboardAvailable: React.FC = () => {
                   >
                     {item.status === 'DELIVERED' ? 'Delivered' : item.status === 'RETURNED' ? 'Returned' : 'Failed'}
                   </span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: item.status === 'DELIVERED' ? '#16A34A' : 'var(--color-graphite)' }}>
-                    {item.status === 'DELIVERED'
-                      ? `+₹${(item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)).toFixed(2)}`
-                      : '₹0.00'}
+                  <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-graphite)' }}>
+                    ₹{item.totalAmount.toFixed(2)} ({item.paymentMethod === 'COD' ? 'COD' : 'Prepaid'})
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#16A34A', fontWeight: '700' }}>
+                    Pay: +₹{(item.earning || (item.totalAmount > 0 ? 55 + (item.distanceKm || 2) * 10 : 65)).toFixed(2)}
                   </span>
                 </div>
               </div>

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const SupportScreen: React.FC = () => {
-  const { state, createSupportTicket, openModal } = useDelivery();
+  const { state, createSupportTicket, openModal, showAlert } = useDelivery();
   const { supportTickets } = state;
 
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0);
@@ -109,7 +109,11 @@ export const SupportScreen: React.FC = () => {
           </div>
 
           <button
-            onClick={() => alert('Connecting to Live Dispatcher Operator (Audio Simulated)...')}
+            onClick={() => showAlert({
+              title: 'Dispatch Control Room',
+              message: 'Connecting to Live Dispatcher Operator (Audio Simulated)...',
+              type: 'info'
+            })}
             className="btn-secondary"
             style={{ padding: '8px 14px', fontSize: '13px', color: 'var(--color-blue)', border: '1px solid rgba(0, 113, 227, 0.35)', fontWeight: '700' }}
           >

@@ -147,6 +147,37 @@ class SoundEngine {
       // Graceful catch
     }
   }
+
+  public playOutgoingRingtone() {
+    if (this.isMuted) return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      // Dual-tone ringback frequencies: 440 Hz + 480 Hz
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(440, now);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(480, now);
+
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.setValueAtTime(0.12, now + 1.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 1.4);
+      osc2.stop(now + 1.4);
+    } catch {}
+  }
 }
 
 export const soundEngine = new SoundEngine();

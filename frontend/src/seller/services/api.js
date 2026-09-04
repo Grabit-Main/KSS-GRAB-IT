@@ -49,16 +49,19 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
         } catch (refreshErr) {
-          // Token refresh failed - clear storage & redirect to login
-          localStorage.removeItem('grabit_seller_access');
-          localStorage.removeItem('grabit_seller_refresh');
-          localStorage.removeItem('grabit_seller_profile');
-          window.location.href = '/login';
+          // Token refresh failed - do not hard redirect to /login if user has active session
+          const session = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_user');
+          if (!session) {
+            localStorage.removeItem('grabit_seller_access');
+            localStorage.removeItem('grabit_seller_refresh');
+            localStorage.removeItem('grabit_seller_profile');
+            window.location.href = '/login';
+          }
           return Promise.reject(refreshErr);
         }
       } else {
-        // No refresh token available - only redirect if no grabit_session
-        const session = localStorage.getItem('grabit_session');
+        // No refresh token available - only redirect if no session/user exists
+        const session = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_user');
         if (!session) {
           localStorage.removeItem('grabit_seller_access');
           localStorage.removeItem('grabit_seller_profile');

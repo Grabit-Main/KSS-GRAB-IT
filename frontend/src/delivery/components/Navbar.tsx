@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { state, setAgentStatus, toggleMute, openModal } = useDelivery();
+  const { state, setAgentStatus, toggleMute, openModal, showAlert } = useDelivery();
   const { agentStatus, isMuted, stats } = state;
   const [showPortalModal, setShowPortalModal] = useState(false);
 
@@ -25,7 +25,12 @@ export const Navbar: React.FC = () => {
 
   const handleToggleOnline = () => {
     if (agentStatus === 'ON_DELIVERY') {
-      alert('Cannot go offline while on an active delivery.');
+      showAlert({
+        title: 'Active Delivery in Progress',
+        message: 'Cannot go offline while on an active delivery. Please complete or transfer the delivery first.',
+        type: 'warning',
+        buttonText: 'Understood'
+      });
       return;
     }
     setAgentStatus(isOnline ? 'OFFLINE' : 'AVAILABLE');

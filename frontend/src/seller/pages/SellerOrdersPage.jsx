@@ -103,9 +103,8 @@ export const SellerOrdersPage = () => {
 
   // Fallback / Live Riders List
   const [ridersList, setRidersList] = useState([
-    { id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a', name: 'Karthik Rider', full_name: 'Karthik Rider (Speedy Express)', phone: '+919999900003' },
-    { id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b', name: 'Arjun Kumar', full_name: 'Arjun Kumar (Flash Partner)', phone: '+919999900005' },
-    { id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2c', name: 'Vikram Singh', full_name: 'Vikram Singh (Express Rider)', phone: '+919999900006' }
+    { id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b', name: 'Thabee', full_name: 'Thabee', phone: '+919080841727' },
+    { id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a', name: 'Karthik Rider', full_name: 'Karthik Rider', phone: '+919999900003' }
   ]);
 
   const prevCountRef = useRef(0);
@@ -278,6 +277,14 @@ export const SellerOrdersPage = () => {
 
   // ── Handle Single Status Change ──
   const handleStatusChange = async (orderId, rawId, nextStatus, deliveryAgentId = null, riderName = null) => {
+    let finalAgentId = deliveryAgentId;
+    let finalRiderName = riderName;
+
+    if (!finalAgentId && (String(nextStatus).toLowerCase() === 'out_for_delivery' || String(nextStatus).toLowerCase() === 'delivering')) {
+      finalAgentId = 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b';
+      finalRiderName = 'Thabee';
+    }
+
     const isMatch = (o) => {
       if (!o) return false;
       const target1 = String(orderId || '').toLowerCase().trim();
@@ -297,8 +304,8 @@ export const SellerOrdersPage = () => {
           ? {
               ...o,
               status: nextStatus,
-              ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}),
-              ...(riderName ? { rider_name: riderName } : {})
+              ...(finalAgentId ? { delivery_agent_id: finalAgentId } : {}),
+              ...(finalRiderName ? { rider_name: finalRiderName } : {})
             } 
           : o
       )
@@ -307,17 +314,32 @@ export const SellerOrdersPage = () => {
     // 1. Update shared localStorage
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
+      let matchFound = false;
       const updated = stored.map((o) => {
         if (isMatch(o)) {
+          matchFound = true;
           return {
             ...o,
             status: nextStatus,
-            ...(deliveryAgentId ? { delivery_agent_id: deliveryAgentId } : {}),
-            ...(riderName ? { rider_name: riderName } : {})
+            ...(finalAgentId ? { delivery_agent_id: finalAgentId } : {}),
+            ...(finalRiderName ? { rider_name: finalRiderName } : {})
           };
         }
         return o;
       });
+
+      if (!matchFound) {
+        const targetOrder = orders.find(isMatch);
+        if (targetOrder) {
+          updated.unshift({
+            ...targetOrder,
+            status: nextStatus,
+            ...(finalAgentId ? { delivery_agent_id: finalAgentId } : {}),
+            ...(finalRiderName ? { rider_name: finalRiderName } : {})
+          });
+        }
+      }
+
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
@@ -326,14 +348,14 @@ export const SellerOrdersPage = () => {
     // 2. Persist to backend API
     try {
       const payload = { status: nextStatus };
-      if (deliveryAgentId) {
-        payload.delivery_agent_id = deliveryAgentId;
+      if (finalAgentId) {
+        payload.delivery_agent_id = finalAgentId;
       }
       await patch(`/orders/${rawId}/status`, payload);
-      if (deliveryAgentId) {
+      if (finalAgentId) {
         await post(`/orders/${rawId}/assign`, {
-          delivery_agent_id: deliveryAgentId,
-          rider_name: riderName
+          delivery_agent_id: finalAgentId,
+          rider_name: finalRiderName
         }).catch(() => {});
       }
     } catch (err) {
@@ -370,7 +392,7 @@ export const SellerOrdersPage = () => {
             ...o,
             delivery_agent_id: riderId,
             rider_name: riderName,
-            status: o.status === 'placed' || o.status === 'preparing' ? 'ready_for_pickup' : o.status
+            status: 'out_for_delivery'
           };
         }
         return o;
@@ -381,17 +403,30 @@ export const SellerOrdersPage = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('grabit_orders') || '[]');
       const updated = stored.map((o) => {
-        const isSelected = orderRawIds.some((rid) => String(rid) === String(o.rawId || o.id));
+        const isSelected = orderRawIds.some((rid) => String(rid) === String(o.rawId || o.id) || String(rid) === String(o.orderNumber));
         if (isSelected) {
           return {
             ...o,
             delivery_agent_id: riderId,
             rider_name: riderName,
-            status: o.status === 'placed' || o.status === 'preparing' ? 'ready_for_pickup' : o.status
+            status: 'out_for_delivery'
           };
         }
         return o;
       });
+
+      ordersToAssign.forEach((targetO) => {
+        const isAlreadyInStored = updated.some((o) => String(o.id) === String(targetO.id) || String(o.rawId) === String(targetO.rawId) || String(o.orderNumber) === String(targetO.orderNumber));
+        if (!isAlreadyInStored) {
+          updated.unshift({
+            ...targetO,
+            delivery_agent_id: riderId,
+            rider_name: riderName,
+            status: 'out_for_delivery'
+          });
+        }
+      });
+
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
