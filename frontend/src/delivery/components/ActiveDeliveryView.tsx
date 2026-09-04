@@ -468,9 +468,6 @@ export const ActiveDeliveryView: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={() => openModal('CHAT')} style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(0,113,227,0.08)', border: '1px solid rgba(0,113,227,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <MessageSquare size={15} color="#0071E3" />
-              </button>
               <button onClick={() => openModal('CALL')} style={{ padding: '7px 12px', fontSize: '12px', fontWeight: '700', backgroundColor: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.25)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A', cursor: 'pointer' }}>
                 <Phone size={13} /> Call
               </button>
@@ -511,117 +508,21 @@ export const ActiveDeliveryView: React.FC = () => {
             <span>Open in Google Maps (Turn-by-Turn GPS)</span>
           </button>
 
-          {/* Customer Doorstep Instruction Badges */}
-          <div style={{ backgroundColor: 'rgba(52,199,89,0.06)', borderRadius: '12px', padding: '12px 14px', fontSize: '12.5px', border: '1px solid rgba(52,199,89,0.2)', color: '#1D1D1F' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#16A34A', marginBottom: '6px' }}>
-              <ShieldCheck size={15} /> Customer Doorstep Instructions
+          {/* Customer Delivery Instructions (Only shown if customer provided instructions) */}
+          {(Boolean(currentOrder.customer.deliveryNotes) || Boolean(currentOrder.specialInstructions)) && (
+            <div style={{ backgroundColor: 'rgba(52,199,89,0.06)', borderRadius: '12px', padding: '12px 14px', fontSize: '12.5px', border: '1px solid rgba(52,199,89,0.2)', color: '#1D1D1F' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#16A34A', marginBottom: '4px' }}>
+                <ShieldCheck size={15} /> Customer Delivery Instructions
+              </div>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#1D1D1F', lineHeight: '1.4' }}>
+                {currentOrder.customer.deliveryNotes || currentOrder.specialInstructions}
+              </p>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
-                🚪 Leave at Doorstep
-              </span>
-              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
-                🔕 Do Not Ring Bell
-              </span>
-              <span style={{ backgroundColor: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(52,199,89,0.3)', fontSize: '11px', fontWeight: '700', color: '#16A34A' }}>
-                🏢 Lift Available
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: '12px', color: '#4B5563' }}>
-              <b>Note:</b> {currentOrder.customer.deliveryNotes || 'Please handle groceries carefully.'}
-            </p>
-          </div>
+          )}
         </div>
-
-        {/* Special Instructions Info Box */}
-        {currentOrder.specialInstructions && (
-          <div style={{ padding: '14px 16px', borderRadius: '16px', backgroundColor: isCOD ? 'rgba(255,59,48,0.08)' : 'rgba(0,113,227,0.08)', border: `1px solid ${isCOD ? 'rgba(255,59,48,0.25)' : 'rgba(0,113,227,0.25)'}`, fontSize: '12.5px', color: isCOD ? '#FF3B30' : '#0071E3', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
-            <Info size={18} style={{ flexShrink: 0 }} /><span>{currentOrder.specialInstructions}</span>
-          </div>
-        )}
       </div>
 
-      {/* ── 8. Next in Line Queued Orders (Auto-Dispatches upon Delivery Completion) ── */}
-      {queuedOrders && queuedOrders.length > 0 && (
-        <div
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '20px',
-            border: '1.5px solid #BFDBFE',
-            padding: '20px',
-            boxShadow: '0 4px 16px rgba(0, 113, 227, 0.06)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>⏳</span>
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0F172A', margin: 0 }}>
-                  Upcoming In Your Queue ({queuedOrders.length})
-                </h3>
-                <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '600' }}>
-                  Auto-activates as your next delivery once current order is completed
-                </span>
-              </div>
-            </div>
-            <span style={{ fontSize: '11px', background: '#EFF6FF', color: '#0071E3', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
-              FIFO QUEUE
-            </span>
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {queuedOrders.map((qOrd, qIdx) => (
-              <div
-                key={qOrd.id}
-                style={{
-                  background: '#F8FAFC',
-                  borderRadius: '14px',
-                  border: '1px solid #E2E8F0',
-                  padding: '12px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  flexWrap: 'wrap'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    background: qIdx === 0 ? '#0071E3' : '#64748B',
-                    color: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: '900'
-                  }}>
-                    #{qIdx + 1}
-                  </span>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <strong style={{ fontSize: '13.5px', color: '#0F172A' }}>{qOrd.orderNumber}</strong>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0071E3', background: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
-                        {qIdx === 0 ? 'Next Up' : 'In Queue'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-                      To: {qOrd.customer.name} • {qOrd.customer.address}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0F172A' }}>₹{qOrd.totalAmount}</span>
-                  <div style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700' }}>{qOrd.paymentMethod}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
     </div>
   );

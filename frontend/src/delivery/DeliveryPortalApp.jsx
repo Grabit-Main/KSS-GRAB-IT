@@ -15,6 +15,7 @@ import { NotificationsScreen } from './components/screens/NotificationsScreen';
 import { SupportScreen } from './components/screens/SupportScreen';
 import { ProfileScreen } from './components/screens/ProfileScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { AttendanceScreen } from './components/screens/AttendanceScreen';
 
 // Modals
 import { ProofOfDeliveryModal } from './components/ProofOfDeliveryModal';
@@ -24,18 +25,22 @@ import { MockChatModal } from './components/MockChatModal';
 import { SOSModal } from './components/SOSModal';
 import { DeliverySuccessModal } from './components/DeliverySuccessModal';
 import { IncentiveDetailsModal } from './components/IncentiveDetailsModal';
+import { ShiftSummaryModal } from './components/ShiftSummaryModal';
 import { NewOrderPopup } from './components/NewOrderPopup';
+import { NotificationsModal } from './components/NotificationsModal';
+import { AlertModal } from './components/AlertModal';
 
 import './index.css';
 import './App.css';
 import { forceScrollToTop } from '../utils/scrollToTop';
 
 function DeliveryAppLayout() {
-  const { state, unreadCount } = useDelivery();
+  const { state, unreadCount, confirmGoOffline } = useDelivery();
   const { activeModal } = state;
   const navigate = useNavigate();
   const location = useLocation();
   const [showPortalModal, setShowPortalModal] = React.useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = React.useState(false);
 
   // Scroll to top on every delivery sub-route change
   useLayoutEffect(() => {
@@ -46,21 +51,10 @@ function DeliveryAppLayout() {
     try {
       const userStr = localStorage.getItem('grabit_user');
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || user.role !== 'delivery_agent') {
-        const riderUser = {
-          id: 'thabee-rider-1',
-          role: 'delivery_agent',
-          name: 'Thabee',
-          full_name: 'Thabee',
-          phone: '+919080841727',
-          email: 'thabee.partner@grabit.com'
-        };
-        localStorage.setItem('grabit_session', localStorage.getItem('grabit_session') || 'demo-token');
-        localStorage.setItem('grabit_user', JSON.stringify(riderUser));
+      if (!user) {
+        navigate('/login');
       }
-    } catch {
-      // safe fallback
-    }
+    } catch {}
   }, [navigate]);
 
   return (
@@ -116,7 +110,7 @@ function DeliveryAppLayout() {
 
             <button
               type="button"
-              onClick={() => navigate('/delivery/notifications')}
+              onClick={() => setShowNotificationsModal(true)}
               style={{
                 position: 'relative',
                 width: '36px',
@@ -172,6 +166,7 @@ function DeliveryAppLayout() {
             <Route path="performance" element={<Navigate to="/delivery/dashboard" replace />} />
             <Route path="notifications" element={<NotificationsScreen />} />
             <Route path="support" element={<Navigate to="/delivery/dashboard" replace />} />
+            <Route path="attendance" element={<AttendanceScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
             <Route path="settings" element={<SettingsScreen />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
@@ -191,9 +186,16 @@ function DeliveryAppLayout() {
       {activeModal === 'SOS' && <SOSModal />}
       {activeModal === 'DELIVERY_SUCCESS' && <DeliverySuccessModal />}
       {activeModal === 'INCENTIVE_DETAILS' && <IncentiveDetailsModal />}
+      {activeModal === 'SHIFT_SUMMARY' && <ShiftSummaryModal onConfirmGoOffline={confirmGoOffline} />}
 
       {/* New Order Assigned Popup */}
       <NewOrderPopup />
+
+      {/* Mobile Responsive Alert & Warning Modal */}
+      <AlertModal />
+
+      {/* Top Right Notifications Glass Modal */}
+      <NotificationsModal isOpen={showNotificationsModal} onClose={() => setShowNotificationsModal(false)} />
 
       {/* 🔐 CONFIRMATION MODAL BEFORE REDIRECTING TO LOGIN */}
       {showPortalModal && (

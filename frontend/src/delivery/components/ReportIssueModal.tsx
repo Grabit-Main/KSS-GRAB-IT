@@ -8,7 +8,23 @@ export const ReportIssueModal: React.FC = () => {
   const { currentOrder } = state;
 
   const [reason, setReason] = useState<IssueReport['reason']>('Customer unavailable');
-  const [notes, setNotes] = useState('');
+  const [guidedCallMade, setGuidedCallMade] = useState(false);
+  const [waitTimerSecs, setWaitTimerSecs] = useState<number | null>(null);
+
+  const startWaitTimer = () => {
+    setWaitTimerSecs(300);
+  };
+
+  React.useEffect(() => {
+    if (waitTimerSecs !== null && waitTimerSecs > 0) {
+      const timer = setInterval(() => {
+        setWaitTimerSecs((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    } else if (waitTimerSecs === 0) {
+      setNotes((prev) => prev || 'Customer unreachable after phone call + 5-minute wait timer expired at delivery location.');
+    }
+  }, [waitTimerSecs]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const reasonsList: IssueReport['reason'][] = [
@@ -139,6 +155,44 @@ export const ReportIssueModal: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Guided Unreachable Customer Protocol */}
+          {(reason === 'Customer unavailable' || reason === 'Unable to contact customer' || reason === 'Wrong address') && (
+            <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e40af', marginBottom: '8px' }}>
+                📋 Guided Protocol for Unreachable Customer
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {!guidedCallMade ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGuidedCallMade(true);
+                      window.open(`tel:${currentOrder?.customer.phone || '+919000000000'}`);
+                    }}
+                    style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    📞 Step 1: Call Customer ({currentOrder?.customer.phone || '+91 98765 43210'})
+                  </button>
+                ) : waitTimerSecs === null ? (
+                  <button
+                    type="button"
+                    onClick={startWaitTimer}
+                    style={{ backgroundColor: '#d97706', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    ⏱️ Step 2: Start 5-Minute Doorstep Wait Timer
+                  </button>
+                ) : (
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>
+                      {waitTimerSecs > 0 ? `⏳ Waiting at location: ${Math.floor(waitTimerSecs / 60)}:${(waitTimerSecs % 60).toString().padStart(2, '0')}` : '✅ 5-Min Wait Completed!'}
+                    </span>
+                    {waitTimerSecs === 0 && <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>Ready to Mark Failed</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>

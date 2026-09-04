@@ -5,7 +5,8 @@ import {
   Home,
   Bike,
   User,
-  History
+  History,
+  Calendar
 } from 'lucide-react';
 
 export const MobileBottomNav: React.FC = () => {
@@ -24,6 +25,7 @@ export const MobileBottomNav: React.FC = () => {
       icon: Bike,
       hasActiveOrder: isOnDeliveryWithOrder
     },
+    { to: '/delivery/attendance', label: 'Attendance', icon: Calendar },
     { to: '/delivery/delivery-history', label: 'History', icon: History },
     { to: '/delivery/profile', label: 'Profile', icon: User }
   ];

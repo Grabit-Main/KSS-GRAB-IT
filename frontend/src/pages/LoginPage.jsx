@@ -79,7 +79,7 @@ export function LoginPage() {
     const knownDemoMap = {
       '+919999900001': { name: 'Admin Supervisor', role: 'admin' },
       '+919999900002': { name: 'GrabIt Supermarket', role: 'seller' },
-      '+919999900003': { name: 'Speedy Express Delivery', role: 'delivery_agent' },
+      '+919999900003': { name: 'Karthik Rider', role: 'delivery_agent' },
       '+919999900004': { name: 'Rahul Sharma', role: 'customer' },
       '+919080841727': { name: 'Thabee', role: 'delivery_agent' },
     };
@@ -99,24 +99,31 @@ export function LoginPage() {
         if (existingStr) existingUser = JSON.parse(existingStr);
       } catch {}
 
+      const isDelivery = demoUser.role === 'delivery_agent';
       const userObj = {
-        id: demoUser.role === 'admin' ? 1 : demoUser.role === 'seller' ? 2 : demoUser.role === 'delivery_agent' ? 3 : 4,
+        id: isDelivery ? 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a' : demoUser.role === 'admin' ? 1 : demoUser.role === 'seller' ? 2 : 4,
         role: demoUser.role,
         full_name: demoUser.name,
         name: demoUser.name,
         phone: fullPhone,
         email: `${demoUser.role}@grabit.local`,
-        ...(existingUser.phone === fullPhone || existingUser.name === demoUser.name ? {
-          selfieImage: existingUser.selfieImage || existingUser.selfie_image || existingUser.avatar_url,
-          selfie_image: existingUser.selfie_image || existingUser.selfieImage || existingUser.avatar_url,
-          avatar_url: existingUser.avatar_url || existingUser.selfieImage || existingUser.selfie_image,
-          biometricsDone: existingUser.biometricsDone,
-          clearances: existingUser.clearances,
-          clearanceTimestamps: existingUser.clearanceTimestamps,
-        } : {})
+        partnerVerified: isDelivery ? true : (existingUser.partnerVerified ?? false),
+        verification_status: isDelivery ? 'VERIFIED' : (existingUser.verification_status || 'NOT_VERIFIED'),
+        verified_by_admin: isDelivery ? true : (existingUser.verified_by_admin ?? false),
+        biometricsDone: isDelivery ? true : (existingUser.biometricsDone ?? false),
+        clearances: isDelivery ? {
+          dlVerified: true,
+          insuranceVerified: true,
+          pucVerified: true,
+          bgCheckVerified: true
+        } : existingUser.clearances,
+        clearanceTimestamps: existingUser.clearanceTimestamps,
+        selfieImage: existingUser.selfieImage || existingUser.selfie_image || existingUser.avatar_url,
+        selfie_image: existingUser.selfie_image || existingUser.selfieImage || existingUser.avatar_url,
+        avatar_url: existingUser.avatar_url || existingUser.selfieImage || existingUser.selfie_image,
       };
 
-      localStorage.setItem('grabit_session', token);
+      localStorage.setItem('grabit_session', isDelivery ? 'demo-delivery-token' : token);
       localStorage.setItem('grabit_user', JSON.stringify(userObj));
       sessionStorage.setItem('grabit_skipped_login', 'true');
       if (demoUser.role === 'seller' || demoUser.role === 'admin') {
@@ -722,7 +729,7 @@ export function LoginPage() {
               {[
                 { label: 'Customer', icon: '🛒', phone: '+919999900004', name: 'Rahul Sharma', role: 'customer' },
                 { label: 'Seller', icon: '🏪', phone: '+919999900002', name: 'GrabIt Supermarket', role: 'seller' },
-                { label: 'Rider', icon: '🛵', phone: '+919999900003', name: 'Speedy Express Delivery', role: 'delivery_agent' },
+                { label: 'Rider', icon: '🛵', phone: '+919999900003', name: 'Karthik Rider', role: 'delivery_agent' },
                 { label: 'Admin', icon: '🛡️', phone: '+919999900001', name: 'Admin Supervisor', role: 'admin' },
               ].map((item) => {
                 const isSelected = phoneDigits === item.phone.replace('+91', '');

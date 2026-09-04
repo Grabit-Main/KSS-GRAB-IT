@@ -7,11 +7,12 @@ import {
   Info,
   ShieldAlert,
   Clock,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 
 export const NotificationsScreen: React.FC = () => {
-  const { state, markNotificationRead, markAllNotificationsRead } = useDelivery();
+  const { state, markNotificationRead, markAllNotificationsRead, deleteNotification } = useDelivery();
   const { notifications, unreadCount } = state;
 
   const getIcon = (type: string) => {
@@ -73,11 +74,12 @@ export const NotificationsScreen: React.FC = () => {
               onClick={() => markNotificationRead(notif.id)}
               className="glass-card"
               style={{
-                padding: '16px 18px',
+                padding: '14px 16px',
                 display: 'flex',
                 alignItems: 'flex-start',
                 justifyContent: 'space-between',
-                gap: '14px',
+                flexWrap: 'wrap',
+                gap: '12px',
                 cursor: 'pointer',
                 background: notif.isRead
                   ? 'rgba(255, 255, 255, 0.65)'
@@ -90,7 +92,7 @@ export const NotificationsScreen: React.FC = () => {
                   : '0 6px 24px rgba(0, 113, 227, 0.08)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '1 1 200px', minWidth: 0 }}>
                 <div
                   style={{
                     width: '38px',
@@ -107,9 +109,9 @@ export const NotificationsScreen: React.FC = () => {
                   {getIcon(notif.type)}
                 </div>
 
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                    <h4 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--color-graphite)', margin: 0 }}>
+                    <h4 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--color-graphite)', margin: 0, wordBreak: 'break-word' }}>
                       {notif.title}
                     </h4>
                     {!notif.isRead && (
@@ -119,12 +121,13 @@ export const NotificationsScreen: React.FC = () => {
                           height: '8px',
                           borderRadius: '50%',
                           backgroundColor: 'var(--color-blue)',
-                          boxShadow: '0 0 8px rgba(0, 113, 227, 0.8)'
+                          boxShadow: '0 0 8px rgba(0, 113, 227, 0.8)',
+                          flexShrink: 0
                         }}
                       />
                     )}
                   </div>
-                  <p style={{ fontSize: '13px', color: 'var(--color-graphite)', margin: '0 0 4px', lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--color-graphite)', margin: '0 0 4px', lineHeight: '1.4', wordBreak: 'break-word' }}>
                     {notif.description}
                   </p>
                   <span style={{ fontSize: '11px', color: 'var(--color-soft-gray)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -133,42 +136,79 @@ export const NotificationsScreen: React.FC = () => {
                 </div>
               </div>
 
-              {!notif.isRead ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: 'auto' }}>
+                {!notif.isRead ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markNotificationRead(notif.id);
+                    }}
+                    style={{
+                      fontSize: '11.5px',
+                      color: 'var(--color-blue)',
+                      fontWeight: '700',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(0, 113, 227, 0.08)',
+                      border: '1px solid rgba(0, 113, 227, 0.25)',
+                      flexShrink: 0,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Mark read
+                  </button>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: '#64748B',
+                      fontWeight: '700',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                      border: '1px solid rgba(148, 163, 184, 0.25)',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    ✓ Read
+                  </span>
+                )}
+
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    markNotificationRead(notif.id);
+                    deleteNotification(notif.id);
                   }}
                   style={{
-                    fontSize: '11.5px',
-                    color: 'var(--color-blue)',
-                    fontWeight: '700',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(0, 113, 227, 0.08)',
-                    border: '1px solid rgba(0, 113, 227, 0.25)',
-                    flexShrink: 0
-                  }}
-                >
-                  Mark read
-                </button>
-              ) : (
-                <span
-                  style={{
-                    fontSize: '11px',
-                    color: '#64748B',
-                    fontWeight: '700',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
-                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     flexShrink: 0,
-                    whiteSpace: 'nowrap'
+                    padding: 0,
+                    transition: 'all 0.15s ease'
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FEE2E2';
+                    e.currentTarget.style.color = '#EF4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#94A3B8';
+                  }}
+                  title="Delete notification"
                 >
-                  ✓ Read
-                </span>
-              )}
+                  <X size={15} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

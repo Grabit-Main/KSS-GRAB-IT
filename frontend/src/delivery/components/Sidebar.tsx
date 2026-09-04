@@ -10,7 +10,8 @@ import {
   Bell,
   HelpCircle,
   User,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -30,6 +31,7 @@ export const Sidebar: React.FC = () => {
       hasActiveOrder: isOnDeliveryWithOrder
     },
     { to: '/delivery/delivery-history', label: 'History', icon: History },
+    { to: '/delivery/attendance', label: 'Attendance', icon: Calendar },
     {
       to: '/delivery/notifications',
       label: 'Notifications',
@@ -45,27 +47,25 @@ export const Sidebar: React.FC = () => {
       {/* Desktop Left Frosted Glass Sidebar (>=760px) */}
       <aside className="app-sidebar">
         {/* Brand & Logo Section */}
-        <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid var(--glass-border-subtle)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+        <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid var(--glass-border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Logo Row with Active Status Pill near Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <img
               src="https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png"
               alt="GrabIt Logo"
               style={{
-                height: '52px',
+                height: '34px',
                 width: 'auto',
-                maxWidth: '200px',
+                maxWidth: '140px',
                 objectFit: 'contain',
-                flexShrink: 0
+                display: 'block'
               }}
             />
-            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--color-blue)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
-              Delivery Partner Portal
-            </div>
+            <AgentStatusPill dotOnly />
           </div>
 
-          {/* Quick Agent Status Pill */}
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <AgentStatusPill />
+          <div style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--color-blue)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+            Delivery Partner Portal
           </div>
         </div>
 
@@ -77,6 +77,7 @@ export const Sidebar: React.FC = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
+                style={{ textDecoration: 'none' }}
                 className={({ isActive }) =>
                   `sidebar-nav-item ${isActive ? 'active' : ''}`
                 }

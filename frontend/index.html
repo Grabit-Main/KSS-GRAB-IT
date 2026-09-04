@@ -11,6 +11,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script>
+      // Early suppression for injected browser extension / Edge DevTools / Vercel Speed Insights scripts
+      window.addEventListener('error', function(e) {
+        if (!e) return;
+        var msg = (e.message || '') + '';
+        var file = (e.filename || '') + '';
+        if (
+          msg.indexOf('startTime') !== -1 ||
+          msg.indexOf('reportAllChanges') !== -1 ||
+          file.indexOf('VM') !== -1 ||
+          file.indexOf('extension') !== -1 ||
+          file.indexOf('_vercel') !== -1 ||
+          file.indexOf('speed-insights') !== -1
+        ) {
+          e.stopImmediatePropagation();
+          e.preventDefault && e.preventDefault();
+          return true;
+        }
+      }, true);
+    </script>
     <title>Grabit - Delivered in 30-45 Min</title>
   </head>
   <body>
