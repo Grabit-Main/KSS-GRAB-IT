@@ -535,12 +535,13 @@ export default function OrdersPage() {
   };
 
   return (
-    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '12px 12px 90px' : '24px 24px 60px' }}>
+    <div style={{ background: '#F4F5F8', minHeight: '100vh', padding: isMobile ? '24px 12px 90px' : '36px 24px 60px' }}>
       <div className="container" style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
         {/* ── 1. PAGE HEADER ── */}
         <div style={{
-          marginBottom: isMobile ? '14px' : '20px'
+          marginTop: isMobile ? '8px' : '12px',
+          marginBottom: isMobile ? '16px' : '24px'
         }}>
           <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
             My Orders
