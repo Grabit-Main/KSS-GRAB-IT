@@ -125,8 +125,8 @@ export async function api(path, options = {}) {
     }
 
     if (response.status === 204) return null;
-    // Treat 401/403/404 on GET or delivery polling as empty response — fall back to localStorage silently
-    if ((response.status === 401 || response.status === 403 || response.status === 404) && isGet) {
+    // Treat 401/403/404 on GET or delivery background polling as empty response — fall back to localStorage silently
+    if ((response.status === 401 || response.status === 403 || response.status === 404) && (isGet || isBackgroundPing)) {
       if (response.status === 404) {
         consecutiveLocalFailures += 1;
         if (consecutiveLocalFailures >= 2) {
@@ -139,7 +139,7 @@ export async function api(path, options = {}) {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 404 && path.startsWith('/delivery')) {
+      if ((response.status === 404 || response.status === 401 || response.status === 403) && isBackgroundPing) {
         consecutiveLocalFailures += 1;
         if (consecutiveLocalFailures >= 2) {
           isLocalBackendDown = true;
@@ -157,8 +157,10 @@ export async function api(path, options = {}) {
       isLocalBackendDown = true;
       lastFailureTime = Date.now();
     }
+    if (isBackgroundPing || isGet) {
+      return null;
+    }
     if (err.name === 'AbortError') {
-      if (isGet) return null; // Timed out GET — treat as no data, caller uses localStorage
       throw new Error('Server request timed out. Please check your network and try again.');
     }
     throw err;
