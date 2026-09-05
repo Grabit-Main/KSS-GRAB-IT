@@ -25,7 +25,6 @@
 - [🛠️ Tech Stack & Cloud Services](#️-tech-stack--cloud-services)
 - [🔌 API Endpoints Reference](#-api-endpoints-reference)
 - [⚡ Quick Start & Local Setup](#-quick-start--local-setup)
-- [🔐 Security & Environment Variables](#-security--environment-variables)
 - [👥 Core Engineering Team](#-core-engineering-team)
 
 ---
