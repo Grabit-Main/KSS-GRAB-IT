@@ -186,7 +186,7 @@ export function LoginPage() {
       } catch {}
       localStorage.setItem('grabit_session', token);
       localStorage.setItem('grabit_user', JSON.stringify(userObj));
-      sessionStorage.setItem('grabit_skipped_login', 'true');
+      sessionStorage.removeItem('grabit_skipped_login');
       if (demoUser.role === 'seller' || demoUser.role === 'admin') {
         localStorage.setItem('grabit_seller_access', token);
         localStorage.setItem('grabit_seller_profile', JSON.stringify(userObj));
@@ -265,7 +265,7 @@ export function LoginPage() {
     }
     localStorage.setItem('grabit_session', x.access_token);
     localStorage.setItem('grabit_user', JSON.stringify(resolvedUser));
-    sessionStorage.setItem('grabit_skipped_login', 'true');
+    sessionStorage.removeItem('grabit_skipped_login');
     const userRole = resolvedUser.role || 'customer';
     if (userRole === 'seller' || userRole === 'admin') {
       localStorage.setItem('grabit_seller_access', x.access_token);
