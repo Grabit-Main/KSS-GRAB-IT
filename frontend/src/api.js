@@ -71,10 +71,13 @@ export async function api(path, options = {}) {
     });
     clearTimeout(timeoutId);
     if (response.status === 204) return null;
-    // Treat 401/403 on GET as empty response — fall back to localStorage silently
-    if ((response.status === 401 || response.status === 403) && isGet) return null;
+    // Treat 401/403/404 on GET or delivery polling as empty response — fall back to localStorage silently
+    if ((response.status === 401 || response.status === 403 || response.status === 404) && isGet) return null;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || 'Something went wrong. Please try again.');
+    if (!response.ok) {
+      if (response.status === 404 && path.startsWith('/delivery')) return null;
+      throw new Error(data.detail || 'Something went wrong. Please try again.');
+    }
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
