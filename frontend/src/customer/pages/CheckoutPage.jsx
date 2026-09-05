@@ -20,6 +20,7 @@ const PAYMENT_METHODS = [
 import { useEffect } from 'react';
 import { forceScrollToTop } from '../../utils/scrollToTop';
 import { addUserNotification } from '../../utils/userNotifications';
+import { notifyOrdersUpdated } from '../../utils/orderSync';
 
 export default function CheckoutPage() {
   const { items, itemTotal, mrpTotal, discount, deliveryFee, toPay, totalItems, clearCart, appliedCoupon, couponDiscount } = useCart();
@@ -420,10 +421,8 @@ export default function CheckoutPage() {
         iconType: 'package'
       });
 
-      window.dispatchEvent(new Event('grabit_orders_updated'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrdersUpdated({ orderId: trackId, status: 'placed' });
       window.dispatchEvent(new Event('grabit_notifications_updated'));
-      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.warn('Local order storage error:', e);
     }

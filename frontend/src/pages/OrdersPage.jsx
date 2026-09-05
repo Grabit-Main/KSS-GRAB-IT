@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import { get, patch } from '../api';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { notifyOrdersUpdated, subscribeOrdersUpdated } from '../utils/orderSync';
 
 const canCancelOrder = (statusStr) => {
   const st = String(statusStr || '').toLowerCase();
@@ -347,9 +348,8 @@ export default function OrdersPage() {
         }));
       }
 
-      window.dispatchEvent(new Event('grabit_orders_updated'));
+      notifyOrdersUpdated({ orderId: targetId, status: 'cancelled' });
       window.dispatchEvent(new Event('grabit_notifications_updated'));
-      window.dispatchEvent(new Event('storage'));
 
       showToast(`Order #${cancellingOrder.id} has been cancelled.`);
       setCancellingOrder(null);
@@ -472,21 +472,16 @@ export default function OrdersPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Refresh immediately on local orders/notification updates without waiting for polling
-    const handleOrdersUpdated = () => {
-      if (isMounted) {
-        fetchCloudOrders();
-      }
-    };
-    window.addEventListener('grabit_orders_updated', handleOrdersUpdated);
-    window.addEventListener('storage', handleOrdersUpdated);
+    const unsubscribeOrders = subscribeOrdersUpdated(() => {
+      if (isMounted) fetchCloudOrders();
+    });
 
     return () => {
       isMounted = false;
       isFetchingRef.current = false;
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('grabit_orders_updated', handleOrdersUpdated);
-      window.removeEventListener('storage', handleOrdersUpdated);
+      unsubscribeOrders();
     };
   }, [fetchCloudOrders]);
 

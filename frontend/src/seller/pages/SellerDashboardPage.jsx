@@ -31,6 +31,7 @@ import { Badge } from '../components/common/Badge';
 import { Toggle } from '../components/common/Toggle';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useToast } from '../context/ToastContext';
+import { notifyOrdersUpdated, subscribeOrdersUpdated } from '../../utils/orderSync';
 import { categoryService } from '../services/categoryService';
 import { productService } from '../services/productService';
 import { mockDb } from '../services/mockData';
@@ -279,17 +280,15 @@ export const SellerDashboardPage = () => {
   useEffect(() => {
     loadDashboardData(true);
     const interval = setInterval(() => loadDashboardData(false), 3000);
-    const handleStorageUpdate = () => loadDashboardData(false);
+    const unsubscribe = subscribeOrdersUpdated(() => loadDashboardData(false));
+    const handleProductsUpdate = () => loadDashboardData(false);
 
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('grabit_orders_updated', handleStorageUpdate);
-    window.addEventListener('grabit_products_updated', handleStorageUpdate);
+    window.addEventListener('grabit_products_updated', handleProductsUpdate);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
-      window.removeEventListener('grabit_products_updated', handleStorageUpdate);
+      unsubscribe();
+      window.removeEventListener('grabit_products_updated', handleProductsUpdate);
     };
   }, [loadDashboardData]);
 
@@ -370,8 +369,7 @@ export const SellerDashboardPage = () => {
       }
 
       localStorage.setItem('grabit_orders', JSON.stringify(up));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrdersUpdated({ orderId, status: nextStatus });
     } catch {}
 
     // Persist to backend API (best-effort)

@@ -28,6 +28,7 @@ import { Button } from '../components/common/Button';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useToast } from '../context/ToastContext';
 import { get, patch, post } from '../../api';
+import { notifyOrdersUpdated, subscribeOrdersUpdated } from '../../utils/orderSync';
 import { PackingSlipModal } from '../components/orders/PackingSlipModal';
 import { playNewOrderChime } from '../utils/orderAudioAlert';
 
@@ -221,15 +222,11 @@ export const SellerOrdersPage = () => {
       fetchOrders(false);
       fetchRiders();
     }, 2500);
-    const handleStorageUpdate = () => fetchOrders(false);
-
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('grabit_orders_updated', handleStorageUpdate);
+    const unsubscribe = subscribeOrdersUpdated(() => fetchOrders(false));
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
+      unsubscribe();
     };
   }, [fetchOrders, fetchRiders]);
 
@@ -341,8 +338,7 @@ export const SellerOrdersPage = () => {
       }
 
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrdersUpdated({ orderId, status: nextStatus, deliveryAgentId: finalAgentId, riderName: finalRiderName });
     } catch {}
 
     // 2. Persist to backend API
@@ -428,8 +424,7 @@ export const SellerOrdersPage = () => {
       });
 
       localStorage.setItem('grabit_orders', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrdersUpdated({ deliveryAgentId: riderId, riderName });
     } catch {}
 
     // Post to backend

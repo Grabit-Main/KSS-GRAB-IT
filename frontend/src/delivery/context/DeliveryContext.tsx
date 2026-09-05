@@ -24,6 +24,7 @@ import {
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
 import { get, patch, post } from '../../api';
+import { notifyOrdersUpdated, subscribeOrdersUpdated } from '../../utils/orderSync';
 
 const patchWithRetry = async (url: string, data: any, maxRetries = 4, delayMs = 1000): Promise<any> => {
   let attempt = 0;
@@ -1694,8 +1695,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           localStorage.setItem('grabit_orders', JSON.stringify(updatedOrders));
         }
 
-        window.dispatchEvent(new Event('grabit_orders_updated'));
-        window.dispatchEvent(new Event('storage'));
+        notifyOrdersUpdated({ orderId: rawId, status: 'delivered' });
       } catch {}
 
       // 3. Authoritative backend status update with retry and error notification
@@ -2136,9 +2136,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               }
               return o;
             });
-            localStorage.setItem('grabit_orders', JSON.stringify(updated));
-            window.dispatchEvent(new Event('grabit_orders_updated'));
-            window.dispatchEvent(new Event('storage'));
+            notifyOrdersUpdated({ orderId: rawId, status: 'out_for_delivery' });
           }
         } catch {}
 
@@ -2721,9 +2719,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const activeInterval = setInterval(fetchActiveOrders, 5000);
     const historyInterval = setInterval(fetchHistory, 15000);
 
-    const handleStorageUpdate = () => fetchActiveOrders();
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('grabit_orders_updated', handleStorageUpdate);
+    const unsubscribeOrders = subscribeOrdersUpdated(() => fetchActiveOrders());
 
     return () => {
       isMounted = false;
@@ -2738,8 +2734,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       clearInterval(activeInterval);
       clearInterval(historyInterval);
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('grabit_orders_updated', handleStorageUpdate);
+      unsubscribeOrders();
     };
   }, []);
 

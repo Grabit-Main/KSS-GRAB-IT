@@ -50,6 +50,7 @@ import { get, post, patch, del, uploadImage, logoutUser } from '../api';
 import { baseProducts } from '../data/products';
 import SupermarketLocationMapPicker from './SupermarketLocationMapPicker';
 import { forceScrollToTop } from '../utils/scrollToTop';
+import { subscribeOrdersUpdated } from '../utils/orderSync';
 
 // ── Window Width Hook ──
 const useWindowWidth = () => {
@@ -656,14 +657,10 @@ export function AdminPortalApp() {
     return () => clearInterval(interval);
   }, [fetchAllAdminData]);
 
-  // Listen for local order placement / updates
+  // Listen for real-time order placement / updates across all tabs
   useEffect(() => {
-    window.addEventListener('grabit_orders_updated', fetchAllAdminData);
-    window.addEventListener('storage', fetchAllAdminData);
-    return () => {
-      window.removeEventListener('grabit_orders_updated', fetchAllAdminData);
-      window.removeEventListener('storage', fetchAllAdminData);
-    };
+    const unsubscribe = subscribeOrdersUpdated(() => fetchAllAdminData());
+    return () => unsubscribe();
   }, [fetchAllAdminData]);
 
   // ── Handlers ──

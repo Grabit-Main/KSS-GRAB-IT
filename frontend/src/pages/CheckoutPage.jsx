@@ -13,6 +13,7 @@ import {
   saveCustomerAddresses,
   getCustomerAddressKey
 } from '../utils/addressManager';
+import { notifyOrdersUpdated } from '../utils/orderSync';
 
 const STEPS = ['Delivery', 'Payment', 'Review & Place Order'];
 
@@ -492,10 +493,8 @@ export default function CheckoutPage() {
         iconType: 'package'
       });
 
-      window.dispatchEvent(new Event('grabit_orders_updated'));
-      window.dispatchEvent(new CustomEvent('grabit_orders_updated'));
+      notifyOrdersUpdated({ orderId: trackId, status: 'placed' });
       window.dispatchEvent(new Event('grabit_notifications_updated'));
-      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.warn('Storage sync:', e);
     }
