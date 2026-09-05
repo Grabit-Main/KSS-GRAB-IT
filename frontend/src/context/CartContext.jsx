@@ -152,6 +152,12 @@ export function CartProvider({ children }) {
       const newPhone = getUserPhone();
       const local = loadStoredCart(newPhone);
       setItems(local || []);
+      try {
+        const stored = localStorage.getItem('grabit_applied_coupon');
+        setAppliedCoupon(stored ? JSON.parse(stored) : null);
+      } catch {
+        setAppliedCoupon(null);
+      }
 
       if (newPhone && (!local || local.length > 0)) {
         try {
@@ -174,6 +180,12 @@ export function CartProvider({ children }) {
       const currentPhone = getUserPhone();
       const local = loadStoredCart(currentPhone);
       setItems(local || []);
+      try {
+        const stored = localStorage.getItem('grabit_applied_coupon');
+        setAppliedCoupon(stored ? JSON.parse(stored) : null);
+      } catch {
+        setAppliedCoupon(null);
+      }
     };
 
     if (typeof window !== 'undefined') {

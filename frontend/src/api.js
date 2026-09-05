@@ -121,6 +121,8 @@ export function logoutUser() {
   localStorage.removeItem('grabit_addresses_guest');
   localStorage.removeItem('grabit_delivery_location');
   localStorage.removeItem('grabit_location_confirmed');
+  localStorage.removeItem('grabit_cart_guest');
+  localStorage.removeItem('grabit_applied_coupon');
   
   // Preserve splashscreen seen flag so it only runs once per app opening
   const splashSeen = sessionStorage.getItem('grabit_splash_displayed');
@@ -131,6 +133,7 @@ export function logoutUser() {
 
   try {
     window.dispatchEvent(new Event('grabit_auth_updated'));
+    window.dispatchEvent(new Event('grabit_cart_updated'));
     window.dispatchEvent(new Event('storage'));
   } catch {}
 }

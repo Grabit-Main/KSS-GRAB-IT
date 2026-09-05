@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ChevronDown } from 'lucide-react';
-import { post } from '../api';
+import { post, logoutUser } from '../api';
 
 const FAVICON_3D = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787646563/grabit_media/ckpo0cpaoydv5zt8yyj0.png';
 const LOGO_PNG = 'https://res.cloudinary.com/hmx3azp6/image/upload/v1787645051/grabit_media/grabit_logo.png';
@@ -20,6 +20,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   const handleSkip = () => {
+    logoutUser();
     sessionStorage.setItem('grabit_skipped_login', 'true');
     const intended = sessionStorage.getItem('grabit_intended_path');
     sessionStorage.removeItem('grabit_intended_path');
