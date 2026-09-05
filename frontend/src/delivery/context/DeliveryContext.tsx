@@ -2580,15 +2580,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             dispatch({ type: 'CLEAR_PENDING_OFFER' });
           }
         } else if (assignedOrders.length > 0) {
-          // Rule 1 & Rule 3: Trigger New Order popup whenever an assigned order is waiting for rider acceptance!
-          activeOrder = null;
-          saveCurrentOrderLocal(null);
-          queuedOrders = assignedOrders.slice(1).map((o, idx) => ({
-            ...o,
-            isQueued: true,
-            queuePosition: idx + 1
-          }));
-
+          // Orders explicitly assigned to this rider by Seller: activate first order and queue remainder
           const firstAssigned = assignedOrders[0];
           const rejectedSet = getSavedRejectedOrderIds();
           const isRejected = rejectedSet.has(String(firstAssigned.id).toLowerCase()) ||
@@ -2602,24 +2594,17 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             isSameOrderId(dId, firstAssigned.id) || isSameOrderId(dId, firstAssigned.orderNumber)
           );
 
-          if (!isRejected && !isDelivered && isStoreOpen && state.agentStatus === 'AVAILABLE' && !state.isLeaveToday) {
-            const isSameAsCurrentPending = state.pendingOffer &&
-              (isSameOrderId(state.pendingOffer.id, firstAssigned.id) || isSameOrderId(state.pendingOffer.orderNumber, firstAssigned.orderNumber));
-
-            if (!isSameAsCurrentPending && !state.pendingOffer) {
-              const offerExpiresAt = new Date(Date.now() + 60000).toISOString();
-              dispatch({
-                type: 'SET_PENDING_OFFER',
-                payload: {
-                  offer: firstAssigned,
-                  expiresAt: offerExpiresAt,
-                  secondsRemaining: 60
-                }
-              });
-              try { soundEngine.playIncomingOrderAlert(); } catch {}
+          if (!isRejected && !isDelivered) {
+            activeOrder = { ...firstAssigned, isQueued: false };
+            saveCurrentOrderLocal(activeOrder);
+            queuedOrders = assignedOrders.slice(1).map((o, idx) => ({
+              ...o,
+              isQueued: true,
+              queuePosition: idx + 1
+            }));
+            if (state.pendingOffer) {
+              dispatch({ type: 'CLEAR_PENDING_OFFER' });
             }
-          } else if (state.pendingOffer && (!isStoreOpen || state.agentStatus === 'UNAVAILABLE' || state.isLeaveToday)) {
-            dispatch({ type: 'CLEAR_PENDING_OFFER' });
           }
         }
 
