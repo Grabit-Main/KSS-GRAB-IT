@@ -34,12 +34,12 @@ export function LocationProvider({ children }) {
   const [formArea, setFormArea] = useState('');
   const [formPincode, setFormPincode] = useState('');
 
-  // 🚀 AUTOMATIC FIRST-VISIT LOCATION PROMPT
+  // 🚀 AUTOMATIC ADDRESS POPUP: Auto-open if 0 addresses exist or location is unconfirmed
   useEffect(() => {
     try {
+      const list = loadCustomerAddresses();
       const isConfirmed = localStorage.getItem('grabit_location_confirmed');
-      const isDismissed = sessionStorage.getItem('grabit_location_prompt_dismissed');
-      if (!isConfirmed && !isDismissed) {
+      if (!list || list.length === 0 || !isConfirmed) {
         setIsModalOpen(true);
       }
     } catch (e) {
@@ -57,6 +57,10 @@ export function LocationProvider({ children }) {
         const def = list.find(l => l.isDefault) || list[0];
         return def ? def.id : null;
       });
+      // 🚀 Auto-open location popup whenever account has 0 saved addresses
+      if (!list || list.length === 0) {
+        setIsModalOpen(true);
+      }
     };
 
     if (typeof window !== 'undefined') {
