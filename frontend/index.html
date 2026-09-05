@@ -16,8 +16,19 @@
       (function() {
         function shouldSuppress(msg) {
           if (!msg) return false;
-          var str = typeof msg === 'string' ? msg : ((msg && (msg.message || msg.stack)) || String(msg));
-          return str.indexOf('startTime') !== -1 || str.indexOf('reportAllChanges') !== -1;
+          var str = '';
+          if (typeof msg === 'string') {
+            str = msg;
+          } else if (typeof msg === 'object') {
+            str = (msg.message || '') + ' ' + (msg.stack || '') + ' ' + (msg.reason || '');
+          } else {
+            str = String(msg);
+          }
+          return str.indexOf('startTime') !== -1 ||
+                 str.indexOf('reportAllChanges') !== -1 ||
+                 str.indexOf('Tracking Prevention') !== -1 ||
+                 str.indexOf('chrome-extension:') !== -1 ||
+                 str.indexOf('moz-extension:') !== -1;
         }
 
         // 1. Intercept window.onerror
