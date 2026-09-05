@@ -2103,6 +2103,23 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const rawId = String(order.id || '').trim();
     if (!rawId) return;
 
+    // If order is ALREADY the rider's active delivery, dismiss offer modal gracefully without throwing 409 Conflict
+    const savedActive = getSavedCurrentOrder();
+    const isAlreadyActive = Boolean(
+      (state.currentOrder && (isSameOrderId(order.id, state.currentOrder.id) || isSameOrderId(order.orderNumber, state.currentOrder.orderNumber))) ||
+      (savedActive && (isSameOrderId(order.id, savedActive.id) || isSameOrderId(order.orderNumber, savedActive.orderNumber)))
+    );
+
+    if (isAlreadyActive) {
+      dispatch({ type: 'CLEAR_PENDING_OFFER' });
+      saveAgentStatusLocal('ON_DELIVERY');
+      dispatch({ type: 'SET_AGENT_STATUS', payload: 'ON_DELIVERY' });
+      if (state.currentOrder) {
+        dispatch({ type: 'ASSIGN_SPECIFIC_ORDER', payload: state.currentOrder });
+      }
+      return;
+    }
+
     // Clear from rejected blacklist
     try {
       const rej = getSavedRejectedOrderIds();
@@ -2350,7 +2367,19 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
 
-        if (!state.currentOrder && state.agentStatus !== 'ON_DELIVERY' && state.agentStatus !== 'UNAVAILABLE' && offerRes && offerRes.has_offer && offerRes.offer) {
+        const savedActive = getSavedCurrentOrder();
+        let isAlreadyActiveOffer = false;
+        if (offerRes && offerRes.offer) {
+          const mappedOffer = mapApiOrderToOrder(offerRes.offer);
+          isAlreadyActiveOffer = Boolean(
+            (state.currentOrder && (isSameOrderId(mappedOffer.id, state.currentOrder.id) || isSameOrderId(mappedOffer.orderNumber, state.currentOrder.orderNumber))) ||
+            (savedActive && (isSameOrderId(mappedOffer.id, savedActive.id) || isSameOrderId(mappedOffer.orderNumber, savedActive.orderNumber)))
+          );
+        }
+
+        if (isAlreadyActiveOffer && state.pendingOffer) {
+          dispatch({ type: 'CLEAR_PENDING_OFFER' });
+        } else if (!isAlreadyActiveOffer && !state.currentOrder && state.agentStatus !== 'ON_DELIVERY' && state.agentStatus !== 'UNAVAILABLE' && offerRes && offerRes.has_offer && offerRes.offer) {
           const mappedOffer = mapApiOrderToOrder(offerRes.offer);
           const rejectedSet = getSavedRejectedOrderIds();
           const deliveredList = JSON.parse(localStorage.getItem('grabit_delivered_order_ids') || '[]');
