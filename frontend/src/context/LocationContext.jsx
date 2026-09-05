@@ -13,6 +13,12 @@ const LocationContext = createContext();
 
 export const defaultLocationsList = [];
 
+const isAuthOrPortalRoute = () => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname || '';
+  return path === '/login' || path.startsWith('/seller') || path.startsWith('/delivery') || path.startsWith('/admin');
+};
+
 export function LocationProvider({ children }) {
   const [locations, setLocations] = useState(() => loadCustomerAddresses());
   const [selectedId, setSelectedId] = useState(() => {
@@ -37,6 +43,7 @@ export function LocationProvider({ children }) {
   // 🚀 AUTOMATIC ADDRESS POPUP: Auto-open if 0 addresses exist or location is unconfirmed
   useEffect(() => {
     try {
+      if (isAuthOrPortalRoute()) return;
       const list = loadCustomerAddresses();
       const isConfirmed = localStorage.getItem('grabit_location_confirmed');
       if (!list || list.length === 0 || !isConfirmed) {
@@ -58,7 +65,7 @@ export function LocationProvider({ children }) {
         return def ? def.id : null;
       });
       // 🚀 Auto-open location popup whenever account has 0 saved addresses
-      if (!list || list.length === 0) {
+      if (!isAuthOrPortalRoute() && (!list || list.length === 0)) {
         setIsModalOpen(true);
       }
     };
@@ -764,7 +771,7 @@ export function LocationProvider({ children }) {
       handleOpenSetAddress
     }}>
       {children}
-      {isModalOpen && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
+      {isModalOpen && !isAuthOrPortalRoute() && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
     </LocationContext.Provider>
   );
 }
