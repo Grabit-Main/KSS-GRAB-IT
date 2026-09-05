@@ -153,22 +153,7 @@ npm run dev
 ```
 > Frontend Application will be running at `http://localhost:5173`
 
----
 
-## 🔐 Security & Environment Variables
-
-Create `.env` inside `backend/`:
-```env
-SUPABASE_URL=https://vhcmjwuhdcdxqmyjvqpz.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_key
-UPSTASH_REDIS_REST_URL=https://right-elf-90042.upstash.io
-UPSTASH_REDIS_REST_TOKEN=upstash_token
-CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
-JWT_SECRET=grabit-super-secure-jwt-secret-key-2026
-CORS_ORIGINS=http://localhost:5173
-```
-
----
 
 ## 👥 Core Engineering Team
 
