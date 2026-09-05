@@ -40,8 +40,39 @@ function getAuthToken() {
 let consecutiveLocalFailures = 0;
 let isLocalBackendDown = false;
 let lastFailureTime = 0;
+let hasProbed = false;
+
+function probeLocalBackend() {
+  if (hasProbed || typeof window === 'undefined') return;
+  hasProbed = true;
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 1200);
+    fetch('http://localhost:8000/api/health', { method: 'GET', signal: controller.signal })
+      .then((r) => {
+        clearTimeout(tid);
+        if (r.ok) {
+          isLocalBackendDown = false;
+          consecutiveLocalFailures = 0;
+        } else {
+          isLocalBackendDown = true;
+          lastFailureTime = Date.now();
+        }
+      })
+      .catch(() => {
+        clearTimeout(tid);
+        isLocalBackendDown = true;
+        lastFailureTime = Date.now();
+      });
+  }
+}
+
+probeLocalBackend();
 
 export function isBackendAvailable() {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    if (!hasProbed) probeLocalBackend();
+  }
   if (isLocalBackendDown && Date.now() - lastFailureTime < 60000) {
     return false;
   }
