@@ -2477,8 +2477,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
         // Add aliases strictly for the currently logged in rider
-        const isCurrentKarthik = (loggedRiderPhone && loggedRiderPhone.includes('9999900003')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('karthik'));
-        const isCurrentThabee = (loggedRiderPhone && loggedRiderPhone.includes('9080841727')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('thabee'));
+        const isCurrentKarthik = (loggedRiderPhone && loggedRiderPhone.includes('9999900003')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('karthik')) || (loggedRiderId && loggedRiderId.toLowerCase().includes('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a'));
+        const isCurrentThabee = (loggedRiderPhone && loggedRiderPhone.includes('9080841727')) || (loggedRiderName && loggedRiderName.toLowerCase().includes('thabee')) || (loggedRiderId && loggedRiderId.toLowerCase().includes('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b'));
 
         if (isCurrentKarthik) {
           myRiderKeys.add('d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a');
@@ -2527,12 +2527,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             continue;
           }
 
-          const agent = String(o.delivery_agent_id || o.deliveryAgentId || o.agentId || '').trim().toLowerCase();
-          const isAssignedToMe = Boolean(agent && myRiderKeys.has(agent));
+          const agent1 = String(o.delivery_agent_id || o.deliveryAgentId || o.agentId || '').trim().toLowerCase();
+          const agent2 = String(o.rider_name || o.riderName || o.assigned_rider || '').trim().toLowerCase();
+          const isAssignedToMe = Boolean((agent1 && myRiderKeys.has(agent1)) || (agent2 && myRiderKeys.has(agent2)));
 
           if (isAssignedToMe) {
             assignedRaw.push(o);
-          } else if (!agent || agent === 'null' || agent === 'none' || agent === 'unassigned') {
+          } else if (!agent1 && !agent2) {
             if (st !== 'delivered' && st !== 'cancelled' && st !== 'failed_delivery' && st !== 'returned') {
               poolRaw.push(o);
             }
