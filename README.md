@@ -158,7 +158,7 @@ npm run dev
 
 | Name | Role | Primary Domain |
 | :--- | :--- | :--- |
-| **Jason Kenneth N** | **Team Lead** | Platform Architecture & Super Admin Portal |
+| **Jason Kenneth N** | **Team Lead [Full Stack Engineer]** | Platform Architecture & Super Admin Portal |
 | **Akash S B** | **Full-Stack Engineer** | End-to-End Customer Storefront & Mobile UX |
 | **Priyanka Kushwah** | **Full-Stack Engineer** | Seller Merchant Hub & Product Management |
 | **I Thabeethal Asnath** | **Full-Stack Engineer** | Delivery Partner App & Logistics Lifecycle |
