@@ -1774,6 +1774,7 @@ async def delivery_history(user=Depends(require_roles("delivery_agent"))):
         return []
 
 @router.post("/delivery/history/sync")
+@router.post("/delivery/history/sync/")
 async def sync_rider_history(payload: dict, user=Depends(require_roles("delivery_agent"))):
     rider_id = user.get("sub")
     client_history = payload.get("history") or []

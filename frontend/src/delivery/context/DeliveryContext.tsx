@@ -1749,8 +1749,13 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // ── Rider Verification & Presence Dispatch ──
   const riderVerificationStatusRef = useRef<string>('VERIFIED');
+  const presenceConsecutiveFailsRef = useRef<number>(0);
+  const presenceStatusFailsRef = useRef<number>(0);
+  const historySyncDisabledRef = useRef<boolean>(false);
 
   const sendPresenceUpdate = useCallback(async (status: AgentStatus, location?: { lat: number; lng: number; accuracy?: number }) => {
+    // If backend presence endpoint returned 404/unreachable 3+ consecutive times, avoid spamming DevTools
+    if (presenceConsecutiveFailsRef.current >= 3) return;
     try {
       let riderId = '';
       let riderPhone = '';
@@ -1772,6 +1777,7 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
 
       if (res) {
+        presenceConsecutiveFailsRef.current = 0;
         if (res.auto_logged_out || res.agent_status === 'UNAVAILABLE' || (res.status === 'error' && res.message && res.message.includes('Store is closed'))) {
           saveAgentStatusLocal('UNAVAILABLE');
           dispatch({ type: 'SET_AGENT_STATUS', payload: 'UNAVAILABLE' });
@@ -1797,6 +1803,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           }
         }
+      } else {
+        presenceConsecutiveFailsRef.current += 1;
       }
     } catch {}
   }, []);
@@ -1950,9 +1958,11 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Server-authoritative presence and status hydration
   const fetchPresenceStatus = useCallback(async () => {
+    if (presenceStatusFailsRef.current >= 3) return;
     try {
       const res: any = await get('/delivery/presence-status');
       if (res && res.status === 'success' && res.user) {
+        presenceStatusFailsRef.current = 0;
         const u = res.user;
         if (u.verification_status) {
           riderVerificationStatusRef.current = String(u.verification_status).toUpperCase();
@@ -2016,8 +2026,12 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             dispatch({ type: 'SET_ACTIVE_SHIFT_SECONDS', payload: shiftSecs });
           }
         }
+      } else {
+        presenceStatusFailsRef.current += 1;
       }
-    } catch {}
+    } catch {
+      presenceStatusFailsRef.current += 1;
+    }
   }, [state.currentOrder, state.agentStatus, showAlert]);
 
   useEffect(() => {
@@ -2652,15 +2666,23 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const merged = [...cloudEntries, ...savedLocal.filter((l) => !existingIds.has(l.orderId))];
         dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: merged });
 
-        if (savedLocal.length > 0) {
-          post('/delivery/history/sync', { history: savedLocal }).catch(() => {});
+        if (savedLocal.length > 0 && !historySyncDisabledRef.current) {
+          post('/delivery/history/sync', { history: savedLocal }).then((syncRes) => {
+            if (syncRes === null) historySyncDisabledRef.current = true;
+          }).catch(() => {
+            historySyncDisabledRef.current = true;
+          });
         }
       } catch {
         if (isMounted) {
           const savedLocal = getSavedHistory();
           dispatch({ type: 'SYNC_CLOUD_HISTORY', payload: savedLocal });
-          if (savedLocal.length > 0) {
-            post('/delivery/history/sync', { history: savedLocal }).catch(() => {});
+          if (savedLocal.length > 0 && !historySyncDisabledRef.current) {
+            post('/delivery/history/sync', { history: savedLocal }).then((syncRes) => {
+              if (syncRes === null) historySyncDisabledRef.current = true;
+            }).catch(() => {
+              historySyncDisabledRef.current = true;
+            });
           }
         }
       }
