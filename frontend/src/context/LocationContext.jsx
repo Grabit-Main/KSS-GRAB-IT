@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { MapPin, Edit2, Plus, X, Trash2, Check, Navigation, LocateFixed } from 'lucide-react';
 import DeliveryLocationMapPicker from '../components/common/DeliveryLocationMapPicker';
 import {
@@ -13,13 +14,20 @@ const LocationContext = createContext();
 
 export const defaultLocationsList = [];
 
-const isAuthOrPortalRoute = () => {
-  if (typeof window === 'undefined') return false;
-  const path = window.location.pathname || '';
+const isAuthOrPortalRoute = (pathname) => {
+  const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
   return path === '/login' || path.startsWith('/seller') || path.startsWith('/delivery') || path.startsWith('/admin');
 };
 
 export function LocationProvider({ children }) {
+  let routerLocation = null;
+  try {
+    routerLocation = useLocation();
+  } catch (e) {
+    // Fallback if rendered outside Router context
+  }
+  const currentPath = routerLocation?.pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
+
   const [locations, setLocations] = useState(() => loadCustomerAddresses());
   const [selectedId, setSelectedId] = useState(() => {
     const list = loadCustomerAddresses();
@@ -43,7 +51,7 @@ export function LocationProvider({ children }) {
   // 🚀 AUTOMATIC ADDRESS POPUP: Auto-open if 0 addresses exist or location is unconfirmed
   useEffect(() => {
     try {
-      if (isAuthOrPortalRoute()) return;
+      if (isAuthOrPortalRoute(currentPath)) return;
       const list = loadCustomerAddresses();
       const isConfirmed = localStorage.getItem('grabit_location_confirmed');
       if (!list || list.length === 0 || !isConfirmed) {
@@ -52,7 +60,7 @@ export function LocationProvider({ children }) {
     } catch (e) {
       console.warn('Auto location prompt check error:', e);
     }
-  }, []);
+  }, [currentPath]);
 
   // Sync addresses across windows, login/logout, or custom events
   useEffect(() => {
@@ -65,7 +73,7 @@ export function LocationProvider({ children }) {
         return def ? def.id : null;
       });
       // 🚀 Auto-open location popup whenever account has 0 saved addresses
-      if (!isAuthOrPortalRoute() && (!list || list.length === 0)) {
+      if (!isAuthOrPortalRoute(currentPath) && (!list || list.length === 0)) {
         setIsModalOpen(true);
       }
     };
@@ -82,7 +90,7 @@ export function LocationProvider({ children }) {
         window.removeEventListener('storage', syncLocations);
       }
     };
-  }, []);
+  }, [currentPath]);
 
   const activeLoc = locations.find(l => l.id === selectedId) || locations[0] || (() => {
     try {
@@ -771,7 +779,7 @@ export function LocationProvider({ children }) {
       handleOpenSetAddress
     }}>
       {children}
-      {isModalOpen && !isAuthOrPortalRoute() && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
+      {isModalOpen && !isAuthOrPortalRoute(currentPath) && typeof document !== 'undefined' && createPortal(modalContent, document.body)}
     </LocationContext.Provider>
   );
 }
