@@ -48,13 +48,12 @@ export function LocationProvider({ children }) {
   const [formArea, setFormArea] = useState('');
   const [formPincode, setFormPincode] = useState('');
 
-  // 🚀 AUTOMATIC ADDRESS POPUP: Auto-open if 0 addresses exist or location is unconfirmed
+  // 🚀 AUTOMATIC ADDRESS POPUP: Only auto-open if account has 0 saved addresses
   useEffect(() => {
     try {
       if (isAuthOrPortalRoute(currentPath)) return;
       const list = loadCustomerAddresses();
-      const isConfirmed = localStorage.getItem('grabit_location_confirmed');
-      if (!list || list.length === 0 || !isConfirmed) {
+      if (!list || list.length === 0) {
         setIsModalOpen(true);
       }
     } catch (e) {
