@@ -71,15 +71,16 @@ export function LoginPage() {
   // Send OTP and store debug code
   const requestOtpFor = async (phone) => {
     try {
+      const res = await post('/auth/send-otp', { phone });
       const code = res?.debug_otp ? String(res.debug_otp) : '123456';
       setDebugOtp(code);
       setResendCooldown(30);
       setError('');
-      return code;
+      return { ok: true, code };
     } catch (err) {
       setDebugOtp('');
       setError(err?.message || 'Unable to send verification code. Please check your connection and try again.');
-      return null;
+      return { ok: false, code: '' };
     }
   };
 
@@ -163,8 +164,9 @@ export function LoginPage() {
         };
       }
       try {
-        const otpCode = await requestOtpFor(fullPhone);
-        if (otpCode) {
+        const otpRes = await requestOtpFor(fullPhone);
+        if (otpRes?.ok) {
+          const otpCode = otpRes.code || '123456';
           const v = await post('/auth/verify', { phone: fullPhone, otp: otpCode });
           if (v?.access_token) {
             token = v.access_token;
@@ -200,7 +202,7 @@ export function LoginPage() {
     // Regular login: just send OTP, no pre-check
     const otpRes = await requestOtpFor(fullPhone);
     setBusy(false);
-    if (otpRes.ok) {
+    if (otpRes?.ok) {
       setOtp('');
       setStep('otp');
     }
