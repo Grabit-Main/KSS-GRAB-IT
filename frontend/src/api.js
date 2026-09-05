@@ -37,6 +37,17 @@ function getAuthToken() {
   }
 }
 
+let consecutiveLocalFailures = 0;
+let isLocalBackendDown = false;
+let lastFailureTime = 0;
+
+export function isBackendAvailable() {
+  if (isLocalBackendDown && Date.now() - lastFailureTime < 60000) {
+    return false;
+  }
+  return true;
+}
+
 export async function api(path, options = {}) {
   const token = getAuthToken();
   const isGet = !options.method || options.method === 'GET';
@@ -52,6 +63,12 @@ export async function api(path, options = {}) {
     path.startsWith('/tickets')
   );
   if (isGet && !token && !isPublicGet) return null;
+
+  // Circuit breaker: skip background polling calls if backend was unreachable recently
+  const isBackgroundPing = isGet || path.startsWith('/delivery') || path.includes('/presence') || path.includes('/sync');
+  if (isLocalBackendDown && isBackgroundPing && Date.now() - lastFailureTime < 60000) {
+    return null;
+  }
 
   // Abort hung GET requests after 4s; allow 15s for mutations/auth calls
   const timeoutMs = isGet ? 4000 : 15000;
@@ -70,17 +87,45 @@ export async function api(path, options = {}) {
       },
     });
     clearTimeout(timeoutId);
+
+    if (response.ok || response.status === 304 || response.status === 204) {
+      consecutiveLocalFailures = 0;
+      isLocalBackendDown = false;
+    }
+
     if (response.status === 204) return null;
     // Treat 401/403/404 on GET or delivery polling as empty response — fall back to localStorage silently
-    if ((response.status === 401 || response.status === 403 || response.status === 404) && isGet) return null;
+    if ((response.status === 401 || response.status === 403 || response.status === 404) && isGet) {
+      if (response.status === 404) {
+        consecutiveLocalFailures += 1;
+        if (consecutiveLocalFailures >= 2) {
+          isLocalBackendDown = true;
+          lastFailureTime = Date.now();
+        }
+      }
+      return null;
+    }
+
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 404 && path.startsWith('/delivery')) return null;
+      if (response.status === 404 && path.startsWith('/delivery')) {
+        consecutiveLocalFailures += 1;
+        if (consecutiveLocalFailures >= 2) {
+          isLocalBackendDown = true;
+          lastFailureTime = Date.now();
+        }
+        return null;
+      }
       throw new Error(data.detail || 'Something went wrong. Please try again.');
     }
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
+    consecutiveLocalFailures += 1;
+    if (consecutiveLocalFailures >= 2) {
+      isLocalBackendDown = true;
+      lastFailureTime = Date.now();
+    }
     if (err.name === 'AbortError') {
       if (isGet) return null; // Timed out GET — treat as no data, caller uses localStorage
       throw new Error('Server request timed out. Please check your network and try again.');

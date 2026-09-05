@@ -23,7 +23,7 @@ import {
   grabitSupermarket
 } from '../data/mockData';
 import { soundEngine } from '../utils/audio';
-import { get, patch, post } from '../../api';
+import { get, patch, post, isBackendAvailable } from '../../api';
 import { notifyOrdersUpdated, subscribeOrdersUpdated } from '../../utils/orderSync';
 
 const patchWithRetry = async (url: string, data: any, maxRetries = 4, delayMs = 1000): Promise<any> => {
@@ -2719,30 +2719,32 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchActiveOrders();
     fetchHistory();
 
-    // Real-time WebSocket connection
+    // Real-time WebSocket connection (only if backend is verified available)
     let ws: WebSocket | null = null;
-    try {
-      const isDev = window.location.port === '5173' || window.location.hostname === 'localhost';
-      const apiHost = (import.meta.env.VITE_API_URL || 'https://grabit-api.vercel.app').replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
-      const wsUrl = isDev
-        ? 'ws://localhost:8000/api/delivery/ws'
-        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiHost}/api/delivery/ws`;
+    if (isBackendAvailable()) {
+      try {
+        const isDev = window.location.port === '5173' || window.location.hostname === 'localhost';
+        const apiHost = (import.meta.env.VITE_API_URL || 'https://grabit-api.vercel.app').replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
+        const wsUrl = isDev
+          ? 'ws://localhost:8000/api/delivery/ws'
+          : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiHost}/api/delivery/ws`;
 
-      ws = new WebSocket(wsUrl);
+        ws = new WebSocket(wsUrl);
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'ORDER_PULSE') {
-            fetchActiveOrders();
-          }
-        } catch {}
-      };
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ORDER_PULSE') {
+              fetchActiveOrders();
+            }
+          } catch {}
+        };
 
-      ws.onerror = () => {
-        // Silent handler to avoid noisy console errors on hot reloads
-      };
-    } catch {}
+        ws.onerror = () => {
+          // Silent handler to avoid noisy console errors on hot reloads
+        };
+      } catch {}
+    }
 
     // Polling interval (5000ms) with in-flight guard to prevent request overlap
     const activeInterval = setInterval(fetchActiveOrders, 5000);
