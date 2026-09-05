@@ -10,7 +10,7 @@ import { useToast } from '../context/ToastContext';
 import useWindowWidth from '../hooks/useWindowWidth';
 import ProductSuggestionModal from '../components/common/ProductSuggestionModal';
 import { forceScrollToTop } from '../utils/scrollToTop';
-import { get, patch } from '../api';
+import { get, patch, logoutUser } from '../api';
 import { 
   DEFAULT_CUSTOMER_ADDRESSES,
   loadCustomerAddresses,
@@ -47,7 +47,9 @@ export default function ProfilePage() {
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const isLoggedIn = !!(userPhone || userEmail || initialUser?.phone);
+  const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+  const isSkipped = sessionStorage.getItem('grabit_skipped_login') === 'true';
+  const isLoggedIn = !!token && token !== 'demo-token-guest' && !isSkipped && !!(userPhone || userEmail || initialUser?.phone);
 
   // Hydrate user profile from backend API (/users/me)
   useEffect(() => {
@@ -247,12 +249,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('grabit_session');
-    localStorage.removeItem('grabit_user');
-    try {
-      window.dispatchEvent(new CustomEvent('grabit_auth_updated'));
-      window.dispatchEvent(new Event('storage'));
-    } catch {}
+    logoutUser();
     navigate('/login', { replace: true });
   };
 

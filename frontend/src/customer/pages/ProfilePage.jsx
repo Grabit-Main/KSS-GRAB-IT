@@ -47,7 +47,9 @@ export default function ProfilePage() {
   const [activeAppIcon, setActiveAppIcon] = useState('Default Grabit Blue');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const isLoggedIn = !!(userPhone || userEmail || initialUser?.phone);
+  const token = localStorage.getItem('grabit_session') || localStorage.getItem('grabit_auth_token') || localStorage.getItem('grabit_jwt');
+  const isSkipped = sessionStorage.getItem('grabit_skipped_login') === 'true';
+  const isLoggedIn = !!token && token !== 'demo-token-guest' && !isSkipped && !!(userPhone || userEmail || initialUser?.phone);
 
   // Hydrate user profile from backend API (/users/me)
   useEffect(() => {
