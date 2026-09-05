@@ -324,7 +324,7 @@ export function LocationProvider({ children }) {
 
   const handleFetchCurrentLocation = handleUseCurrentGpsLocation;
 
-  const hasConfirmedLocation = typeof window !== 'undefined' && !!localStorage.getItem('grabit_location_confirmed');
+  const hasConfirmedLocation = locations && locations.length > 0 && typeof window !== 'undefined' && !!localStorage.getItem('grabit_location_confirmed');
 
   const modalContent = isModalOpen && (
     <div
