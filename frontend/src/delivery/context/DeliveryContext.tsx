@@ -2568,8 +2568,8 @@ export const DeliveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             continue;
           }
 
-          const agent1 = String(o.delivery_agent_id || o.deliveryAgentId || o.agentId || '').trim().toLowerCase();
-          const agent2 = String(o.rider_name || o.riderName || o.assigned_rider || '').trim().toLowerCase();
+          const agent1 = String(o.delivery_agent_id || o.deliveryAgentId || o.agentId || o.rider_id || o.riderId || o.assignedRiderId || o.assigned_rider_id || '').trim().toLowerCase();
+          const agent2 = String(o.rider_name || o.riderName || o.assigned_rider || o.assignedRiderName || o.assigned_rider_name || '').trim().toLowerCase();
           const isAssignedToMe = Boolean((agent1 && myRiderKeys.has(agent1)) || (agent2 && myRiderKeys.has(agent2)));
 
           if (isAssignedToMe) {

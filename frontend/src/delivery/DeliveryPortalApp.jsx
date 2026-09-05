@@ -126,24 +126,24 @@ function DeliveryAppLayout() {
         return;
       }
 
-      // No user session at all: default fallback to Thabee
+      // No user session at all: default fallback to Karthik Rider
       if (!user) {
         const fallbackRider = {
-          id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2b',
+          id: 'd7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a',
           role: 'delivery_agent',
-          name: 'Thabee',
-          full_name: 'Thabee',
-          phone: '+919080841727',
-          email: 'thabee@grabit.local',
+          name: 'Karthik Rider',
+          full_name: 'Karthik Rider',
+          phone: '+919999900003',
+          email: 'karthik.rider@grabit.local',
           partnerVerified: true,
           biometricsDone: true,
           verification_status: 'ADMIN_VERIFIED',
           verified_by_admin: true,
-          vehicle_type: 'Ather 450X EV Scooter',
-          plate_number: 'KA 05 EQ 4421',
-          license_number: 'DL-KA-05-2024009182',
-          insuranceNo: 'POL-HDFC-99201',
-          pucNo: 'PUC-KA05-882190',
+          vehicle_type: 'TVS iQube Electric Scooter',
+          plate_number: 'KA-05-EX-9921',
+          license_number: 'DL-2024-88712',
+          insuranceNo: 'POL-BAJAJ-77182',
+          pucNo: 'PUC-KA05-110291',
           clearances: {
             dlVerified: true,
             insuranceVerified: true,
