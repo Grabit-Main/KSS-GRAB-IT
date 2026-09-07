@@ -270,11 +270,31 @@ export function AdminPortalApp() {
   const fetchSuggestions = useCallback(async () => {
     try {
       const apiData = await get('/admin/product-suggestions').catch(() => null);
-      const localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
-      const merged = Array.isArray(apiData) && apiData.length > 0 ? apiData : localData;
-      setSuggestionsList(merged);
+      let localData = [];
+      try {
+        localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+        if (!Array.isArray(localData)) localData = [];
+      } catch {}
+      let apiList = [];
+      if (Array.isArray(apiData)) {
+        apiList = apiData;
+      } else if (apiData && Array.isArray(apiData.suggestions)) {
+        apiList = apiData.suggestions;
+      }
+      const mergedMap = new Map();
+      [...apiList, ...localData].forEach((item) => {
+        if (item && (item.id || item.product_name)) {
+          const key = String(item.id || item.product_name).toLowerCase().trim();
+          if (!mergedMap.has(key)) mergedMap.set(key, item);
+        }
+      });
+      setSuggestionsList(Array.from(mergedMap.values()));
     } catch {
-      const localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+      let localData = [];
+      try {
+        localData = JSON.parse(localStorage.getItem('grabit_product_suggestions') || '[]');
+        if (!Array.isArray(localData)) localData = [];
+      } catch {}
       setSuggestionsList(localData);
     }
   }, []);
@@ -542,6 +562,7 @@ export function AdminPortalApp() {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
+      fetchSuggestions();
       const [ordersRes, partnersRes, productsRes, storeSettingsRes, presenceSummaryRes] = await Promise.all([
         get('/orders/').catch(() => []),
         get('/admin/partners').catch(() => get('/users/').catch(() => [])),

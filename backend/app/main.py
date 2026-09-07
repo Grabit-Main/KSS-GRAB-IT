@@ -3791,11 +3791,6 @@ async def get_top_products(period: str = "30days"):
 async def get_seller_payouts():
     return {"status": "success", "payouts": [], "total_payout": 0}
 
-@router.get("/admin/product-suggestions")
-@router.get("/admin/product-suggestions/")
-async def get_admin_product_suggestions():
-    return {"status": "success", "suggestions": []}
-
 leaves_db_lock = asyncio.Lock()
 LEAVES_FILE = os.path.join(os.path.dirname(__file__), "data", "leaves.json")
 
