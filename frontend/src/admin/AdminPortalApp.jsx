@@ -3294,7 +3294,7 @@ export function AdminPortalApp() {
                     <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>When customers suggest missing products, they will be listed here.</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '16px', width: '100%', minWidth: 0 }}>
                     {suggestionsList.map((sug) => (
                       <div
                         key={sug.id || sug.created_at}
@@ -3302,34 +3302,42 @@ export function AdminPortalApp() {
                           background: '#FFFFFF', borderRadius: '16px',
                           border: '1px solid #E2E8F0', padding: '18px 20px',
                           boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                          display: 'flex', flexDirection: 'column', gap: '8px'
+                          display: 'flex', flexDirection: 'column', gap: '8px',
+                          minWidth: 0, maxWidth: '100%', overflow: 'hidden',
+                          overflowWrap: 'anywhere', wordBreak: 'break-word'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', minWidth: 0 }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: 0, overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0, flex: '1 1 auto' }}>
                             {sug.product_name}
                           </h4>
                           <span style={{
                             background: '#EFF6FF', color: '#0071E3',
-                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px'
+                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                            flexShrink: 0, whiteSpace: 'nowrap'
                           }}>
                             {sug.category || 'General'}
                           </span>
                         </div>
 
                         {sug.brand && (
-                          <div style={{ fontSize: '12.5px', color: '#475569', fontWeight: 600 }}>
+                          <div style={{ fontSize: '12.5px', color: '#475569', fontWeight: 600, overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>
                             Brand: <strong>{sug.brand}</strong>
                           </div>
                         )}
 
                         {sug.notes && (
-                          <p style={{ fontSize: '12px', color: '#64748B', margin: 0, fontStyle: 'italic', background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                          <p style={{
+                            fontSize: '12px', color: '#64748B', margin: 0, fontStyle: 'italic',
+                            background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px',
+                            border: '1px solid #F1F5F9', overflowWrap: 'anywhere', wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap', minWidth: 0, maxWidth: '100%'
+                          }}>
                             "{sug.notes}"
                           </p>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9', marginTop: '4px', fontSize: '11.5px', color: '#94A3B8' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', paddingTop: '8px', borderTop: '1px solid #F1F5F9', marginTop: '4px', fontSize: '11.5px', color: '#94A3B8', minWidth: 0 }}>
                           <span>Customer: {sug.customer_phone || 'Anonymous'}</span>
                           <span>{sug.created_at ? new Date(sug.created_at).toLocaleDateString() : 'Recent'}</span>
                         </div>
